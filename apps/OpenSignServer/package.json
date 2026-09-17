@@ -14,6 +14,7 @@
     "lint-fix": "eslint --cache --fix ./cloud && eslint --cache --fix index.js && eslint --cache --fix ./spec",
     "prettier": "prettier --write '{cloud,spec}/{**/*,*}.js' 'index.js'",
     "start": "node index.js",
+    "dev": "nodemon index.js",
     "test": "mongodb-runner start && TESTING=true jasmine",
     "watch": "nodemon index.js"
   },
