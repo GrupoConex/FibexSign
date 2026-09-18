@@ -1,7 +1,7 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
 dotenv.config({ quiet: true });
-const ssoApiUrl = process.env.SSO_API_URL || 'https://sso.opensignlabs.com/api'; //'https://osl-jacksonv2.vercel.app/api';
+const ssoApiUrl = process.env.SSO_API_URL;
 export const SSOAuth = {
   // Returns a promise that fulfills if this user mail is valid.
   validateAuthData: async authData => {

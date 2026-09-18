@@ -5,11 +5,7 @@ import ThemeToggle from "./ThemeToggle";
 import { useNavigate } from "react-router";
 import Parse from "parse";
 import { useWindowSize } from "../hook/useWindowSize";
-import {
-  getAppLogo,
-  openInNewTab,
-  saveLanguageInLocal
-} from "../constant/Utils";
+import { getAppLogo, saveLanguageInLocal } from "../constant/Utils";
 import { useTranslation } from "react-i18next";
 import { appInfo } from "../constant/appinfo";
 import { useDispatch } from "react-redux";
@@ -149,7 +145,7 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
                 className="object-contain h-full w-auto"
                 src={
                       isDarkTheme
-                      ? "/static/js/assets/images/logo-dark.png"
+                      ? "/static/js/assets/images/logo-dark.svg"
                       : applogo
                 }
                 alt="logo"
@@ -203,15 +199,6 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
             >
               {!isConsole && (
                 <>
-                    <li
-                      onClick={() =>
-                        openInNewTab("https://docs.opensignlabs.com")
-                      }
-                    >
-                      <span>
-                        <i className="fa-light fa-book"></i> {t("docs")}
-                      </span>
-                    </li>
                   <li
                     onClick={() => {
                       setIsOpen(false);

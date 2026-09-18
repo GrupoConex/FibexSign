@@ -2,24 +2,22 @@ import { TEditorConfiguration } from "../../documents/editor/core";
 
 const getCompletionEmail = (
 ): TEditorConfiguration => {
-  const appName =
-    "OpenSign™";
+  const appName = "FibexSign";
 
   const logoBlock =
         {
           "block-1709571212684": {
-            type: "Image",
+            type: "Text",
             data: {
               style: {
+                fontSize: 22,
+                fontWeight: "bold",
+                textAlign: "center",
                 padding: { top: 24, bottom: 24, right: 24, left: 24 }
               },
               props: {
-                width: null,
-                height: 50,
-                url: "https://qikinnovation.ams3.digitaloceanspaces.com/logo.png",
-                alt: "logo",
-                linkHref: null,
-                contentAlignment: "middle"
+                markdown: false,
+                text: appName
               }
             }
           }

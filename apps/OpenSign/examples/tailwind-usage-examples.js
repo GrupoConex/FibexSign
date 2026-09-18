@@ -1,5 +1,5 @@
 /**
- * Tailwind Dark Mode Usage Examples for OpenSign
+ * Tailwind Dark Mode Usage Examples for FibexSign
  *
  * This file demonstrates how to use the new Tailwind utilities
  * for better dark mode visibility of buttons and icons.

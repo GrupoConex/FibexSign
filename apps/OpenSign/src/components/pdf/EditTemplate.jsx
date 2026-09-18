@@ -30,8 +30,7 @@ const EditTemplate = ({
   setPdfBase64Url,
   isAddYourSelfCheckbox,
 }) => {
-  const appName =
-    "OpenSign™";
+  const appName = "FibexSign";
   const { t } = useTranslation();
   const inputFileRef = useRef(null);
   const [formData, setFormData] = useState({

@@ -25,15 +25,6 @@ export const templateReportTour = [
       <Trans i18nKey="tour-mssg.option">
         This menu reveals more options such as Edit, Delete, Rename, Duplicate,
         Share, etc.
-        <a
-          className="cursor-pointer op-text-primary"
-          href="https://docs.opensignlabs.com/docs/help/Templates/manage-templates"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Click here
-        </a>
-        to read more about all available options.
         <p className="pt-2">
           Note: Changes to an existing template will apply to all future
           documents created from that template but won't affect documents that

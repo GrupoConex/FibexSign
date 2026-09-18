@@ -8,7 +8,7 @@ import {
   contractUsers,
   saveLanguageInLocal
 } from "../constant/Utils";
-import logo from "../assets/images/logo.png";
+import logo from "../assets/images/logo.svg";
 import { appInfo } from "../constant/appinfo";
 import Parse from "parse";
 import { useTranslation } from "react-i18next";
@@ -81,10 +81,7 @@ function GuestLogin() {
 
     localStorage.clear(); // Clears everything
     localStorage.setItem("favicon", favicon);
-    localStorage.setItem(
-      "appname",
-        "OpenSign™"
-    );
+    localStorage.setItem("appname", "FibexSign");
     //save isGuestSigner true in local to handle login flow header in mobile view
     localStorage.setItem("isGuestSigner", true);
     saveLanguageInLocal(i18n);

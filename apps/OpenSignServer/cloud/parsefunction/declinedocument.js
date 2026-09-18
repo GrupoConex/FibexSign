@@ -4,8 +4,7 @@ import sendSystemMail from './sendSystemMail.js';
 async function sendDeclineMail(doc, publicUrl, userId, reason) {
   try {
     const TenantAppName = appName;
-    const logo =
-      "<img src='https://qikinnovation.ams3.digitaloceanspaces.com/logo.png' height='50' style='padding:20px'/>";
+    const logo = `<p style='padding:20px;font-family:system-ui;font-size:22px;font-weight:700;color:#1a1a1a'>${TenantAppName}</p>`;
 
     const removePrefill =
       doc?.Placeholders?.length > 0 && doc?.Placeholders?.filter(x => x?.Role !== 'prefill');

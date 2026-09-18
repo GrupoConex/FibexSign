@@ -19,7 +19,8 @@ export const cloudServerUrl =
   process.env.SERVER_URL ||
   (process.env.PORT ? `http://localhost:${process.env.PORT}/app` : '/app');
 export const serverAppId = process.env.APP_ID || 'opensign';
-export const appName = 'OpenSign™';
+export const appName = 'FibexSign';
+export const supportEmail = 'contacto@fibexsign.com';
 export const prefillDraftDocWidget = ['date', 'textbox', 'checkbox', 'radio button', 'image'];
 export const prefillDraftTemWidget = [
   'date',
@@ -671,7 +672,7 @@ export const mailTemplate = param => {
   const themeColor = '#47a3ad';
   const subject = `${param.senderName} has requested you to sign "${param.title}"`;
   const AppName = appName;
-  const logo = `<img src='https://qikinnovation.ams3.digitaloceanspaces.com/logo.png' height='50' />`;
+  const logo = `<p style='padding:10px;font-family:system-ui;font-size:22px;font-weight:700;color:#1a1a1a'>${AppName}</p>`;
 
   const body =
     "<html><head><meta http-equiv='Content-Type' content='text/html;charset=UTF-8' /></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background:white;padding-bottom:20px'><div style='padding:10px'>" +

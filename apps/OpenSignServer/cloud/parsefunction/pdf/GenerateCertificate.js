@@ -1,7 +1,7 @@
 import { PDFDocument, rgb } from 'pdf-lib';
 import fs from 'node:fs';
 import fontkit from '@pdf-lib/fontkit';
-import { formatDateTime } from '../../../Utils.js';
+import { formatDateTime, appName } from '../../../Utils.js';
 
 const formatDateStr = (dateStr, DateFormat, timezone, Is12Hr) => {
   if (!dateStr) return '';
@@ -19,10 +19,8 @@ export default async function GenerateCertificate(docDetails) {
   const fontBytes = fs.readFileSync('./font/times.ttf'); //
   pdfDoc.registerFontkit(fontkit);
   const timesRomanFont = await pdfDoc.embedFont(fontBytes, { subset: true });
-  const pngUrl = fs.readFileSync('./images/logo.png').buffer;
   const naSignUrl = fs.readFileSync('./images/na_sign.png').buffer;
   const nasign = await pdfDoc.embedPng(naSignUrl);
-  const pngImage = await pdfDoc.embedPng(pngUrl);
   const page = pdfDoc.addPage();
   const { width, height } = page.getSize();
   const startX = 15;
@@ -104,11 +102,12 @@ export default async function GenerateCertificate(docDetails) {
     borderColor: borderColor,
     borderWidth: 1,
   });
-  page.drawImage(pngImage, {
+  page.drawText(appName, {
     x: 30,
-    y: 790,
-    width: 100,
-    height: 25,
+    y: 795,
+    size: 16,
+    font: timesRomanFont,
+    color: rgb(0.12, 0.12, 0.12),
   });
 
   page.drawText(generatedOn, {
