@@ -27,8 +27,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 
 const Preferences = () => {
-  const appName =
-    "OpenSign™";
+  const appName = "FibexSign";
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const { isLoader, isTopLoader, alertInfo } = useSelector(

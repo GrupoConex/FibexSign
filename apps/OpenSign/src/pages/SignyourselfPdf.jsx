@@ -85,8 +85,7 @@ function SignYourSelf() {
   const windowSize = useWindowSize();
   const { scrollRef } = useScroll();
   const isShowModal = useSelector((state) => state.widget.isShowModal);
-  const appName =
-    "OpenSign™";
+  const appName = "FibexSign";
   const divRef = useRef(null);
   const nodeRef = useRef(null);
   const pdfRef = useRef();

@@ -5,11 +5,11 @@ import { PDFDocument } from 'pdf-lib';
 import fs from 'node:fs';
 import dotenv from 'dotenv';
 import GenerateCertificate from './pdf/GenerateCertificate.js';
-import { getSecureUrl } from '../../Utils.js';
+import { getSecureUrl, appName, supportEmail } from '../../Utils.js';
 import { parseUploadFile } from '../../utils/fileUtils.js';
 dotenv.config({ quiet: true });
-const eSignName = 'OpenSign';
-const eSigncontact = 'hello@opensignlabs.com';
+const eSignName = appName;
+const eSigncontact = supportEmail;
 
 // `uploadFile` is used to create url in from pdfFile
 async function uploadFile(pdfName, filepath) {

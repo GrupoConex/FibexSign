@@ -42,8 +42,7 @@ const DocumentsReport = (props) => {
   const copyUrlRef = useRef(null);
   const titleRef = useRef(null);
   const titleElement = useElSize(titleRef);
-  const appName =
-    "OpenSign™";
+  const appName = "FibexSign";
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();

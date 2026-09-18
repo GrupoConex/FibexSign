@@ -8,6 +8,7 @@ import {
   saveFileUsage,
   getSecureUrl,
   appName,
+  supportEmail,
   serverAppId,
 } from '../../../Utils.js';
 import GenerateCertificate from './GenerateCertificate.js';
@@ -37,8 +38,8 @@ import {
 const serverUrl = cloudServerUrl; // process.env.SERVER_URL;
 const APPID = serverAppId;
 const masterKEY = process.env.MASTER_KEY;
-const eSignName = 'OpenSign';
-const eSigncontact = 'hello@opensignlabs.com';
+const eSignName = appName;
+const eSigncontact = supportEmail;
 const docUrl = `${serverUrl}/classes/contracts_Document`;
 const headers = {
   'Content-Type': 'application/json',
@@ -149,8 +150,7 @@ async function updateDoc(
 async function sendNotifyMail(doc, signUser, mailProvider, publicUrl) {
   try {
     const TenantAppName = appName;
-    const logo =
-      "<img src='https://qikinnovation.ams3.digitaloceanspaces.com/logo.png' height='50' style='padding:20px'/>";
+    const logo = `<p style='padding:20px;font-family:system-ui;font-size:22px;font-weight:700;color:#1a1a1a'>${TenantAppName}</p>`;
 
     const auditTrailCount =
       doc?.AuditTrail?.filter(x => COMPLETION_ACTIVITIES.includes(x.Activity))?.length || 0;
@@ -197,8 +197,7 @@ async function sendCompletedMail(obj) {
   const sender = obj.doc.ExtUserPtr;
   const pdfName = doc.Name;
   const TenantAppName = appName;
-  const logo =
-    "<img src='https://qikinnovation.ams3.digitaloceanspaces.com/logo.png' height='50' style='padding:20px'/>";
+  const logo = `<p style='padding:20px;font-family:system-ui;font-size:22px;font-weight:700;color:#1a1a1a'>${TenantAppName}</p>`;
 
   let signersMail;
   if (doc?.Signers?.length > 0) {

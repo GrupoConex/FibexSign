@@ -36,9 +36,8 @@ export const RenderReportCell = ({
   handleItemClick
 }) => {
   const { t } = useTranslation();
-  const appName =
-    "OpenSign™";
-  const drivename = appName === "OpenSign™" ? "OpenSign™" : "";
+  const appName = "FibexSign";
+  const drivename = appName;
   switch (col) {
     case "Sr.No":
       return (

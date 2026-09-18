@@ -13,8 +13,7 @@ const MailTemplateEditor = ({
   info,
   tenantId,
 }) => {
-  const appName =
-    "OpenSign™";
+  const appName = "FibexSign";
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [requestBody, setRequestBody] = useState({ basic: "", advanced: "" });
