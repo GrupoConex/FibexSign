@@ -1,5 +1,5 @@
-// FullScreenButton.js
 import React, { useState, useEffect } from "react";
+import Icon from "../primitives/Icon";
 
 const FullScreenButton = () => {
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -67,13 +67,10 @@ const FullScreenButton = () => {
     <div className="flex items-center">
       <button
         onClick={toggleFullScreen}
-        className="text-base-content p-2 text-sm focus:outline-none"
+        className="text-base-content p-2 text-sm focus:outline-none flex items-center justify-center"
+        aria-label={isFullScreen ? "Exit Fullscreen" : "Enter Fullscreen"}
       >
-        {isFullScreen ? (
-          <i className="fa-light fa-compress"></i>
-        ) : (
-          <i className="fa-light fa-maximize"></i>
-        )}
+        <Icon name={isFullScreen ? "minimize" : "maximize"} size={18} />
       </button>
     </div>
   );

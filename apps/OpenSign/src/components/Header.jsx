@@ -1,7 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import dp from "../assets/images/dp.png";
 import FullScreenButton from "./FullScreenButton";
 import ThemeToggle from "./ThemeToggle";
+import Icon from "../primitives/Icon";
+import logoPositivo from "../assets/images/logo.svg";
+import logoNegativo from "../assets/images/Fibex-logo-negativo.svg";
 import { useNavigate } from "react-router";
 import Parse from "parse";
 import { useWindowSize } from "../hook/useWindowSize";
@@ -20,8 +23,17 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
   const username = localStorage.getItem("username") || "";
   const image = localStorage.getItem("profileImg") || dp;
   const [isOpen, setIsOpen] = useState(false);
-  const [applogo, setAppLogo] = useState("");
-  const [isDarkTheme, setIsDarkTheme] = useState();
+  const [applogo, setAppLogo] = useState(
+    () => localStorage.getItem("appLogo") || appInfo.applogo || logoPositivo
+  );
+  const [isDarkTheme, setIsDarkTheme] = useState(() => {
+    if (typeof document !== "undefined") {
+      return (
+        document.documentElement.getAttribute("data-theme") === "opensigndark"
+      );
+    }
+    return false;
+  });
 
   const toggleDropdown = () => {
     setIsOpen(!isOpen);
@@ -46,15 +58,20 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
     dispatch(toggleSidebar());
   };
 
-
   async function initializeHead() {
-      const applogo = await getAppLogo();
-      if (applogo?.logo) {
-        setAppLogo(applogo?.logo);
+    try {
+      const tenantLogoData = await getAppLogo();
+      if (tenantLogoData?.logo) {
+        setAppLogo(tenantLogoData.logo);
+        localStorage.setItem("appLogo", tenantLogoData.logo);
       } else {
-        const logo = localStorage.getItem("appLogo") || appInfo.applogo;
-        setAppLogo(logo);
+        setAppLogo(logoPositivo);
+        localStorage.setItem("appLogo", logoPositivo);
       }
+    } catch (err) {
+      console.log("Error fetching logo", err);
+      setAppLogo(logoPositivo);
+    }
   }
   const handleLogout = async () => {
     setIsOpen(false);
@@ -124,6 +141,12 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
     return () => observer.disconnect();
   }, []);
 
+  const defaultLogo = isDarkTheme ? logoNegativo : logoPositivo;
+  const currentLogo =
+    applogo && applogo !== appInfo.applogo && applogo !== logoPositivo
+      ? applogo
+      : defaultLogo;
+
   return (
     <>
       <div className="op-navbar bg-base-100 shadow touch-none">
@@ -131,26 +154,25 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
           <button
             className="op-btn op-btn-square op-btn-ghost focus:outline-none hover:bg-transparent op-btn-sm no-animation"
             onClick={showSidebar}
+            aria-label="Toggle Sidebar"
           >
-            <i className="fa-light fa-bars text-xl text-base-content"></i>
+            <Icon name="menu" size={22} className="text-base-content" />
           </button>
         </div>
         <div className="flex-1 ml-2">
           <div
             onClick={() => navigate("/dashboard/35KBoSgoAK")}
-            className="h-[25px] md:h-[40px] w-auto overflow-hidden cursor-pointer"
+            className="h-[25px] md:h-[40px] w-auto overflow-hidden cursor-pointer flex items-center"
           >
-            {applogo && (
-              <img
-                className="object-contain h-full w-auto"
-                src={
-                      isDarkTheme
-                      ? "/static/js/assets/images/logo-dark.svg"
-                      : applogo
-                }
-                alt="logo"
-              />
-            )}
+            <img
+              className="object-contain h-full w-auto max-h-[40px]"
+              src={currentLogo}
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = defaultLogo;
+              }}
+              alt="FibexSign logo"
+            />
           </div>
         </div>
         <div id="profile-menu" className="flex-none gap-2">
@@ -187,9 +209,9 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
               tabIndex={0}
               role="button"
               onClick={toggleDropdown}
-              className="op-btn op-btn-ghost op-btn-xs w-[10px] h-[20px] hover:bg-transparent"
+              className="op-btn op-btn-ghost op-btn-xs w-[10px] h-[20px] hover:bg-transparent flex items-center justify-center"
             >
-              <i className="fa-light fa-angle-down text-base-content"></i>
+              <Icon name="chevron-down" size={16} className="text-base-content" />
             </div>
             <ul
               tabIndex={0}
@@ -205,8 +227,8 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
                       navigate("/profile");
                     }}
                   >
-                    <span>
-                      <i className="fa-light fa-user"></i> {t("profile")}
+                    <span className="flex items-center gap-2">
+                      <Icon name="user" size={16} /> {t("profile")}
                     </span>
                   </li>
                     <li
@@ -215,9 +237,8 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
                         navigate("/changepassword");
                       }}
                     >
-                      <span>
-                        <i className="fa-light fa-lock"></i>{" "}
-                        {t("change-password")}
+                      <span className="flex items-center gap-2">
+                        <Icon name="lock" size={16} /> {t("change-password")}
                       </span>
                     </li>
                   <li
@@ -226,14 +247,13 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
                       navigate("/verify-document");
                     }}
                   >
-                    <span>
-                      <i className="fa-light fa-check-square"></i>{" "}
-                      {t("verify-document")}
+                    <span className="flex items-center gap-2">
+                      <Icon name="check-square" size={16} /> {t("verify-document")}
                     </span>
                   </li>
                   <li>
-                    <span>
-                      <i className="fa-light fa-moon"></i>
+                    <span className="flex items-center gap-2">
+                      <Icon name="moon" size={16} />
                       {t("dark-mode")}
                       <span className="text-[10px] font-semibold bg-base-300 text-base-content px-1 rounded-md">
                         BETA
@@ -244,9 +264,8 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
                 </>
               )}
               <li onClick={handleLogout}>
-                <span>
-                  <i className="fa-light fa-arrow-right-from-bracket"></i>{" "}
-                  {t("log-out")}
+                <span className="flex items-center gap-2">
+                  <Icon name="log-out" size={16} /> {t("log-out")}
                 </span>
               </li>
             </ul>

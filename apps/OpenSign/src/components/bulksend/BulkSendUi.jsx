@@ -32,6 +32,7 @@ import PrefillWidgets from "./components/PrefillWidgets";
 import WizardHeader from "./components/WizardHeader";
 import ResponseTab from "./components/ResponseTab";
 import { steps } from "../../json/BulkSendSteps";
+import Icon from "../../primitives/Icon";
 
 const EXCLUDED_PREFILL_TYPES = new Set(["image", "draw"]);
 const EXCLUDED_WIDGET_TYPES = new Set([
@@ -610,9 +611,9 @@ const BulkSendUi = (props) => {
                     <div className="flex flex-row flex-wrap pb-3 pt-2 px-3 gap-3 justify-center">
                       <button
                         type="submit"
-                        className="op-btn op-btn-accent w-[150px] focus:outline-none"
+                        className="op-btn op-btn-accent w-[150px] focus:outline-none flex items-center justify-center gap-2"
                       >
-                        <i className="fa-light fa-paper-plane"></i>
+                        <Icon name="send" size={16} />
                         <span>{t("send")}</span>
                       </button>
                     </div>
