@@ -2,7 +2,117 @@
 module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
-    extend: {}
+    extend: {
+      fontFamily: {
+        sans: ["Nunito", "sans-serif"]
+      },
+      colors: {
+        gray: {
+          25: "#fcfcfd",
+          50: "#f9fafb",
+          100: "#f2f4f7",
+          200: "#e4e7ec",
+          300: "#d0d5dd",
+          400: "#98a2b3",
+          500: "#667085",
+          600: "#475467",
+          700: "#344054",
+          800: "#1d2939",
+          900: "#101828",
+          950: "#0c111d"
+        },
+        "success-scale": {
+          25: "#f6fef9",
+          50: "#ecfdf3",
+          100: "#d1fadf",
+          200: "#a6f4c5",
+          300: "#6ce9a6",
+          400: "#32d583",
+          500: "#12b76a",
+          600: "#039855",
+          700: "#027a48",
+          800: "#05603a",
+          900: "#054f31",
+          950: "#053321"
+        },
+        "error-scale": {
+          25: "#fffbfa",
+          50: "#fef3f2",
+          100: "#fee4e2",
+          200: "#fecdca",
+          300: "#fda29b",
+          400: "#f97066",
+          500: "#f04438",
+          600: "#d92d20",
+          700: "#b42318",
+          800: "#912018",
+          900: "#7a271a",
+          950: "#55160c"
+        },
+        "warning-scale": {
+          25: "#fffcf5",
+          50: "#fffaeb",
+          100: "#fef0c7",
+          200: "#fedf89",
+          300: "#fec84b",
+          400: "#fdb022",
+          500: "#f79009",
+          600: "#dc6803",
+          700: "#b54708",
+          800: "#93370d",
+          900: "#7a2e0e",
+          950: "#4e1d09"
+        },
+        "blue-light": {
+          25: "#f5fbff",
+          50: "#f0f9ff",
+          100: "#e0f2fe",
+          200: "#b9e6fe",
+          300: "#7cd4fd",
+          400: "#36bffa",
+          500: "#0ba5ec",
+          600: "#0086c9",
+          700: "#026aa2",
+          800: "#065986",
+          900: "#0b4a6f",
+          950: "#062c41"
+        },
+        orange: {
+          25: "#fffaf5",
+          50: "#fff6ed",
+          100: "#ffead5",
+          200: "#fddcab",
+          300: "#feb273",
+          400: "#fd853a",
+          500: "#fb6514",
+          600: "#ec4a0a",
+          700: "#c4320a",
+          800: "#9c2a10",
+          900: "#7e2410",
+          950: "#511c10"
+        },
+        ice: {
+          50: "#f0f9ff",
+          100: "#e0f2fe",
+          200: "#b9e6fe"
+        },
+        night: {
+          800: "#1c2a47",
+          900: "#18233a",
+          950: "#121b2d"
+        },
+        peach: {
+          light: "#fef6ee",
+          dark: "#2c221e"
+        },
+        pink: {
+          500: "#ee46bc"
+        },
+        purple: {
+          500: "#7a5af8"
+        }
+      }
+    }
   },
   plugins: [
     require("daisyui"),
@@ -80,27 +190,31 @@ module.exports = {
     themes: [
       {
         opensigndark: {
-          primary: "#007ACC", // VS Code blue - CTA & highlight color
+          primary: "#fb6514", // orange-500 - CTA & highlight color
           "primary-content": "#FFFFFF",
 
-          secondary: "#1F2937", // Sidebar background (darker slate)
-          "secondary-content": "#E5E7EB",
+          secondary: "#2c221e", // peach-dark
+          "secondary-content": "#fddcab", // orange-200
 
-          accent: "#4A9EFF", // Lighter VS Code blue for hover, minor CTA
+          accent: "#7a5af8", // purple-500
           "accent-content": "#FFFFFF",
 
-          neutral: "#3C3C3C", // VS Code inactive/disabled element background
-          "neutral-content": "#CCCCCC", // VS Code inactive text color
+          neutral: "#1d2939", // gray-800 border
+          "neutral-content": "#98a2b3", // gray-400 text
 
-          "base-100": "#121212", // App background
-          "base-200": "#181818", // Slight elevation (cards)
-          "base-300": "#1E1E1E", // Further elevated items (panels)
-          "base-content": "#F3F4F6", // Main text color (soft white)
+          "base-100": "#101828", // gray-900 app background
+          "base-200": "#1a2231", // gray-dark elevation (cards)
+          "base-300": "#18233a", // night-900 further elevated panels
+          "base-content": "#e6e8eb", // white/90 main text color
 
-          info: "#2563EB", // For info panels like "Out for signature"
-          success: "#22C55E", // Optional: for completed docs or alerts
-          warning: "#FBBF24",
-          error: "#EF4444",
+          info: "#0ba5ec", // blue-light-500
+          "info-content": "#FFFFFF",
+          success: "#12b76a",
+          "success-content": "#FFFFFF",
+          warning: "#f79009",
+          "warning-content": "#FFFFFF",
+          error: "#f04438",
+          "error-content": "#FFFFFF",
 
           "--rounded-btn": "1.9rem",
           "--tab-border": "2px",
@@ -122,26 +236,26 @@ module.exports = {
       },
       {
         opensigncss: {
-          primary: "#002864",
-          "primary-content": "#cacccf",
-          secondary: "#29354a",
-          "secondary-content": "#c8d1e0",
-          accent: "#E10032",
-          "accent-content": "#ffd8d5",
-          neutral: "#c1ccdb",
-          "neutral-content": "#111312",
+          primary: "#fb6514", // orange-500
+          "primary-content": "#ffffff",
+          secondary: "#fef6ee", // peach-light
+          "secondary-content": "#7e2410", // orange-900
+          accent: "#7a5af8", // purple-500
+          "accent-content": "#ffffff",
+          neutral: "#e4e7ec", // gray-200 border
+          "neutral-content": "#344054", // gray-700
           "base-100": "#ffffff",
-          "base-200": "#dedede",
-          "base-300": "#bebebe",
-          "base-content": "#161616",
-          info: "#00b6ff",
-          "info-content": "#f5f5f4",
-          success: "#00a96e",
-          "success-content": "#f5f5f4",
-          warning: "#ffbe00",
-          "warning-content": "#ccd9e8",
-          error: "#ffa1a7",
-          "error-content": "#16090a",
+          "base-200": "#f9fafb", // gray-50
+          "base-300": "#f2f4f7", // gray-100
+          "base-content": "#101828", // gray-900
+          info: "#0ba5ec", // blue-light-500
+          "info-content": "#ffffff",
+          success: "#12b76a",
+          "success-content": "#ffffff",
+          warning: "#f79009",
+          "warning-content": "#ffffff",
+          error: "#f04438",
+          "error-content": "#ffffff",
           "--rounded-btn": "1.9rem",
           "--tab-border": "2px",
           "--tab-radius": "0.7rem"

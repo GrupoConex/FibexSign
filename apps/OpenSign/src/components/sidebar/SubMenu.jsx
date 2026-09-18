@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { NavLink } from "react-router";
+import Icon from "../../primitives/Icon";
 
 const Submenu = ({ item, closeSidebar, toggleSubmenu, submenuOpen }) => {
   const appName = "FibexSign";
@@ -18,21 +19,18 @@ const Submenu = ({ item, closeSidebar, toggleSubmenu, submenuOpen }) => {
         aria-haspopup="true"
         aria-controls={`submenu-${title}`}
       >
-        <span className="w-[20px] h-[20px] flex justify-center">
-          <i className={`${icon} text-[20px]`}></i>
+        <span className="w-[20px] h-[20px] flex items-center justify-center">
+          <Icon name={icon} size={20} className="text-current" />
         </span>
         <div className="flex justify-between items-center w-full">
           <span className="flex items-center mb-0.5">
             {t(`sidebar.${item.title}`, { appName })}
           </span>
-          <i
-            className={`${
-              submenuOpen[item.title]
-                ? "fa-light fa-angle-down"
-                : "fa-light fa-angle-right"
-            }`}
-            aria-hidden="true"
-          ></i>
+          <Icon
+            name={submenuOpen[item.title] ? "chevron-down" : "chevron-right"}
+            size={16}
+            className="text-current transition-transform duration-200"
+          />
         </div>
       </button>
       {submenuOpen[item.title] && (
@@ -52,11 +50,12 @@ const Submenu = ({ item, closeSidebar, toggleSubmenu, submenuOpen }) => {
                 role="menuitem"
                 tabIndex={submenuOpen ? 0 : -1}
               >
-                <span className="w-[18px] h-[18px] flex justify-center">
-                  <i
-                    className={`${childItem.icon} text-[18px]`}
-                    aria-hidden="true"
-                  ></i>
+                <span className="w-[18px] h-[18px] flex items-center justify-center">
+                  <Icon
+                    name={childItem.icon}
+                    size={18}
+                    className="text-current"
+                  />
                 </span>
                 <span className="mb-0.5">
                   {t(`sidebar.${item.title}-Children.${childItem.title}`, {

@@ -1,6 +1,6 @@
 const userssetting = [
   {
-    icon: "fa-light fa-users fa-fw",
+    icon: "users",
     title: "Users",
     target: "_self",
     pageType: "",
@@ -10,7 +10,7 @@ const userssetting = [
 ];
 export const subSetting = [
   {
-    icon: "fa-light fa-sliders",
+    icon: "sliders",
     title: "Preferences",
     target: "_self",
     pageType: "",
@@ -22,7 +22,7 @@ export const subSetting = [
 
 const sidebarList = [
   {
-    icon: "fa-light fa-tachometer-alt",
+    icon: "dashboard",
     title: "Dashboard",
     target: "",
     pageType: "dashboard",
@@ -30,7 +30,7 @@ const sidebarList = [
     objectId: "35KBoSgoAK"
   },
   {
-    icon: "fa-light fa-pen-nib",
+    icon: "pen-tool",
     title: "Sign yourself",
     target: "_self",
     pageType: "form",
@@ -38,7 +38,7 @@ const sidebarList = [
     objectId: "sHAnZphf69"
   },
   {
-    icon: "fa-light fa-paper-plane",
+    icon: "send",
     title: "Request signatures",
     target: "_self",
     pageType: "form",
@@ -46,7 +46,7 @@ const sidebarList = [
     objectId: "8mZzFxbG1z"
   },
   {
-    icon: "fa-light fa-newspaper",
+    icon: "file-text",
     title: "Templates",
     target: "_self",
     pageType: null,
@@ -54,7 +54,7 @@ const sidebarList = [
     objectId: null,
     children: [
       {
-        icon: "fa-light fa-file-signature",
+        icon: "file-signature",
         title: "Create template",
         target: "_self",
         pageType: "form",
@@ -62,7 +62,7 @@ const sidebarList = [
         objectId: "template"
       },
       {
-        icon: "fa-light fa-file-contract",
+        icon: "file-check",
         title: "Manage templates",
         target: "_self",
         pageType: "report",
@@ -72,7 +72,7 @@ const sidebarList = [
     ]
   },
   {
-    icon: "fa-light fa-folder",
+    icon: "folder",
     title: "OpenSign™ Drive",
     target: "_self",
     pageType: "",
@@ -80,7 +80,7 @@ const sidebarList = [
     objectId: "drive"
   },
   {
-    icon: "fa-light fa-address-card",
+    icon: "folder-archive",
     title: "Documents",
     target: "_self",
     pageType: null,
@@ -88,7 +88,7 @@ const sidebarList = [
     objectId: null,
     children: [
       {
-        icon: "fa-light fa-signature",
+        icon: "need-sign",
         title: "Need your sign",
         target: "_self",
         pageType: "report",
@@ -96,7 +96,7 @@ const sidebarList = [
         objectId: "4Hhwbp482K"
       },
       {
-        icon: "fa-light fa-tasks",
+        icon: "in-progress",
         title: "In Progress",
         target: "_self",
         pageType: "report",
@@ -104,7 +104,7 @@ const sidebarList = [
         objectId: "1MwEuxLEkF"
       },
       {
-        icon: "fa-light fa-check-circle",
+        icon: "completed",
         title: "Completed",
         target: "_self",
         pageType: "report",
@@ -112,7 +112,7 @@ const sidebarList = [
         objectId: "kQUoW4hUXz"
       },
       {
-        icon: "fa-light fa-edit",
+        icon: "drafts",
         title: "Drafts",
         target: "_self",
         pageType: "report",
@@ -120,7 +120,7 @@ const sidebarList = [
         objectId: "ByHuevtCFY"
       },
       {
-        icon: "fa-light fa-times-circle",
+        icon: "declined",
         title: "Declined",
         target: "_self",
         pageType: "report",
@@ -128,7 +128,7 @@ const sidebarList = [
         objectId: "UPr2Fm5WY3"
       },
       {
-        icon: "fa-light fa-hourglass-end",
+        icon: "expired",
         title: "Expired",
         target: "_self",
         pageType: "report",
@@ -138,7 +138,7 @@ const sidebarList = [
     ]
   },
   {
-    icon: "fa-light fa-address-book",
+    icon: "contact",
     title: "Contactbook",
     target: "_self",
     pageType: "report",
@@ -146,7 +146,7 @@ const sidebarList = [
     objectId: "contacts"
   },
   {
-    icon: "fa-light fa-cog",
+    icon: "settings",
     title: "Settings",
     target: "_self",
     pageType: null,
@@ -154,7 +154,7 @@ const sidebarList = [
     objectId: null,
     children: [
       {
-        icon: "fa-light fa-pen-fancy",
+        icon: "my-signature",
         title: "My Signature",
         target: "_self",
         pageType: "",
@@ -162,7 +162,7 @@ const sidebarList = [
         objectId: "managesign"
       },
       {
-        icon: "fa-light fa-key",
+        icon: "api-token",
         title: "API Token",
         target: "_self",
         pageType: "",
@@ -170,7 +170,7 @@ const sidebarList = [
         objectId: "generatetoken"
       },
       {
-        icon: "fa-light fa-globe",
+        icon: "globe",
         title: "Webhook",
         target: "_self",
         pageType: "",

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { NavLink } from "react-router";
+import Icon from "../../primitives/Icon";
 
 const Menu = ({ item, isOpen, closeSidebar }) => {
   const appName = "FibexSign";
@@ -23,8 +24,8 @@ const Menu = ({ item, isOpen, closeSidebar }) => {
         tabIndex={isOpen ? 0 : -1}
         role="menuitem"
       >
-        <span className="w-[20px] h-[20px] flex justify-center">
-          <i className={`${item.icon} text-[20px]`} aria-hidden="true"></i>
+        <span className="w-[20px] h-[20px] flex items-center justify-center">
+          <Icon name={item.icon} size={20} className="text-current" />
         </span>
         <span className="flex items-center mb-0.5">
           {t(`sidebar.${item.title}`, { appName: drivename })}
