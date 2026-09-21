@@ -10,6 +10,7 @@ import {
 import Loader from "./Loader";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import { notify } from "../utils";
 
 function DownloadPdfZip(props) {
   const appName = "FibexSign";
@@ -80,7 +81,7 @@ function DownloadPdfZip(props) {
         props.setIsDownloadModal(false);
         setIsDownloading("");
       } catch (error) {
-        alert(t("something-went-wrong-mssg"));
+        notify.error(t("something-went-wrong-mssg"));
         setSelectType(1);
         props.setIsDownloadModal(false);
         setIsDownloading("");

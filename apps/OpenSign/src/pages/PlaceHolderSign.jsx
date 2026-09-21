@@ -63,6 +63,7 @@ import LottieWithLoader from "../primitives/DotLottieReact";
 import Alert from "../primitives/Alert";
 import WidgetsValueModal from "../components/pdf/WidgetsValueModal";
 import * as utils from "../utils";
+import { notify } from "../utils";
 import { resetWidgetState, setPrefillImg } from "../redux/reducers/widgetSlice";
 import EditDocument from "../components/pdf/EditTemplate";
 import CustomizeMail from "../components/pdf/CustomizeMail";
@@ -187,7 +188,7 @@ function PlaceHolderSign() {
       try {
         const tenantDetails = await getTenantDetails(user?.objectId);
         if (tenantDetails && tenantDetails === "user does not exist!") {
-          alert(t("user-not-exist"));
+          notify.error(t("user-not-exist"));
         } else if (tenantDetails) {
           const signatureType = tenantDetails?.SignatureType || [];
           const filterSignTypes = signatureType?.filter(
@@ -216,10 +217,10 @@ function PlaceHolderSign() {
           return filterSignTypes;
         }
       } catch (e) {
-        alert(t("user-not-exist"));
+        notify.error(t("user-not-exist"));
       }
     } else {
-      alert(t("user-not-exist"));
+      notify.error(t("user-not-exist"));
     }
   };
 
@@ -924,7 +925,7 @@ function PlaceHolderSign() {
         return pdfUrl;
       } catch (err) {
         console.log("error to convertBase64ToFile in placeholder flow", err);
-        alert(err?.message);
+        notify.error(err?.message);
       }
     } else if (pdfBase64Url) {
       try {
@@ -937,7 +938,7 @@ function PlaceHolderSign() {
         return pdfUrl;
       } catch (err) {
         console.log("error to convertBase64ToFile in placeholder flow", err);
-        alert(err?.message);
+        notify.error(err?.message);
       }
     } else {
       return pdfDetails[0].URL;
@@ -1003,7 +1004,7 @@ function PlaceHolderSign() {
       setIsSendAlert({ mssg: "prefill", alert: true });
       setUnSignedWidgetId(unfilledTextWidgetId);
     } else if (signersdata?.length === 0) {
-      alert(t("atleast-one-recipient-alert"));
+      notify.warning(t("atleast-one-recipient-alert"));
     } else if (isPlaceholderExist && unassignedWidget.length === 0) {
       const IsSignerNotExist = filterPrefill?.filter((x) => !x.signerObjId);
       // below condition is used to hightlight the widget whose value is not provided by signer
@@ -1065,7 +1066,7 @@ function PlaceHolderSign() {
       }
     } catch (e) {
       console.log("error", e);
-      alert(t("something-went-wrong-mssg"));
+      notify.error(t("something-went-wrong-mssg"));
     }
   };
   //function to use save placeholder details in contracts_document
@@ -1143,7 +1144,7 @@ function PlaceHolderSign() {
         }
       } catch (e) {
         console.log("error", e);
-        alert(t("something-went-wrong-mssg"));
+        notify.error(t("something-went-wrong-mssg"));
       }
     } else {
       setIsUiLoading(false);

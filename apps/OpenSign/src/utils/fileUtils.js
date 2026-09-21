@@ -2,6 +2,7 @@ import { SaveFileSize } from "../constant/saveFileSize";
 import { getSecureUrl } from "../constant/Utils";
 import Parse from "parse";
 import i18n from "../i18n";
+import { notify } from "./notificationManager";
 
 export const uploadFile = async (file, userId) => {
   try {
@@ -14,16 +15,16 @@ export const uploadFile = async (file, userId) => {
         SaveFileSize(file.size, fileRes.url, tenantId, userId);
         return fileRes?.url;
       } else {
-        alert(i18n.t("something-went-wrong-mssg"));
+        notify.error(i18n.t("something-went-wrong-mssg"));
         return false;
       }
     } else {
-      alert(i18n.t("something-went-wrong-mssg"));
+      notify.error(i18n.t("something-went-wrong-mssg"));
       return false;
     }
   } catch (err) {
     console.log("sign upload err", err);
-    alert(`${err.message}`);
+    notify.error(`${err.message}`);
     return false;
   }
 };

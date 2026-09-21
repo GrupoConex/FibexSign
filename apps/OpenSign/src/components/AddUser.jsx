@@ -11,7 +11,7 @@ import {
 import {
   useTranslation
 } from "react-i18next";
-import { withSessionValidation } from "../utils";
+import { notify, withSessionValidation } from "../utils";
 
 function generatePassword(length) {
   const characters =
@@ -73,13 +73,13 @@ const AddUser = (props) => {
     e.preventDefault();
     e.stopPropagation();
     if (!emailRegex.test(formdata.email)) {
-      alert(t("valid-email-alert"));
+      notify.warning(t("valid-email-alert"));
     } else {
       const localUser = JSON.parse(localStorage.getItem("Extand_Class"))?.[0];
       setIsFormLoader(true);
       const res = await checkUserExist();
       if (res) {
-        props.showAlert("danger", t("user-already-exist"));
+        notify.error(t("user-already-exist"));
         setIsFormLoader(false);
       } else {
         if (localStorage.getItem("TenantId")) {
@@ -121,14 +121,14 @@ const AddUser = (props) => {
               team: "",
               role: ""
             });
-            props.showAlert("success", t("user-created-successfully"));
+            notify.success(t("user-created-successfully"));
           } catch (err) {
             console.log("err", err);
             setIsFormLoader(false);
-            props.showAlert("danger", t("something-went-wrong-mssg"));
+            notify.error(t("something-went-wrong-mssg"));
           }
         } else {
-          props.showAlert("danger", t("something-went-wrong-mssg"));
+          notify.error(t("something-went-wrong-mssg"));
         }
       }
     }
@@ -151,7 +151,7 @@ const AddUser = (props) => {
 
   const copytoclipboard = (text) => {
     copytoData(text);
-    props.showAlert("success", t("copied"));
+    notify.success(t("copied"));
   };
   return (
     <div className="shadow-md rounded-box my-[1px] p-3 bg-base-100 relative">

@@ -11,6 +11,7 @@ import {
   getSignedUrl
 } from "../constant/Utils";
 import { PDFDocument } from "pdf-lib";
+import { notify } from "./notificationManager";
 
 export const prefillBlockColor = "transparent";
 export const prefillObj = (id) => {
@@ -57,7 +58,7 @@ export const handleEmbedPrefillToDoc = async (
       return pdfUrl;
     } catch (err) {
       console.log("error to convertBase64ToFile in placeholder flow", err);
-      alert(err?.message);
+      notify.error(err?.message);
     }
   } catch (err) {
     console.log("error in handleEmbedPrefillToDoc function", err);

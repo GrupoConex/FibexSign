@@ -19,6 +19,7 @@ import SignersInput from "../shared/fields/SignersInput";
 import { PDFDocument } from "pdf-lib";
 import ModalUi from "../../primitives/ModalUi";
 import { SaveFileSize } from "../../constant/saveFileSize";
+import { notify } from "../../utils";
 
 const EditTemplate = ({
   title,
@@ -78,7 +79,7 @@ const EditTemplate = ({
       handleReplaceFileValdition(file);
       // You can handle the file here
     } else {
-      alert(t("only-pdf-allowed"));
+      notify.warning(t("only-pdf-allowed"));
       if (inputFileRef.current) inputFileRef.current.value = "";
     }
   };
@@ -141,16 +142,15 @@ const EditTemplate = ({
           const pdfName = generatePdfName(16);
           setIsUpdate(true);
           setUploadPdf((prev) => ({ ...prev, name: pdfName, base64: base64 }));
-          // alert("✅ PDFs match (based on page number, width, height)");
         } else {
-          alert("❌ PDF do NOT match based on page number, width, height");
+          notify.error("❌ PDF do NOT match based on page number, width, height");
           if (inputFileRef.current) inputFileRef.current.value = "";
         }
       };
 
       fileReader.readAsArrayBuffer(file);
     } catch (err) {
-      alert("Error: " + err.message);
+      notify.error("Error: " + err.message);
       if (inputFileRef.current) inputFileRef.current.value = "";
     }
   };
@@ -159,19 +159,19 @@ const EditTemplate = ({
     e.preventDefault();
     e.stopPropagation();
     if (formData.RedirectUrl && !isValidURL(formData?.RedirectUrl)) {
-      alert(t("invalid-redirect-url"));
+      notify.warning(t("invalid-redirect-url"));
       return;
     }
     if (formData?.Name?.length > maxTitleLength) {
-      alert(t("title-length-alert"));
+      notify.warning(t("title-length-alert"));
       return;
     }
     if (formData?.Note?.length > maxNoteLength) {
-      alert(t("note-length-alert"));
+      notify.warning(t("note-length-alert"));
       return;
     }
     if (formData?.Description?.length > maxDescriptionLength) {
-      alert(t("description-length-alert"));
+      notify.warning(t("description-length-alert"));
       return;
     }
     let pdfUrl;
@@ -203,7 +203,7 @@ const EditTemplate = ({
     const TimeToCompleteDays = parseInt(formData?.TimeToCompleteDays);
     const reminderCount = TimeToCompleteDays / remindOnceInEvery;
     if (AutoReminder && reminderCount > 15) {
-      alert(t("only-15-reminder-allowed"));
+      notify.warning(t("only-15-reminder-allowed"));
       return;
     }
     if (AutoReminder) {

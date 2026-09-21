@@ -10,7 +10,7 @@ import FolderModal from "../shared/fields/FolderModal";
 import { useTranslation } from "react-i18next";
 import { handleDownloadPdf, isMobile } from "../../constant/Utils";
 import Parse from "parse";
-import { withSessionValidation } from "../../utils";
+import { notify, withSessionValidation } from "../../utils";
 
 function DriveBody(props) {
   const { t } = useTranslation();
@@ -245,7 +245,7 @@ function DriveBody(props) {
 
       setIsOpenMoveModal(false);
     } else {
-      alert(t("folder-already-exist!"));
+      notify.warning(t("folder-already-exist!"));
       setIsOpenMoveModal(false);
     }
   });
@@ -295,7 +295,7 @@ function DriveBody(props) {
         });
       }
     } else {
-      alert(t("delete-folder-alert-1"));
+      notify.warning(t("delete-folder-alert-1"));
     }
   };
 

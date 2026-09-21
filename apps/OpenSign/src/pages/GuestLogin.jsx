@@ -16,6 +16,7 @@ import SelectLanguage from "../components/pdf/SelectLanguage";
 import LoaderWithMsg from "../primitives/LoaderWithMsg";
 import ModalUi from "../primitives/ModalUi";
 import Loader from "../primitives/Loader";
+import { notify } from "../utils";
 
 function GuestLogin() {
   const { t, i18n } = useTranslation();
@@ -141,7 +142,7 @@ function GuestLogin() {
         setEnterOtp(true);
       }
     } catch (error) {
-      alert(t("something-went-wrong-mssg"));
+      notify.error(t("something-went-wrong-mssg"));
       setLoading(false);
     }
   };
@@ -172,10 +173,10 @@ function GuestLogin() {
         };
         let user = await axios.post(url, body, { headers: headers });
         if (user.data.result === "Invalid Otp") {
-          alert(t("invalid-otp"));
+          notify.error(t("invalid-otp"));
           setLoading(false);
         } else if (user.data.result === "user not found!") {
-          alert(t("user-not-found"));
+          notify.error(t("user-not-found"));
           setLoading(false);
         } else {
           let _user = user.data.result;
@@ -210,7 +211,7 @@ function GuestLogin() {
         setLoading(false);
       }
     } else {
-      alert(t("enter-otp-alert"));
+      notify.warning(t("enter-otp-alert"));
     }
   };
 
@@ -218,7 +219,7 @@ function GuestLogin() {
   const handleUserData = async (e) => {
     e.preventDefault();
     if (!emailRegex.test(contact.email?.toLowerCase()?.replace(/\s/g, ""))) {
-      alert(t("valid-email-alert"));
+      notify.warning(t("valid-email-alert"));
     } else {
       const params = { ...contact, docId: documentId };
       try {
@@ -238,7 +239,7 @@ function GuestLogin() {
         }
       } catch (err) {
         setLoading(false);
-        alert(t("something-went-wrong-mssg"));
+        notify.error(t("something-went-wrong-mssg"));
         console.log("Err in link ext contact", err);
       }
     }

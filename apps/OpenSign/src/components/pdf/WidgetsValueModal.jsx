@@ -53,7 +53,8 @@ import RegexParser from "regex-parser";
 import {
   saveToMySign,
   getInitials,
-  isValidBase64
+  isValidBase64,
+  notify
 } from "../../utils";
 import Draw from "./tab/Draw";
 import DefaultSignature from "./tab/DefaultSignature";
@@ -647,10 +648,10 @@ function WidgetsValueModal(props) {
         } else if (currWidgetsDetails?.type === "stamp") {
           dispatch(setMyStamp(mySignRes.base64File));
         }
-        alert(t("saved-successfully"));
+        notify.success(t("saved-successfully"));
       } catch (error) {
         console.log("error while save to my sign", error?.message);
-        alert(`${error.message}`);
+        notify.error(`${error.message}`);
       } finally {
         setIsLoader(false);
       }

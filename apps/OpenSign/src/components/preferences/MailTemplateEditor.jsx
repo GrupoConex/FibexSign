@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import Parse from "parse";
 import Tooltip from "../../primitives/Tooltip";
-import Alert from "../../primitives/Alert";
 import Loader from "../../primitives/Loader";
-import { withSessionValidation } from "../../utils";
+import { notify, withSessionValidation } from "../../utils";
 import { useDispatch } from "react-redux";
 import { setTenantInfo, setUserInfo } from "../../redux/reducers/userReducer";
 import EmailEditor from "../emaileditor";
@@ -32,7 +31,6 @@ const MailTemplateEditor = ({
     request: false,
     completion: false
   });
-  const [isalert, setIsAlert] = useState({ type: "success", msg: "" });
   const [editorType, setEditorType] = useState({
     request: "basic",
     completion: "basic"
@@ -62,7 +60,7 @@ const MailTemplateEditor = ({
 
   const tenantEmailTemplate = async (tenantRes) => {
     if (tenantRes === "user does not exist!") {
-      alert(t("user-not-exist"));
+      notify.error(t("user-not-exist"));
     } else if (tenantRes) {
       const updateRes = tenantRes;
       const defaultRequestBody = `<p>Hi {{receiver_name}},</p><br><p>We hope this email finds you well. {{sender_name}}&nbsp;has requested you to review and sign&nbsp;{{document_title}}.</p><p>Your signature is crucial to proceed with the next steps as it signifies your agreement and authorization.</p><br><p><a href='{{signing_url}}' rel='noopener noreferrer' target='_blank'>Sign here</a></p><br><br><p>If you have any questions or need further clarification regarding the document or the signing process, please contact the sender.</p><br><p>Thanks</p><p> Team ${appName}</p><br>`;
@@ -145,13 +143,11 @@ const MailTemplateEditor = ({
         setCompletionSubject(updateRes?.CompletionSubject);
         setEditorType(updateRes?.EmailEditorType);
         updateValuesInRedux("CompletionSubject", "CompletionBody", updateRes);
-        setIsAlert({ type: "success", msg: t("saved-successfully") });
-        setTimeout(() => setIsAlert({ type: "", msg: "" }), 1500);
+        notify.success(t("saved-successfully"));
       }
     } catch (err) {
       console.error("Error while saving completion email template: ", err);
-      setIsAlert({ type: "danger", msg: t("something-went-wrong-mssg") });
-      setTimeout(() => setIsAlert({ type: "", msg: "" }), 1500);
+      notify.error(t("something-went-wrong-mssg"));
     }
   });
   //function to save request email template
@@ -192,13 +188,11 @@ const MailTemplateEditor = ({
           localStorage.setItem("Extand_Class", JSON.stringify([_extUser]));
         }
         updateValuesInRedux("RequestSubject", "RequestBody", updateRes);
-        setIsAlert({ type: "success", msg: t("saved-successfully") });
-        setTimeout(() => setIsAlert({ type: "", msg: "" }), 1500);
+        notify.success(t("saved-successfully"));
       }
     } catch (err) {
       console.error("Error while saving request email template: ", err);
-      setIsAlert({ type: "danger", msg: t("something-went-wrong-mssg") });
-      setTimeout(() => setIsAlert({ type: "", msg: "" }), 1500);
+      notify.error(t("something-went-wrong-mssg"));
     }
   });
 
@@ -310,7 +304,6 @@ const MailTemplateEditor = ({
 
   return (
     <>
-      {isalert.msg && <Alert type={isalert.type}>{isalert.msg}</Alert>}
       <div className="flex flex-col mb-4">
         <div className="flex flex-col">
           <h1 className="text-[14px] mb-[0.7rem] font-medium">

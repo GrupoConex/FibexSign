@@ -22,6 +22,7 @@ import {
   normalizeKey,
   loadPdfOnce,
   hasSignatureWidget,
+  notify,
 } from "../../utils";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -302,16 +303,16 @@ const BulkSendUi = (props) => {
         const normalizedEmail = normalizeKey(field?.email);
         const params = { email: field.email, row: rowNumber };
         if (!normalizedEmail) {
-          alert(t("email-not-found-in-row", { ...params }));
+          notify.warning(t("email-not-found-in-row", { ...params }));
           return false;
         } else if (!emailRegex.test(normalizedEmail)) {
-          alert(t("invalid-email-found-in-row", { ...params }));
+          notify.warning(t("invalid-email-found-in-row", { ...params }));
           return false;
         } else if (
           rowEmails.has(normalizedEmail) ||
           emails?.includes(normalizedEmail)
         ) {
-          alert(t("duplicate-email-found-in-row", { ...params }));
+          notify.warning(t("duplicate-email-found-in-row", { ...params }));
           return false;
         } else {
           rowEmails.add(normalizedEmail);
@@ -396,7 +397,7 @@ const BulkSendUi = (props) => {
     e.stopPropagation();
       dispatch(setBulkLoader(true));
       if (!forms.length) {
-        alert(t("bulk-send-no-records"));
+        notify.warning(t("bulk-send-no-records"));
         dispatch(setBulkLoader(false));
         return;
       }
@@ -424,7 +425,7 @@ const BulkSendUi = (props) => {
           const pdfArrayBuffer = await loadPdfOnce(pdfSignedUrl);
           if (pdfArrayBuffer === "Error") {
             const error = t("something-went-wrong-mssg");
-            alert(error);
+            notify.error(error);
             dispatch(setBulkLoader(false));
             return;
           }
@@ -440,7 +441,7 @@ const BulkSendUi = (props) => {
             const error = pdfUrl?.error?.includes("not compatible")
               ? t("pdf-uncompatible", { appName: appName })
               : pdfUrl?.error;
-            alert(error);
+            notify.error(error);
             dispatch(setBulkLoader(false));
             return;
           }
@@ -519,7 +520,7 @@ const BulkSendUi = (props) => {
           }
         }
         if (error) {
-          alert(error);
+          notify.error(error);
         } else {
           await batchQuery(Documents);
         }

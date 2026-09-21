@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { lazyWithRetry, withSessionValidation } from "../utils";
+import { lazyWithRetry, notify, withSessionValidation } from "../utils";
 import "../styles/opensigndrive.css";
 import {
   getThemeIconColor,
@@ -540,7 +540,7 @@ function Opensigndrive() {
         setPdfData(JSON.parse(JSON.stringify(res)));
       } catch (err) {
         console.error("Search error:", err);
-        alert(`Error: ${err.message}`);
+        notify.error(`Error: ${err.message}`);
       }
     }, 300);
   };

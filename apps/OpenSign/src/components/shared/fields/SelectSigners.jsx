@@ -3,6 +3,7 @@ import AsyncSelect from "react-select/async";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 import { handleUnlinkSigner } from "../../../constant/Utils";
+import { notify } from "../../../utils";
 
 const SelectSigners = (props) => {
   const { t } = useTranslation();
@@ -45,7 +46,7 @@ const SelectSigners = (props) => {
         (item2) => item2.objectId === item.value
       );
       if (alreadyAssign) {
-        alert(t("already-exist-signer"));
+        notify.warning(t("already-exist-signer"));
         setSelected("");
       } else {
         setSelected(item);

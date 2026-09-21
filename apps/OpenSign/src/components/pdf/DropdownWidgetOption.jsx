@@ -3,6 +3,7 @@ import ModalUi from "../../primitives/ModalUi";
 import { radioButtonWidget } from "../../constant/Utils";
 import { useTranslation } from "react-i18next";
 import { fontColorArr, fontsizeArr } from "../../constant/Utils";
+import { notify } from "../../utils";
 
 function DropdownWidgetOption(props) {
   const { t } = useTranslation();
@@ -108,7 +109,7 @@ function DropdownWidgetOption(props) {
       const allUnique =
         new Set(dropdownOptionList).size === dropdownOptionList.length;
       if (!allUnique) {
-        alert("Please remove duplicate option");
+        notify.warning("Please remove duplicate option");
         return;
       }
     }
@@ -127,7 +128,7 @@ function DropdownWidgetOption(props) {
 
     // If it’s a dropdown and it’s read-only without a value (nor marked optional), stop here.
     if (isDropdownOrRadio && readOnlyWithoutValue) {
-      alert(t("readonly-error", { widgetName: props?.type }));
+      notify.warning(t("readonly-error", { widgetName: props?.type }));
       return;
     } else if (
       isCheckbox &&
@@ -135,7 +136,7 @@ function DropdownWidgetOption(props) {
       minCount > 0 &&
       defaultCheckbox?.length === 0
     ) {
-      alert(t("readonly-error", { widgetName: props?.type }));
+      notify.warning(t("readonly-error", { widgetName: props?.type }));
       return;
     }
 

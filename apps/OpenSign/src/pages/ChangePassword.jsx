@@ -2,6 +2,7 @@ import { useState } from "react";
 import Parse from "parse";
 import { Navigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import { notify } from "../utils";
 
 function ChangePassword() {
   const { t } = useTranslation();
@@ -56,24 +57,24 @@ function ChangePassword() {
                       setCurrentPassword("");
                       setnewpassword("");
                       setconfirmpassword("");
-                      alert(t("password-update-alert-1"));
+                      notify.success(t("password-update-alert-1"));
                     })
                     .catch((error) => {
                       console.log("err", error);
-                      alert(t("something-went-wrong-mssg"));
+                      notify.error(t("something-went-wrong-mssg"));
                     });
                 });
               } else {
-                alert(t("password-update-alert-2"));
+                notify.error(t("password-update-alert-2"));
               }
             })
             .catch((error) => {
-              alert(t("password-update-alert-3"));
+              notify.error(t("password-update-alert-3"));
               console.error("Error while logging in user", error);
             });
         }
       } else {
-        alert(t("password-update-alert-4"));
+        notify.warning(t("password-update-alert-4"));
       }
     } catch (error) {
       console.log("err", error);

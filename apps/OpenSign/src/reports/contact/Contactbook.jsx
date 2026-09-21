@@ -4,7 +4,6 @@ import axios from "axios";
 import { useTranslation } from "react-i18next";
 import EditContactForm from "./EditContactForm";
 import ModalUi from "../../primitives/ModalUi";
-import Alert from "../../primitives/Alert";
 import Tooltip from "../../primitives/Tooltip";
 import Icon from "../../primitives/Icon";
 import Loader from "../../primitives/Loader";
@@ -12,7 +11,7 @@ import { serverUrl_fn } from "../../constant/appinfo";
 import { useElSize } from "../../hook/useElSize";
 import ImportContact from "./ImportContact";
 import AddContact from "../../primitives/AddContact";
-import { withSessionValidation } from "../../utils";
+import { notify, withSessionValidation } from "../../utils";
 
 const Contactbook = (props) => {
   const titleRef = useRef(null);
@@ -23,7 +22,6 @@ const Contactbook = (props) => {
   const [isContactform, setIsContactform] = useState(false);
   const [isDeleteModal, setIsDeleteModal] = useState({});
   const [isOption, setIsOption] = useState({});
-  const [alertMsg, setAlertMsg] = useState({ type: "success", message: "" });
   const [isModal, setIsModal] = useState({});
   const [contact, setContact] = useState({
     Name: "",
@@ -93,10 +91,6 @@ const Contactbook = (props) => {
 
     return pages;
   };
-  const showAlert = (type, message, time = 1500) => {
-    setAlertMsg({ type: type, message: message });
-    setTimeout(() => setAlertMsg({ type: "", message: "" }), time);
-  };
   const pageNumbers = getPaginationRange();
   //  below useEffect reset currenpage to 1 if user change route
   useEffect(() => {
@@ -163,7 +157,7 @@ const Contactbook = (props) => {
 
   const handleUserData = (data) => {
     props.setList((prevData) => [data, ...prevData]);
-    showAlert("success", t("contact-saved"));
+    notify.success(t("contact-saved"));
   };
 
   const handleDelete = withSessionValidation(async (item) => {
@@ -183,7 +177,7 @@ const Contactbook = (props) => {
       });
       if (res.data && res.data.updatedAt) {
         setActLoader({});
-        showAlert("success", t("record-delete-alert"));
+        notify.success(t("record-delete-alert"));
         const upldatedList = props.List.filter(
           (x) => x.objectId !== item.objectId
         );
@@ -191,7 +185,7 @@ const Contactbook = (props) => {
       }
     } catch (err) {
       console.log("err", err);
-      showAlert("danger", t("something-went-wrong-mssg"));
+      notify.error(t("something-went-wrong-mssg"));
       setActLoader({});
     }
   });
@@ -223,9 +217,6 @@ const Contactbook = (props) => {
         </div>
       )}
       <div className="p-2 w-full bg-base-100 text-base-content op-card">
-        {alertMsg.message && (
-          <Alert type={alertMsg.type}>{alertMsg.message}</Alert>
-        )}
         <div
           ref={titleRef}
           className="flex flex-row items-center justify-between my-2 mx-3 text-[20px] md:text-[23px]"
@@ -506,7 +497,6 @@ const Contactbook = (props) => {
             <ImportContact
               setLoader={setActLoader}
               onImport={handleCloseModal}
-              showAlert={showAlert}
             />
           </div>
         </ModalUi>
