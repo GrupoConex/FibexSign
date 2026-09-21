@@ -580,7 +580,6 @@
   "reset-to-default": "Reimposta predefinita",
   "customize-email": "Personalizza Email",
   "upgrade-to-customize-email": "Aggiorna per personalizzare l'Email",
-  "sign-url": "URL Firma",
   "mails-sent": "Mail inviate",
   "mail-not-delivered": "Mail non consegnata",
   "email-not-verified-head": "Email non verificata",
@@ -620,7 +619,6 @@
   "do-not-access": "Non hai accesso, contatta l'amministratore.",
   "add-admin": "Aggiungi amministratore",
   "opensign-setup": "Configurazione {{appName}}",
-  "join-discord": "Unisciti al nostro server Discord",
   "admin-already-exist": "L'amministratore esiste già.",
   "password-update-alert-1": "Password aggiornata con successo.",
   "password-update-alert-2": "La tua password attuale manca o è errata.",
@@ -694,12 +692,6 @@
   },
   "all-right": "Tutti i diritti riservati",
   "version": "versione",
-  "social-media": {
-    "github": "Github",
-    "linked-in": "LinkedIn",
-    "twitter": "Twitter",
-    "discord": "Discord"
-  },
   "tour-mssg": {
     "home-layout-1": "Accesso effettuato con successo! Diamo un'occhiata.",
     "home-layout-2": "Per caricare documenti da firmare personalmente o richiedere le firme di altri, seleziona semplicemente i pulsanti corrispondenti.",

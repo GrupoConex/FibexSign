@@ -12,7 +12,6 @@ export function serverUrl_fn() {
 export const appInfo = {
   applogo: logo,
   appName: "FibexSign",
-  supportEmail: "soporte@fibexsign.com",
   appId: process.env.REACT_APP_APPID ? process.env.REACT_APP_APPID : "opensign",
   baseUrl: serverUrl_fn(),
   defaultRole: "contracts_User",

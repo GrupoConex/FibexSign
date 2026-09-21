@@ -580,7 +580,6 @@
   "reset-to-default": "Auf Standard zurücksetzen",
   "customize-email": "E-Mail anpassen",
   "upgrade-to-customize-email": "Upgrade, um E-Mails anzupassen",
-  "sign-url": "Signatur-URL",
   "mails-sent": "E-Mails gesendet",
   "mail-not-delivered": "E-Mail nicht zugestellt",
   "email-not-verified-head": "E-Mail nicht verifiziert",
@@ -620,7 +619,6 @@
   "do-not-access": "Sie haben keinen Zugriff. Bitte kontaktieren Sie den Administrator.",
   "add-admin": "Admin hinzufügen",
   "opensign-setup": "{{appName}} Einrichtung",
-  "join-discord": "Treten Sie unserem Discord-Server bei",
   "admin-already-exist": "Admin existiert bereits.",
   "password-update-alert-1": "Passwort erfolgreich aktualisiert.",
   "password-update-alert-2": "Ihr aktuelles Passwort fehlt oder ist falsch.",
@@ -694,12 +692,6 @@
   },
   "all-right": "Alle Rechte vorbehalten",
   "version": "version",
-  "social-media": {
-    "github": "Github",
-    "linked-in": "LinkedIn",
-    "twitter": "Twitter",
-    "discord": "Discord"
-  },
   "tour-mssg": {
     "home-layout-1": "Sie haben sich erfolgreich angemeldet! Werfen wir einen Blick darauf.",
     "home-layout-2": "Um Dokumente zum Selbstunterzeichnen hochzuladen oder um Unterschriften anderer anzufordern, wählen Sie einfach die entsprechenden Schaltflächen.",

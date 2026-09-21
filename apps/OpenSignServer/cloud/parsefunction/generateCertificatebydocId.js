@@ -5,11 +5,10 @@ import { PDFDocument } from 'pdf-lib';
 import fs from 'node:fs';
 import dotenv from 'dotenv';
 import GenerateCertificate from './pdf/GenerateCertificate.js';
-import { getSecureUrl, appName, supportEmail } from '../../Utils.js';
+import { getSecureUrl, appName } from '../../Utils.js';
 import { parseUploadFile } from '../../utils/fileUtils.js';
 dotenv.config({ quiet: true });
 const eSignName = appName;
-const eSigncontact = supportEmail;
 
 // `uploadFile` is used to create url in from pdfFile
 async function uploadFile(pdfName, filepath) {
@@ -72,7 +71,7 @@ export default async function generateCertificatebydocId(req) {
         reason: `Digitally signed by ${eSignName}.`,
         location: 'n/a',
         name: eSignName,
-        contactInfo: eSigncontact,
+        contactInfo: '',
         signatureLength: 16000,
       });
       const pdfWithPlaceholderBytes = await certificatePdf.save();

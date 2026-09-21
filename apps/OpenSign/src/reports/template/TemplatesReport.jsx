@@ -5,7 +5,6 @@ import axios from "axios";
 import ModalUi from "../../primitives/ModalUi";
 import Alert from "../../primitives/Alert";
 import Tooltip from "../../primitives/Tooltip";
-import ShareButton from "../../primitives/ShareButton";
 import Tour from "../../primitives/Tour";
 import Parse from "parse";
 import {
@@ -1038,13 +1037,6 @@ const TemplatesReport = (props) => {
               <i className="fa-light fa-copy" />
               <span className=" hidden md:block ml-1 ">{t("copy-link")}</span>
             </button>
-            <ShareButton
-              title={t("sign-url")}
-              text={t("sign-url")}
-              url={data.url}
-            >
-              <i className="fa-light fa-share-from-square op-link op-link-secondary no-underline"></i>
-            </ShareButton>
           </div>
         </div>
       );
@@ -1453,15 +1445,6 @@ const TemplatesReport = (props) => {
                                   {share.email}
                                 </span>
                                 <div className="flex items-center gap-2">
-                                  <ShareButton
-                                    title={t("sign-url")}
-                                    text={t("sign-url")}
-                                    url={share.url}
-                                    className="op-btn op-btn-primary op-btn-outline op-btn-xs md:op-btn-sm "
-                                  >
-                                    <i className="fa-light fa-share-from-square"></i>
-                                    {t("btnLabel.Share")}
-                                  </ShareButton>
                                   <button
                                     className="op-btn op-btn-primary op-btn-outline op-btn-xs md:op-btn-sm"
                                     onClick={() =>
