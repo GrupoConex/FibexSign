@@ -734,7 +734,7 @@ const TemplatesReport = (props) => {
 
     return (
       <div className="flex flex-row gap-2 justify-center items-center">
-        <div className="flex justify-center items-center bg-base-300 text-base-content shadow-md op-card w-[65px] h-[32px] cursor-default">
+        <div className="flex justify-center items-center bg-base-300 text-base-content op-card w-[65px] h-[32px] cursor-default">
           {audit?.Activity ? audit?.Activity : "Awaited"}
         </div>
 
@@ -1072,7 +1072,7 @@ const TemplatesReport = (props) => {
           <Loader />
         </div>
       )}
-      <div className="p-2 w-full bg-base-100 text-base-content op-card shadow-lg">
+      <div className="p-2 w-full bg-base-100 text-base-content op-card">
         {alertMsg.message && (
           <Alert type={alertMsg.type}>{alertMsg.message}</Alert>
         )}

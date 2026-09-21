@@ -83,7 +83,7 @@ function ChangePassword() {
     return <Navigate to="/" />;
   }
   return (
-    <div className="w-full bg-base-100 text-base-content shadow rounded-box p-2">
+    <div className="w-full bg-base-100 text-base-content rounded-box p-2">
       <div className="text-xl font-bold border-b-[1px] border-gray-300">
         {t("change-password")}
       </div>
@@ -198,7 +198,7 @@ function ChangePassword() {
           )}
           <button
             type="submit"
-            className="op-btn op-btn-primary shadow-md mt-2"
+            className="op-btn op-btn-primary mt-2"
           >
             {t("change-password")}
           </button>

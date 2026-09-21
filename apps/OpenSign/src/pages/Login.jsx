@@ -445,7 +445,7 @@ function Login() {
                       <legend className="text-[12px] text-[#878787]">
                         {t("Login-to-your-account")}
                       </legend>
-                      <div className="w-full px-6 py-3 my-1 op-card bg-base-100 shadow-md outline outline-1 outline-slate-300/50">
+                      <div className="w-full px-6 py-3 my-1 op-card bg-base-100 outline outline-1 outline-slate-300/50">
                         <label className="block text-xs" htmlFor="email">
                           {t("email")}
                         </label>

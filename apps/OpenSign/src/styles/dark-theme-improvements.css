@@ -100,7 +100,7 @@
 
   /* Status indicators with better visibility */
   .status-badge {
-    box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1) !important;
+    box-shadow: none !important;
   }
 
   /* Tooltip improvements */

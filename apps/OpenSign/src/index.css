@@ -3,7 +3,6 @@
 @tailwind utilities;
 
 body {
-  background-color: white;
   font-family: "Nunito", sans-serif;
 }
 
@@ -228,3 +227,89 @@ body {
     background-color: #4b5563 !important;
   }
 }
+
+/* Quitar todas las sombras de tarjetas, fondos, sidebar y header */
+.op-card,
+.card,
+.op-navbar,
+aside,
+header,
+.rounded-box {
+  box-shadow: none !important;
+}
+
+/* Modo Claro: Fondo azul claro para diferenciar del blanco de las tarjetas */
+html[data-theme="opensigncss"],
+html[data-theme="opensigncss"] body,
+html[data-theme="opensigncss"] #renderList {
+  background-color: #edf4fc !important;
+}
+
+/* Tarjetas generales, navbar y sidebar en blanco limpio para contrastar con el fondo azul claro */
+html[data-theme="opensigncss"] .op-card:not(.dashboard-stat-card),
+html[data-theme="opensigncss"] .card:not(.dashboard-stat-card),
+html[data-theme="opensigncss"] .op-navbar,
+html[data-theme="opensigncss"] aside {
+  background-color: #ffffff !important;
+}
+
+/* Tarjetas de métricas del dashboard en azul rey con transparencia */
+.dashboard-stat-card,
+html[data-theme="opensigncss"] .dashboard-stat-card,
+[data-theme="opensigndark"] .dashboard-stat-card {
+  background-color: rgba(29, 78, 216, 0.85) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  color: #ffffff !important;
+}
+
+/* Inputs, buscadores, selects y textareas con fondo blanco limpio en general */
+html[data-theme="opensigncss"] input,
+html[data-theme="opensigncss"] select,
+html[data-theme="opensigncss"] textarea,
+html[data-theme="opensigncss"] .op-input,
+html[data-theme="opensigncss"] .op-select,
+html[data-theme="opensigncss"] .op-textarea {
+  background-color: #ffffff !important;
+  color: #101828 !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-theme="opensigncss"] input::placeholder,
+html[data-theme="opensigncss"] .op-input::placeholder,
+html[data-theme="opensigncss"] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="opensigncss"] input:focus,
+html[data-theme="opensigncss"] select:focus,
+html[data-theme="opensigncss"] textarea:focus,
+html[data-theme="opensigncss"] .op-input:focus,
+html[data-theme="opensigncss"] .op-select:focus,
+html[data-theme="opensigncss"] .op-textarea:focus {
+  background-color: #ffffff !important;
+  border-color: #1d4ed8 !important;
+}
+
+/* Modo Oscuro: Color blanco mate para el elemento primario en lugar de azul */
+[data-theme="opensigndark"] .op-btn-primary {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #ffffff !important;
+}
+
+[data-theme="opensigndark"] .op-btn-primary:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #f1f5f9 !important;
+}
+
+[data-theme="opensigndark"] .text-primary {
+  color: #ffffff !important;
+}
+
+[data-theme="opensigndark"] .bg-primary {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+

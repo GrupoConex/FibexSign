@@ -27,7 +27,7 @@ const DashboardButton = (props) => {
         props.Data && props.Data.Redirect_type
           ? "cursor-pointer"
           : "cursor-default"
-      } w-full shadow-md px-3 py-2 op-card bg-base-100`}
+      } w-full px-3 py-2 op-card bg-base-100`}
     >
       <div className="flex flex-row items-center text-base-content">
         <div className="flex flex-row items-center">

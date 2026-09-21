@@ -149,7 +149,7 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
 
   return (
     <>
-      <div className="op-navbar bg-base-100 shadow touch-none">
+      <div className="op-navbar bg-base-100 touch-none">
         <div className="flex-none">
           <button
             className="op-btn op-btn-square op-btn-ghost focus:outline-none hover:bg-transparent op-btn-sm no-animation"

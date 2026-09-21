@@ -254,7 +254,7 @@ const Preferences = () => {
               {errMsg}
             </div>
           ) : (
-            <div className="relative bg-base-100 text-base-content flex flex-col justify-center shadow-md rounded-box mb-3">
+            <div className="relative bg-base-100 text-base-content flex flex-col justify-center rounded-box mb-3">
               {isLoader && (
                 <div className="flex z-[100] justify-center items-center absolute w-full h-full rounded-box bg-black/30">
                   <Loader />
