@@ -1,4 +1,17 @@
 {
+  "document-details": "Document details",
+  "drag-and-drop-here": "Drag and drop your file here",
+  "or-browse-from-computer": "or click to browse from your computer",
+  "enter-document-title": "Enter document title",
+  "enter-description": "Enter description",
+  "replace-file": "Change file",
+  "ready": "Ready",
+  "max-file-size": "Max size",
+  "sign-yourself": "Sign yourself",
+  "request-signatures": "Request signatures",
+  "new-template": "New template",
+  "template-tips-title": "Reusable templates",
+  "template-tips-desc": "Create a template to standardize recurring documents. Reuse it anytime without having to reconfigure fields.",
   "header-news": "New feature: Protect your account with Two-Factor Authentication (2FA) and enjoy the future of login with Passkeys — no passwords needed.",
   "header-news-btn": "Setup now",
   "sandbox-news": "This is a sandbox environment. Please do not use it for production purposes.",
@@ -80,6 +93,16 @@
   "register": "Register",
   "sidebar": {
     "Dashboard": "Dashboard",
+    "Firma": "Firma",
+    "Firma-Children": {
+      "Sign yourself": "Sign yourself",
+      "Request signatures": "Request signatures"
+    },
+    "Sign": "Sign",
+    "Sign-Children": {
+      "Sign yourself": "Sign yourself",
+      "Request signatures": "Request signatures"
+    },
     "Sign yourself": "Sign yourself",
     "Request signatures": "Request signatures",
     "Templates": "Templates",

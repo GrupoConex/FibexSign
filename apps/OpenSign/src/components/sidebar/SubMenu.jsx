@@ -27,7 +27,10 @@ const Submenu = ({ item, closeSidebar, toggleSubmenu, submenuOpen }) => {
         </span>
         <div className="flex justify-between items-center w-full">
           <span className="flex items-center mb-0.5">
-            {t(`sidebar.${item.title}`, { appName })}
+            {t(`sidebar.${item.title}`, {
+              appName,
+              defaultValue: item.title
+            })}
           </span>
           <Icon
             name={isExpanded ? "chevron-down" : "chevron-right"}
@@ -67,7 +70,11 @@ const Submenu = ({ item, closeSidebar, toggleSubmenu, submenuOpen }) => {
                 </span>
                 <span className="mb-0.5">
                   {t(`sidebar.${item.title}-Children.${childItem.title}`, {
-                    appName: drivename
+                    appName: drivename,
+                    defaultValue: t(`sidebar.${childItem.title}`, {
+                      appName: drivename,
+                      defaultValue: childItem.title
+                    })
                   })}
                 </span>
               </NavLink>

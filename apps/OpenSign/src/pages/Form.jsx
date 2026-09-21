@@ -93,6 +93,71 @@ const Forms = (props) => {
   const [cc, setCc] = useState([]);
   const pensList = ["blue", "red", "black"];
   const [selectedColors, setSelectedColors] = useState(pensList);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const formatFileSize = (bytes) => {
+    if (!bytes || bytes === 0) return "0 KB";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+  };
+
+  const getHeaderMeta = () => {
+    switch (props.title) {
+      case "Sign Yourself":
+        return {
+          icon: "fa-light fa-pen-nib",
+          badge: t("sign-yourself") || "Firma tu mismo",
+          description: t("signyour-self-description")
+        };
+      case "Request Signatures":
+        return {
+          icon: "fa-light fa-paper-plane",
+          badge: t("request-signatures") || "Solicitar firmas",
+          description: t("requestsign-description")
+        };
+      case "New Template":
+        return {
+          icon: "fa-light fa-file-invoice",
+          badge: t("new-template") || "Nueva plantilla",
+          description: t("template-form-description")
+        };
+      default:
+        return {
+          icon: "fa-light fa-file-signature",
+          badge: t(props?.title),
+          description: ""
+        };
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileInput({ target: { files: e.dataTransfer.files } });
+    }
+  };
+
+  const handleRemoveUploadedFile = () => {
+    setFileUpload("");
+    setSelectedFiles([]);
+    removeFile();
+  };
 
   const handleStrInput = (e) => {
     setIsCorrectPass(true);
@@ -139,8 +204,11 @@ const Forms = (props) => {
   const removeFile = (e) => {
     setfileload(false);
     setpercentage(0);
-    if (e) {
+    if (e && e.target) {
       e.target.value = "";
+    }
+    if (inputFileRef.current) {
+      inputFileRef.current.value = "";
     }
   };
   const handleFileInput = withSessionValidation(async (e) => {
@@ -737,13 +805,13 @@ const Forms = (props) => {
       return e.target.setCustomValidity(t("reminder-error"));
     }
   };
+  const headerMeta = getHeaderMeta();
+
   return (
-    <div
-      className={`${isSubmit || isInitializing ? "" : "rounded-box my-[2px] p-3 bg-base-100 text-base-content"}`}
-    >
+    <div className="w-full p-3 md:p-6">
       {isAlert?.message && <Alert type={isAlert.type}>{isAlert.message}</Alert>}
       {isSubmit || isInitializing ? (
-        <div className="flex flex-col justify-center items-center h-[100vh]">
+        <div className="flex flex-col justify-center items-center h-[70vh]">
           <Loader />
         </div>
       ) : (
@@ -763,7 +831,7 @@ const Forms = (props) => {
                   name="password"
                   value={formData.password}
                   onChange={(e) => handleStrInput(e)}
-                  className="w-full op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content text-xs"
+                  className="w-full op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content text-xs rounded-lg"
                   placeholder={t("enter-pdf-password")}
                   onInvalid={(e) =>
                     e.target.setCustomValidity(t("input-required"))
@@ -782,265 +850,503 @@ const Forms = (props) => {
                 </p>
               </div>
               <div className="px-6 mb-3">
-                <button type="submit" className="op-btn op-btn-primary">
+                <button type="submit" className="op-btn op-btn-primary op-btn-sm rounded-lg">
                   {t("submit")}
                 </button>
               </div>
             </form>
           </ModalUi>
-          <form onSubmit={handleSubmit}>
-            <div className="mb-[11px]">
-              <h1 className="text-[20px] font-semibold">{t(props?.title)}</h1>
-              {props.title === "Sign Yourself" && (
-                <div className="text-gray-500 text-xs mt-1">
-                  {t("signyour-self-description")}
-                </div>
-              )}
-              {props.title === "Request Signatures" && (
-                <div className="text-gray-500 text-xs mt-1">
-                  {t("requestsign-description")}
-                </div>
-              )}
-              {props.title === "New Template" && (
-                <div className="text-gray-500 text-xs mt-1">
-                  {t("template-form-description")}
-                </div>
-              )}
-            </div>
-            {fileload && (
-              <div className="flex items-center gap-x-2">
-                <div className="h-2 rounded-full w-[200px] md:w-[400px] bg-gray-200">
-                  <div
-                    className="h-2 rounded-full bg-blue-500"
-                    style={{ width: `${percentage}%` }}
-                  ></div>
-                </div>
-                <span className="text-base-content text-sm">{percentage}%</span>
-              </div>
-            )}
-            {isDecrypting && (
-              <div className="flex items-center gap-x-2">
-                <span className="text-base-content text-sm">
-                  {t("decrypting-pdf")}
-                </span>
-              </div>
-            )}
-            <div className="text-xs">
-              <label className="block">
-                {`${`${t("report-heading.File")} (${t("file-type")}`}${", docx)"}`}
-                <span className="text-red-500 text-[13px]">*</span>
-              </label>
-              {fileupload.length > 0 ? (
-                <div className="flex gap-1 justify-center items-center">
-                  <div className="flex justify-between items-center op-input op-input-bordered op-input-sm w-full h-full text-[13px]">
-                    <div className="break-all cursor-default">
-                      {t("files-selected")}: {selectedFiles.join(", ")}
+
+          {/* CONTENEDOR DE FORMULARIO: op-card automático para light/dark y sin márgenes laterales vacíos */}
+          <div className="op-card w-full p-4 md:p-6">
+            <form onSubmit={handleSubmit} className="flex flex-col">
+              {/* Header del Formulario */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3.5 mb-4 border-b border-base-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 text-lg">
+                    <i className={headerMeta.icon}></i>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-base md:text-lg font-bold text-base-content tracking-tight">
+                        {t(props?.title)}
+                      </h1>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider bg-primary/10 text-primary px-2 py-0.5 rounded-md">
+                        {headerMeta.badge}
+                      </span>
                     </div>
-                    <div
-                      onClick={() => {
-                        setFileUpload("");
-                        setSelectedFiles([]);
-                      }}
-                      className="cursor-pointer ml-[10px] text-[20px] font-bold"
-                    >
-                      <i className="fa-light fa-xmark inline-flex h-7 w-7 items-center justify-center rounded-full hover:bg-red-100 text-red-500" />
-                    </div>
+                    <p className="text-xs text-base-content/70 mt-0.5">
+                      {headerMeta.description}
+                    </p>
                   </div>
                 </div>
-              ) : (
-                <div className="flex gap-1 justify-center items-center">
-                  <input
-                    type="file"
-                    multiple
-                    className="op-file-input op-file-input-bordered op-file-input-sm focus:outline-none hover:border-base-content w-full text-xs"
-                    onChange={(e) => handleFileInput(e)}
-                    ref={inputFileRef}
-                    accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg"
-                    onInvalid={(e) =>
-                      e.target.setCustomValidity(t("input-required"))
-                    }
-                    onInput={(e) => e.target.setCustomValidity("")}
-                    required
-                  />
-                </div>
-              )}
-            </div>
-            <div className="text-xs mt-2">
-              <label className="block">
-                {props.title === "New Template"
-                  ? t("template-title")
-                  : t("document-title")}
-                <span className="text-red-500 text-[13px]">*</span>
-              </label>
-              <input
-                name="Name"
-                className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
-                value={formData.Name}
-                onChange={(e) => handleStrInput(e)}
-                onInvalid={(e) =>
-                  e.target.setCustomValidity(t("input-required"))
-                }
-                onInput={(e) => e.target.setCustomValidity("")}
-                required
-              />
-            </div>
-            {props.title === "New Template" && (
-              <div className="text-xs mt-2">
-                <label className="block">{t("description")}</label>
-                <input
-                  name="Description"
-                  className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
-                  value={formData.Description}
-                  onChange={(e) => handleStrInput(e)}
-                />
               </div>
-            )}
-            {props.signers && (
-              <SignersInput
-                label={t("signers")}
-                onChange={handleSigners}
-                isReset={isReset}
-                zindex={50}
-                isAddYourSelfCheckbox
-                required
-              />
-            )}
-            <div className="text-xs mt-2">
-              <label className="block">
-                {t("report-heading.Note")}
-                <span className="text-red-500 text-[13px]">*</span>
-              </label>
-              <input
-                name="Note"
-                className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
-                value={formData.Note}
-                onChange={(e) => handleStrInput(e)}
-                onInvalid={(e) =>
-                  e.target.setCustomValidity(t("input-required"))
-                }
-                onInput={(e) => e.target.setCustomValidity("")}
-                required
-              />
-            </div>
-            {props.title === "Sign Yourself" ? (
-              <SelectFolder
-                onSuccess={handleFolder}
-                folderCls={props.Cls}
-                isReset={isReset}
-              />
-            ) : (
-              <div className="flex flex-col md:flex-row w-full mt-4 md:mt-10 gap-3">
-                <div className="card bg-base-100 rounded-box flex-grow-0 w-full p-3">
-                  {props.title !== "New Template" ? (
-                    <SelectFolder
-                      onSuccess={handleFolder}
-                      folderCls={props.Cls}
-                      isReset={isReset}
-                    />
-                  ) : (
-                    <>
-                      <span className=" mb-2 font-[400]">
-                        {t("form-title-1")}
-                      </span>
-                      <div className="text-xs mt-3">
-                        <label className="block">
-                          {t("send-in-order")}
-                          <a
-                            data-tooltip-id="sendInOrder-tooltip"
-                            className="ml-1"
-                          >
-                            <sup>
-                              <i className="fa-light fa-question rounded-full border-[#33bbff] text-[#33bbff] text-[13px] border-[1px] py-[1.5px] px-[4px]"></i>
-                            </sup>
-                          </a>
-                          <Tooltip id="sendInOrder-tooltip" className="z-[999]">
-                            <div className="max-w-[200px] md:max-w-[450px]">
-                              <p className="font-bold">{t("send-in-order")}</p>
-                              <p>{t("send-in-order-help.p1")}</p>
-                              <div className="p-[5px]">
-                                <ol className="list-disc">
-                                  <li>
-                                    <span className="font-bold">
-                                      {t("yes")}:{" "}
-                                    </span>
-                                    <span>{t("send-in-order-help.p2")}</span>
-                                  </li>
-                                  <li>
-                                    <span className="font-bold">
-                                      {t("no")}:{" "}
-                                    </span>
-                                    <span>{t("send-in-order-help.p3")}</span>
-                                  </li>
-                                </ol>
-                              </div>
-                              <p>{t("send-in-order-help.p4")}</p>
-                            </div>
-                          </Tooltip>
-                        </label>
-                        <div className="flex flex-col md:flex-row md:gap-4">
-                          <div className="flex items-center gap-2 ml-2 mb-1">
-                            <input
-                              type="radio"
-                              value={"true"}
-                              className="op-radio op-radio-xs"
-                              name="SendinOrder"
-                              checked={formData.SendinOrder === "true"}
-                              onChange={handleStrInput}
-                            />
-                            <div className="text-center">{t("yes")}</div>
+
+              {/* Grid 2 Columnas Compacto y Equilibrado */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                
+                {/* COLUMNA IZQUIERDA (6 de 12 cols) */}
+                <div className="lg:col-span-6 flex flex-col gap-3.5">
+                  {/* Bloque de Carga de Archivo */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-base-content flex items-center gap-1.5">
+                        <i className="fa-light fa-file-arrow-up text-blue-500"></i>
+                        <span>{t("report-heading.File") || "Archivo del documento"}</span>
+                        <span className="text-red-500">*</span>
+                      </label>
+                      {fileupload && (
+                        <span className="text-[11px] text-green-600 dark:text-green-400 font-medium bg-green-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <i className="fa-solid fa-circle-check text-[9px]"></i>
+                          <span>{t("ready", "Listo")}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {fileupload.length > 0 ? (
+                      /* Archivo Cargado */
+                      <div className="rounded-xl border border-slate-200 dark:border-[#243046] bg-slate-50 dark:bg-slate-900/30 p-3 flex flex-col gap-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-500 flex items-center justify-center flex-shrink-0 text-lg">
+                            <i className="fa-light fa-file-pdf"></i>
                           </div>
-                          <div className="flex items-center gap-2 ml-2 mb-1">
-                            <input
-                              type="radio"
-                              value={"false"}
-                              name="SendinOrder"
-                              className="op-radio op-radio-xs"
-                              checked={formData.SendinOrder === "false"}
-                              onChange={handleStrInput}
-                            />
-                            <div className="text-center">{t("no")}</div>
+                          <div className="min-w-0 flex-1">
+                            <p
+                              className="text-xs font-semibold text-slate-800 dark:text-base-content truncate"
+                              title={selectedFiles.join(", ") || formData.file?.name}
+                            >
+                              {selectedFiles.join(", ") || formData.file?.name || formData.Name || "Documento"}
+                            </p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                              {formData.file?.size ? formatFileSize(formData.file.size) : "PDF"}
+                            </p>
                           </div>
                         </div>
-                        {formData.SendinOrder === "true" && (
-                          <div className="flex items-center gap-2 ml-2 mt-1 mb-1">
-                            <input
-                              type="checkbox"
-                              className="op-checkbox op-checkbox-xs"
-                              name="SendInOrderStrict"
-                              checked={formData.SendInOrderStrict === "true"}
-                              onChange={(e) =>
-                                setFormData({
-                                  ...formData,
-                                  SendInOrderStrict: e.target.checked
-                                    ? "true"
-                                    : "false"
-                                })
-                              }
-                            />
-                            <span title={t("strict-order-help")}>
-                              {t("strict-order")}
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-[#243046]">
+                          <button
+                            type="button"
+                            onClick={() => inputFileRef.current?.click()}
+                            className="text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                          >
+                            <i className="fa-light fa-arrows-rotate text-[11px]"></i>
+                            <span>{t("replace-file", "Cambiar archivo")}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRemoveUploadedFile}
+                            className="text-[11px] font-medium text-red-500 hover:text-red-400 flex items-center gap-1"
+                          >
+                            <i className="fa-light fa-trash-can text-[11px]"></i>
+                            <span>{t("remove", "Eliminar")}</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Drag & Drop Zone Compacta y Elegante */
+                      <div
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onClick={() => inputFileRef.current?.click()}
+                        className={`relative border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center min-h-[140px] group ${
+                          isDragging
+                            ? "border-blue-500 bg-blue-50/50 dark:bg-blue-500/10 scale-[1.01]"
+                            : "border-slate-200 dark:border-[#243046] hover:border-blue-500/60 bg-slate-50/50 hover:bg-blue-50/20 dark:bg-slate-900/20 dark:hover:bg-slate-900/40"
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          multiple
+                          ref={inputFileRef}
+                          className="hidden"
+                          onChange={(e) => handleFileInput(e)}
+                          accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg"
+                          required={!fileupload}
+                        />
+
+                        {fileload || isDecrypting ? (
+                          <div
+                            className="w-full flex flex-col items-center gap-2 py-3"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="w-8 h-8 rounded-full border-2 border-blue-500/30 border-t-blue-500 animate-spin"></div>
+                            <span className="text-xs font-medium text-slate-700 dark:text-base-content">
+                              {isDecrypting
+                                ? t("decrypting-pdf")
+                                : `${t("uploading", "Cargando archivo")} (${percentage}%)`}
                             </span>
+                            <div className="w-full max-w-[200px] h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-blue-500 transition-all duration-300"
+                                style={{ width: `${percentage}%` }}
+                              ></div>
+                            </div>
                           </div>
+                        ) : (
+                          <>
+                            <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
+                              <i className="fa-light fa-cloud-arrow-up text-lg"></i>
+                            </div>
+                            <p className="text-xs font-semibold text-slate-800 dark:text-base-content mb-0.5">
+                              {t("drag-and-drop-here", "Arrastra y suelta tu archivo aquí")}
+                            </p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                              {t("or-browse-from-computer", "o haz clic para buscar en tu equipo")}
+                            </p>
+                            <div className="flex items-center gap-1 mb-1.5">
+                              <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent">
+                                PDF
+                              </span>
+                              <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent">
+                                DOCX
+                              </span>
+                              <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent">
+                                PNG
+                              </span>
+                              <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent">
+                                JPG
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                              {t("max-file-size", "Tamaño máx.")}: {fileSize} MB
+                            </span>
+                          </>
                         )}
                       </div>
-                    </>
+                    )}
+                  </div>
+
+                  {/* En Solicitar firmas: Ubicación en Drive en columna izquierda */}
+                  {props.title === "Request Signatures" && (
+                    <div className="flex flex-col">
+                      <SelectFolder
+                        onSuccess={handleFolder}
+                        folderCls={props.Cls}
+                        isReset={isReset}
+                      />
+                    </div>
                   )}
+
+                  {/* En Nueva plantilla: Flujo "Enviar en orden" en columna izquierda */}
+                  {props.title === "New Template" && (
+                    <div className="flex flex-col gap-2.5 p-3 rounded-xl bg-slate-50/70 dark:bg-slate-900/30 border border-slate-200 dark:border-[#243046]">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <i className="fa-light fa-list-ol text-blue-600 dark:text-blue-400 text-xs"></i>
+                          <span className="text-xs font-semibold text-slate-800 dark:text-base-content">
+                            {t("send-in-order")}
+                          </span>
+                          <a
+                            data-tooltip-id="sendInOrder-tooltip"
+                            className="cursor-pointer text-blue-600 dark:text-blue-400 opacity-80 hover:opacity-100"
+                          >
+                            <i className="fa-light fa-circle-question text-xs"></i>
+                          </a>
+                          <Tooltip id="sendInOrder-tooltip" className="z-[999]">
+                            <div className="max-w-[280px] text-xs">
+                              <p className="font-bold mb-1">{t("send-in-order")}</p>
+                              <p>{t("send-in-order-help.p1")}</p>
+                            </div>
+                          </Tooltip>
+                        </div>
+
+                        <div className="flex items-center bg-slate-100 dark:bg-slate-900/60 p-0.5 rounded-lg border border-slate-200 dark:border-[#243046]">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData({ ...formData, SendinOrder: "true" })
+                            }
+                            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                              formData.SendinOrder === "true"
+                                ? "bg-blue-600 text-white shadow-sm"
+                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                            }`}
+                          >
+                            {t("yes")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                SendinOrder: "false",
+                                SendInOrderStrict: "false"
+                              })
+                            }
+                            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                              formData.SendinOrder === "false"
+                                ? "bg-blue-600 text-white shadow-sm"
+                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                            }`}
+                          >
+                            {t("no")}
+                          </button>
+                        </div>
+                      </div>
+
+                      {formData.SendinOrder === "true" && (
+                        <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-[#243046]">
+                          <input
+                            type="checkbox"
+                            id="strictOrderCheckTpl"
+                            className="op-checkbox op-checkbox-xs border-slate-300 dark:border-slate-500 checked:bg-blue-600 checked:border-blue-600"
+                            name="SendInOrderStrict"
+                            checked={formData.SendInOrderStrict === "true"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                SendInOrderStrict: e.target.checked
+                                  ? "true"
+                                  : "false"
+                              })
+                            }
+                          />
+                          <label
+                            htmlFor="strictOrderCheckTpl"
+                            className="text-xs text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title={t("strict-order-help")}
+                          >
+                            {t("strict-order")}
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* COLUMNA DERECHA (6 de 12 cols) */}
+                <div className="lg:col-span-6 flex flex-col gap-3.5">
+                  {/* Título del Documento */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-base-content mb-1">
+                      {props.title === "New Template"
+                        ? t("template-title")
+                        : t("document-title")}
+                      <span className="text-red-500 text-xs ml-0.5">*</span>
+                    </label>
+                    <input
+                      name="Name"
+                      className="op-input op-input-sm focus:outline-none border border-slate-200 dark:border-[#243046] focus:border-blue-500 w-full text-xs rounded-lg bg-white dark:bg-[#101828] text-slate-800 dark:text-base-content placeholder:text-slate-400"
+                      value={formData.Name}
+                      placeholder={t("enter-document-title", "Ingrese el título del documento")}
+                      onChange={(e) => handleStrInput(e)}
+                      onInvalid={(e) =>
+                        e.target.setCustomValidity(t("input-required"))
+                      }
+                      onInput={(e) => e.target.setCustomValidity("")}
+                      required
+                    />
+                  </div>
+
+                  {/* Descripción (si es plantilla) */}
+                  {props.title === "New Template" && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-base-content mb-1">
+                        {t("description")}
+                      </label>
+                      <input
+                        name="Description"
+                        className="op-input op-input-sm focus:outline-none border border-slate-200 dark:border-[#243046] focus:border-blue-500 w-full text-xs rounded-lg bg-white dark:bg-[#101828] text-slate-800 dark:text-base-content placeholder:text-slate-400"
+                        value={formData.Description}
+                        placeholder={t("enter-description", "Ingrese una descripción")}
+                        onChange={(e) => handleStrInput(e)}
+                      />
+                    </div>
+                  )}
+
+                  {/* Firmantes (si aplica) */}
+                  {props.signers && (
+                    <div>
+                      <SignersInput
+                        label={t("signers")}
+                        onChange={handleSigners}
+                        isReset={isReset}
+                        zindex={50}
+                        isAddYourSelfCheckbox
+                        required
+                      />
+                    </div>
+                  )}
+
+                  {/* Nota */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-base-content mb-1">
+                      {t("report-heading.Note")}
+                      <span className="text-red-500 text-xs ml-0.5">*</span>
+                    </label>
+                    <textarea
+                      name="Note"
+                      rows={2}
+                      className="op-textarea op-textarea-sm focus:outline-none border border-slate-200 dark:border-[#243046] focus:border-blue-500 w-full text-xs rounded-lg bg-white dark:bg-[#101828] text-slate-800 dark:text-base-content leading-relaxed placeholder:text-slate-400"
+                      value={formData.Note}
+                      onChange={(e) => handleStrInput(e)}
+                      onInvalid={(e) =>
+                        e.target.setCustomValidity(t("input-required"))
+                      }
+                      onInput={(e) => e.target.setCustomValidity("")}
+                      required
+                    />
+                  </div>
+
+                  {/* En "Firma tu mismo": Ubicación en Drive */}
+                  {props.title === "Sign Yourself" && (
+                    <div className="flex flex-col">
+                      <SelectFolder
+                        onSuccess={handleFolder}
+                        folderCls={props.Cls}
+                        isReset={isReset}
+                      />
+                    </div>
+                  )}
+
+                  {/* En "Solicitar firmas": Enviar en orden */}
+                  {props.title === "Request Signatures" && (
+                    <div className="flex flex-col gap-2.5 p-3 rounded-xl bg-slate-50/70 dark:bg-slate-900/30 border border-slate-200 dark:border-[#243046]">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <i className="fa-light fa-list-ol text-blue-600 dark:text-blue-400 text-xs"></i>
+                          <span className="text-xs font-semibold text-slate-800 dark:text-base-content">
+                            {t("send-in-order")}
+                          </span>
+                          <a
+                            data-tooltip-id="sendInOrder-tooltip"
+                            className="cursor-pointer text-blue-600 dark:text-blue-400 opacity-80 hover:opacity-100"
+                          >
+                            <i className="fa-light fa-circle-question text-xs"></i>
+                          </a>
+                          <Tooltip id="sendInOrder-tooltip" className="z-[999]">
+                            <div className="max-w-[280px] text-xs">
+                              <p className="font-bold mb-1">{t("send-in-order")}</p>
+                              <p>{t("send-in-order-help.p1")}</p>
+                            </div>
+                          </Tooltip>
+                        </div>
+
+                        <div className="flex items-center bg-slate-100 dark:bg-slate-900/60 p-0.5 rounded-lg border border-slate-200 dark:border-[#243046]">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData({ ...formData, SendinOrder: "true" })
+                            }
+                            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                              formData.SendinOrder === "true"
+                                ? "bg-blue-600 text-white shadow-sm"
+                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                            }`}
+                          >
+                            {t("yes")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                SendinOrder: "false",
+                                SendInOrderStrict: "false"
+                              })
+                            }
+                            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                              formData.SendinOrder === "false"
+                                ? "bg-blue-600 text-white shadow-sm"
+                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                            }`}
+                          >
+                            {t("no")}
+                          </button>
+                        </div>
+                      </div>
+
+                      {formData.SendinOrder === "true" && (
+                        <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-[#243046]">
+                          <input
+                            type="checkbox"
+                            id="strictOrderCheck"
+                            className="op-checkbox op-checkbox-xs border-slate-300 dark:border-slate-500 checked:bg-blue-600 checked:border-blue-600"
+                            name="SendInOrderStrict"
+                            checked={formData.SendInOrderStrict === "true"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                SendInOrderStrict: e.target.checked
+                                  ? "true"
+                                  : "false"
+                              })
+                            }
+                          />
+                          <label
+                            htmlFor="strictOrderCheck"
+                            className="text-xs text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title={t("strict-order-help")}
+                          >
+                            {t("strict-order")}
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Opciones avanzadas A ANCHO COMPLETO (no deforma ni desequilibra el formulario) */}
+              {props.title !== "Sign Yourself" && (
+                <div className="flex flex-col pt-3 mt-3 border-t border-slate-200 dark:border-[#243046]">
+                  <button
+                    type="button"
+                    onClick={() => setIsAdvanceOpt(!isAdvanceOpt)}
+                    className="flex items-center justify-between py-1 px-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors group w-full"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <i className="fa-light fa-sliders text-xs"></i>
+                      <span>
+                        {isAdvanceOpt
+                          ? t("hide-advanced-options")
+                          : t("advanced-options")}
+                      </span>
+                    </span>
+                    <i
+                      className={`fa-light fa-chevron-down text-[10px] transition-transform duration-200 ${
+                        isAdvanceOpt ? "rotate-180" : ""
+                      }`}
+                    ></i>
+                  </button>
+
                   {isAdvanceOpt && (
-                    <>
-                      {props.title === "New Template" &&
-                        formData?.autoreminder === true && (
-                          <div className="text-xs mt-2">
-                            <label className="block">
+                    <div className="pt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Columna Izquierda de Opciones Avanzadas */}
+                      <div className="flex flex-col gap-3">
+                        {/* Tiempo para completar */}
+                        <div>
+                          <label className="block text-xs font-medium text-slate-700 dark:text-base-content mb-1">
+                            {t("time-to-complete")} (días)
+                            <span className="text-red-500 text-xs ml-0.5">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            name="TimeToCompleteDays"
+                            className="op-input op-input-sm focus:outline-none border border-slate-200 dark:border-[#243046] focus:border-blue-500 w-full text-xs rounded-lg bg-white dark:bg-[#101828] text-slate-800 dark:text-base-content placeholder:text-slate-400"
+                            value={formData.TimeToCompleteDays}
+                            onChange={(e) => handleStrInput(e)}
+                            onInvalid={(e) =>
+                              e.target.setCustomValidity(t("input-required"))
+                            }
+                            onInput={(e) => e.target.setCustomValidity("")}
+                            min={1}
+                            required
+                          />
+                        </div>
+
+                        {/* Recordatorio automático */}
+                        {formData?.autoreminder === true && (
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 dark:text-base-content mb-1">
                               {t("remind-once")}
-                              <span className="text-red-500 text-[13px]">
-                                *
-                              </span>
+                              <span className="text-red-500 text-xs ml-0.5">*</span>
                             </label>
                             <input
                               type="number"
                               value={formData.remindOnceInEvery}
                               name="remindOnceInEvery"
-                              className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
+                              className="op-input op-input-sm focus:outline-none border border-slate-200 dark:border-[#243046] focus:border-blue-500 w-full text-xs rounded-lg bg-white dark:bg-[#101828] text-slate-800 dark:text-base-content placeholder:text-slate-400"
                               onChange={handleStrInput}
                               onInvalid={(e) => reminderCustomWarning(e)}
                               onInput={(e) => e.target.setCustomValidity("")}
@@ -1050,393 +1356,154 @@ const Forms = (props) => {
                             />
                           </div>
                         )}
-                      {props.title !== "New Template" && (
-                        <>
-                          <span className=" mt-2 font-[400]">
-                            {t("form-title-1")}
-                          </span>
-                          <div className="text-xs mt-3">
-                            <label className="block">
-                              {t("send-in-order")}
-                              <a
-                                data-tooltip-id="sendInOrder-tooltip"
-                                className="ml-1"
-                              >
-                                <sup>
-                                  <i className="fa-light fa-question rounded-full border-[#33bbff] text-[#33bbff] text-[13px] border-[1px] py-[1.5px] px-[4px]"></i>
-                                </sup>
-                              </a>
-                              <Tooltip
-                                id="sendInOrder-tooltip"
-                                className="z-[999]"
-                              >
-                                <div className="max-w-[200px] md:max-w-[450px]">
-                                  <p className="font-bold">
-                                    {t("send-in-order")}
-                                  </p>
-                                  <p>{t("send-in-order-help.p1")}</p>
-                                  <div className="p-[5px]">
-                                    <ol className="list-disc">
-                                      <li>
-                                        <span className="font-bold">
-                                          {t("yes")}:{" "}
-                                        </span>
-                                        <span>
-                                          {t("send-in-order-help.p2")}
-                                        </span>
-                                      </li>
-                                      <li>
-                                        <span className="font-bold">
-                                          {t("no")}:{" "}
-                                        </span>
-                                        <span>
-                                          {t("send-in-order-help.p3")}
-                                        </span>
-                                      </li>
-                                    </ol>
-                                  </div>
-                                  <p>{t("send-in-order-help.p4")}</p>
-                                </div>
-                              </Tooltip>
-                            </label>
-                            <div className="flex flex-col md:flex-row md:gap-4">
-                              <div className="flex items-center gap-2 ml-2 mb-1">
-                                <input
-                                  type="radio"
-                                  value={"true"}
-                                  className="op-radio op-radio-xs"
-                                  name="SendinOrder"
-                                  checked={formData.SendinOrder === "true"}
-                                  onChange={handleStrInput}
-                                />
-                                <div className="text-center">{t("yes")}</div>
-                              </div>
-                              <div className="flex items-center gap-2 ml-2 mb-1">
-                                <input
-                                  type="radio"
-                                  value={"false"}
-                                  name="SendinOrder"
-                                  className="op-radio op-radio-xs"
-                                  checked={formData.SendinOrder === "false"}
-                                  onChange={handleStrInput}
-                                />
-                                <div className="text-center">{t("no")}</div>
-                              </div>
-                            </div>
-                            {formData.SendinOrder === "true" && (
-                              <div className="flex items-center gap-2 ml-2 mt-1 mb-1">
-                                <input
-                                  type="checkbox"
-                                  className="op-checkbox op-checkbox-xs"
-                                  name="SendInOrderStrict"
-                                  checked={
-                                    formData.SendInOrderStrict === "true"
-                                  }
-                                  onChange={(e) =>
-                                    setFormData({
-                                      ...formData,
-                                      SendInOrderStrict: e.target.checked
-                                        ? "true"
-                                        : "false"
-                                    })
-                                  }
-                                />
-                                <span title={t("strict-order-help")}>
-                                  {t("strict-order")}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </>
-                      )}
-                      <div className="overflow-y-auto z-[40] transition-all">
-                        {props.title !== "Sign yourself" && (
-                          <div className="text-xs mt-2">
-                            <label className="block">
-                              {t("time-to-complete")}
-                              <span className="text-red-500 text-[13px]">
-                                *
-                              </span>
-                            </label>
+
+                        {/* Tour y Notificaciones */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-[#243046]">
+                            <span className="text-xs font-medium text-slate-700 dark:text-base-content">
+                              {t("enable-tour")}
+                            </span>
                             <input
-                              type="number"
-                              name="TimeToCompleteDays"
-                              className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
-                              value={formData.TimeToCompleteDays}
-                              onChange={(e) => handleStrInput(e)}
-                              onInvalid={(e) =>
-                                e.target.setCustomValidity(t("input-required"))
+                              type="checkbox"
+                              className="op-toggle op-toggle-xs checked:bg-blue-600 border-slate-300 dark:border-slate-600 bg-slate-200 dark:bg-slate-700"
+                              checked={formData.IsTourEnabled === "true"}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  IsTourEnabled: e.target.checked
+                                    ? "true"
+                                    : "false"
+                                })
                               }
-                              onInput={(e) => e.target.setCustomValidity("")}
-                              min={1}
-                              required
                             />
                           </div>
-                        )}
+
+                          <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-[#243046]">
+                            <span className="text-xs font-medium text-slate-700 dark:text-base-content">
+                              {t("notify-on-signatures")}
+                            </span>
+                            <input
+                              type="checkbox"
+                              className="op-toggle op-toggle-xs checked:bg-blue-600 border-slate-300 dark:border-slate-600 bg-slate-200 dark:bg-slate-700"
+                              checked={formData.NotifyOnSignatures === true}
+                              onChange={(e) =>
+                                handleNotifySignChange(e.target.checked)
+                              }
+                            />
+                          </div>
+                        </div>
+
+                        {/* Colores de bolígrafo permitidos */}
+                        <div>
+                          <label className="block text-xs font-medium text-slate-700 dark:text-base-content mb-1.5">
+                            {t("pen-colors") || "Colores de firma permitidos"}
+                          </label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {pensList.map((color) => {
+                              const isSelected = selectedColors.includes(color);
+                              const colorDot =
+                                color === "blue"
+                                  ? "bg-blue-600"
+                                  : color === "red"
+                                  ? "bg-red-600"
+                                  : "bg-slate-900 dark:bg-slate-200";
+                              return (
+                                <button
+                                  key={color}
+                                  type="button"
+                                  onClick={() => handleColorsChange(color)}
+                                  className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 border transition-all ${
+                                    isSelected
+                                      ? "border-blue-600 bg-blue-50 text-blue-600 dark:border-blue-500 dark:bg-blue-500/15 dark:text-blue-400 font-semibold shadow-sm"
+                                      : "border-slate-200 dark:border-[#243046] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 bg-slate-50 dark:bg-slate-800/20"
+                                  }`}
+                                >
+                                  <span
+                                    className={`w-2 h-2 rounded-full ${colorDot}`}
+                                  ></span>
+                                  <span className="capitalize">{color}</span>
+                                  {isSelected && (
+                                    <i className="fa-solid fa-check text-[9px]"></i>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </div>
-                      {props.bcc && (
-                        <SignersInput
-                          label={t("Bcc")}
-                          initialData={bcc}
-                          onChange={handleBcc}
-                          isReset={isReset}
-                          zindex={50}
-                          helpText={t("bcc-help")}
-                          isCaptureAllData
-                          isAddYourSelfCheckbox
-                        />
-                      )}
-                      {props.cc && (
-                        <SignersInput
-                          label={t("Cc")}
-                          initialData={cc}
-                          onChange={handleCc}
-                          isReset={isReset}
-                          zindex={50}
-                          helpText={t("cc-help")}
-                          isCaptureAllData
-                          isAddYourSelfCheckbox
-                        />
-                      )}
-                    </>
-                  )}
-                </div>
-                {isAdvanceOpt && (
-                  <div
-                    style={{
-                      height:
-                              props.title === "New Template"
-                            ? "100px"
-                            : "280px"
-                    }}
-                    className="w-[1px] bg-gray-300 m-auto hidden md:inline-block"
-                  ></div>
-                )}
-                {isAdvanceOpt && (
-                  <div className="card bg-base-100 rounded-box p-3 flex-grow-0 w-full">
-                    {formData?.autoreminder === true &&
-                      props.title !== "New Template" && (
-                        <div className="text-xs mt-2">
-                          <label className="block">
-                            {t("remind-once")}
-                            <span className="text-red-500 text-[13px]">*</span>
+
+                      {/* Columna Derecha de Opciones Avanzadas */}
+                      <div className="flex flex-col gap-3">
+                        {/* Copia Oculta (BCC) y Con Copia (CC) */}
+                        {props.bcc && (
+                          <SignersInput
+                            label={t("Bcc")}
+                            initialData={bcc}
+                            onChange={handleBcc}
+                            isReset={isReset}
+                            zindex={50}
+                            helpText={t("bcc-help")}
+                            isCaptureAllData
+                            isAddYourSelfCheckbox
+                          />
+                        )}
+                        {props.cc && (
+                          <SignersInput
+                            label={t("Cc")}
+                            initialData={cc}
+                            onChange={handleCc}
+                            isReset={isReset}
+                            zindex={50}
+                            helpText={t("cc-help")}
+                            isCaptureAllData
+                            isAddYourSelfCheckbox
+                          />
+                        )}
+
+                        {/* URL de Redirección */}
+                        <div>
+                          <label className="block text-xs font-medium text-slate-700 dark:text-base-content mb-1">
+                            {t("redirect-url")}
                           </label>
                           <input
-                            type="number"
-                            value={formData.remindOnceInEvery}
-                            name="remindOnceInEvery"
-                            className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
-                            onChange={handleStrInput}
-                            onInvalid={(e) => reminderCustomWarning(e)}
-                            onInput={(e) => e.target.setCustomValidity("")}
-                            min={1}
-                            max={formData?.TimeToCompleteDays}
-                            required
+                            name="RedirectUrl"
+                            className="op-input op-input-sm focus:outline-none border border-slate-200 dark:border-[#243046] focus:border-blue-500 w-full text-xs rounded-lg bg-white dark:bg-[#101828] text-slate-800 dark:text-base-content placeholder:text-slate-400"
+                            value={formData.RedirectUrl}
+                            placeholder="https://ejemplo.com/completado"
+                            onChange={(e) => handleStrInput(e)}
                           />
-                        </div>
-                      )}
-                    <span className="font-[400] mt-2">{t("form-title-2")}</span>
-                    <div className="text-xs mt-3">
-                      <label className="block">
-                        <span>
-                          {t("enable-tour")}
-                          <a
-                            data-tooltip-id="istourenabled-tooltip"
-                            className="ml-1"
-                          >
-                            <sup>
-                              <i className="fa-light fa-question rounded-full border-[#33bbff] text-[#33bbff] text-[13px] border-[1px] py-[1.5px] px-[4px]"></i>
-                            </sup>
-                          </a>
-                        </span>
-                        <Tooltip id="istourenabled-tooltip" className="z-[999]">
-                          <div className="max-w-[200px] md:max-w-[450px]">
-                            <p className="font-bold">{t("enable-tour")}</p>
-                            <div className="p-[5px]">
-                              <ol className="list-disc">
-                                <li>
-                                  <span className="font-bold">
-                                    {t("yes")}:{" "}
-                                  </span>
-                                  <span>{t("istourenabled-help.p1")}</span>
-                                </li>
-                                <li>
-                                  <span className="font-bold">{t("no")}: </span>
-                                  <span>{t("istourenabled-help.p2")}</span>
-                                </li>
-                              </ol>
-                            </div>
-                            <p>
-                              {t("istourenabled-help.p3", { appName: appName })}
-                            </p>
-                          </div>
-                        </Tooltip>
-                      </label>
-                      <div className="flex flex-col md:flex-row md:gap-4">
-                        <div className="flex items-center gap-2 ml-2 mb-1">
-                          <input
-                            type="radio"
-                            value={"true"}
-                            className="op-radio op-radio-xs"
-                            name="IsTourEnabled"
-                            checked={formData.IsTourEnabled === "true"}
-                            onChange={handleStrInput}
-                          />
-                          <div className="text-center">{t("yes")}</div>
-                        </div>
-                        <div className="flex items-center gap-2 ml-2 mb-1">
-                          <input
-                            type="radio"
-                            value={"false"}
-                            name="IsTourEnabled"
-                            className="op-radio op-radio-xs"
-                            checked={formData.IsTourEnabled === "false"}
-                            onChange={handleStrInput}
-                          />
-                          <div className="text-center">{t("no")}</div>
                         </div>
                       </div>
                     </div>
-                    <div className="text-xs mt-3">
-                      <label className="block">
-                        {t("notify-on-signatures")}
-                        <a data-tooltip-id="nos-tooltip" className="ml-1">
-                          <sup>
-                            <i className="fa-light fa-question rounded-full border-[#33bbff] text-[#33bbff] text-[13px] border-[1px] py-[1.5px] px-[4px]"></i>
-                          </sup>
-                        </a>
-                        <Tooltip id="nos-tooltip" className="z-[999]">
-                          <div className="max-w-[200px] md:max-w-[450px] text-[11px]">
-                            <p className="font-bold">
-                              {t("notify-on-signatures")}
-                            </p>
-                            <p>{t("notify-on-signatures-help.p1")}</p>
-                            <p>{t("notify-on-signatures-help.note")}</p>
-                          </div>
-                        </Tooltip>
-                      </label>
-                      <div className="flex flex-col md:flex-row md:gap-4">
-                        <div
-                          className={
-                            `flex items-center gap-2 ml-2 mb-1`
-                          }
-                        >
-                          <input
-                            className="mr-[2px] op-radio op-radio-xs"
-                            type="radio"
-                            onChange={() => handleNotifySignChange(true)}
-                            checked={formData.NotifyOnSignatures === true}
-                          />
-                          <div className="text-center">{t("yes")}</div>
-                        </div>
-                        <div
-                          className={
-                            `flex items-center gap-2 ml-2 mb-1`
-                          }
-                        >
-                          <input
-                            className="mr-[2px] op-radio op-radio-xs"
-                            type="radio"
-                            onChange={() => handleNotifySignChange(false)}
-                            checked={formData.NotifyOnSignatures === false}
-                          />
-                          <div className="text-center">{t("no")}</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-xs mt-2">
-                      <label className="block">{t("redirect-url")}</label>
-                      <input
-                        name="RedirectUrl"
-                        className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
-                        value={formData.RedirectUrl}
-                        onChange={(e) => handleStrInput(e)}
-                        onInvalid={(e) =>
-                          e.target.setCustomValidity(t("input-required"))
-                        }
-                        onInput={(e) => e.target.setCustomValidity("")}
-                      />
-                    </div>
-                    {props.title !== "Sign Yourself" && (
-                      <div className="text-xs mt-3">
-                        <label htmlFor="penColors">
-                          {t("pen-colors")}
-                          <a
-                            data-tooltip-id="pen-colors-tooltip"
-                            className="ml-1"
-                          >
-                            <sup>
-                              <i className="fa-light fa-question rounded-full border-[#33bbff] text-[#33bbff] text-[13px] border-[1px] py-[1.5px] px-[4px]"></i>
-                            </sup>
-                          </a>
-                          <Tooltip id="pen-colors-tooltip" className="z-[999]">
-                            <div className="max-w-[200px] md:max-w-[450px]">
-                              <p className="font-bold">{t("pen-colors")}</p>
-                              <div>{t("pen-colors-help")}</div>
-                            </div>
-                          </Tooltip>
-                        </label>
-                        <div className="ml-[7px] flex flex-col md:flex-row gap-[10px] mb-[0.7rem]">
-                          {pensList.map((color) => (
-                            <div
-                              key={color}
-                              className="flex flex-row gap-[5px] items-center"
-                            >
-                              <input
-                                className="mr-[2px] op-checkbox op-checkbox-xs"
-                                type="checkbox"
-                                name="penColors"
-                                checked={selectedColors.includes(color)}
-                                onChange={() => handleColorsChange(color)}
-                              />
-                              <div className="hover:underline underline-offset-2 cursor-default capitalize">
-                                {color}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
 
-            {isAdvanceOpt && props.title !== "Sign Yourself" ? (
-              <span
-                onClick={() => setIsAdvanceOpt(!isAdvanceOpt)}
-                className={`mt-2.5 op-link op-link-primary text-sm`}
-              >
-                {t("hide-advanced-options")}
-              </span>
-            ) : (
-              props.title !== "Sign Yourself" && (
-                <span
-                  onClick={() => setIsAdvanceOpt(!isAdvanceOpt)}
-                  className={`mt-2.5 op-link op-link-primary text-sm`}
+
+              {/* Barra Inferior de Acciones */}
+              <div className="flex items-center justify-end gap-2.5 pt-4 mt-4 border-t border-slate-200 dark:border-[#243046]">
+                <button
+                  type="button"
+                  className="op-btn op-btn-ghost op-btn-sm text-xs font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/40"
+                  onClick={() => handleCancel()}
                 >
-                  {t("advanced-options")}
-                </span>
-              )
-            )}
-            <div className="flex items-center mt-3 gap-2">
-              <button
-                className={`${
-                  isSubmit || !fileupload ? "cursor-progress" : ""
-                } op-btn op-btn-primary`}
-                type="submit"
-                disabled={isSubmit || !fileupload}
-              >
-                {t("next")}
-              </button>
-              <div
-                className="op-btn op-btn-ghost text-base-content"
-                onClick={() => handleCancel()}
-              >
-                {t("cancel")}
+                  {t("cancel")}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmit || !fileupload}
+                  className={`op-btn op-btn-sm text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 border-none shadow-sm ${
+                    isSubmit || !fileupload
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
+                >
+                  <span>{t("next")}</span>
+                  <i className="fa-light fa-arrow-right text-xs"></i>
+                </button>
               </div>
-            </div>
-          </form>
+            </form>
+          </div>
         </>
       )}
     </div>
