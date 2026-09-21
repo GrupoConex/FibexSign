@@ -5,6 +5,7 @@ import axios from "axios";
 import ModalUi from "../../primitives/ModalUi";
 import Alert from "../../primitives/Alert";
 import Tooltip from "../../primitives/Tooltip";
+import Icon from "../../primitives/Icon";
 import ShareButton from "../../primitives/ShareButton";
 import Tour from "../../primitives/Tour";
 import Parse from "parse";
@@ -1647,14 +1648,14 @@ const TemplatesReport = (props) => {
                 </>
               ) : (
                 <>
-                  <div className="w-[60px] h-[60px] overflow-hidden">
-                    <img
-                      className="w-full h-full object-contain"
-                      src={pad}
-                      alt={t("no-data-available")}
+                  <div className="w-16 h-16 rounded-2xl bg-base-200/80 border border-slate-700/40 flex items-center justify-center mb-3">
+                    <Icon
+                      name="file-text"
+                      size={32}
+                      className="text-gray-400 dark:text-gray-500"
                     />
                   </div>
-                  <div className="text-sm font-semibold">
+                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     {t("no-data-available")}
                   </div>
                 </>

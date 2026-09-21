@@ -8,8 +8,10 @@ const ThemeToggle = () => {
     if (storedTheme === "dark") {
       setIsDark(true);
       document.documentElement.setAttribute("data-theme", "opensigndark");
+      document.documentElement.classList.add("dark");
     } else {
       document.documentElement.setAttribute("data-theme", "opensigncss");
+      document.documentElement.classList.remove("dark");
     }
   }, []);
 
@@ -18,9 +20,11 @@ const ThemeToggle = () => {
     setIsDark(newTheme);
     if (newTheme) {
       document.documentElement.setAttribute("data-theme", "opensigndark");
+      document.documentElement.classList.add("dark");
       localStorage.setItem("theme", "dark");
     } else {
       document.documentElement.setAttribute("data-theme", "opensigncss");
+      document.documentElement.classList.remove("dark");
       localStorage.setItem("theme", "light");
     }
   };
@@ -30,7 +34,7 @@ const ThemeToggle = () => {
       <input
         id="dark-mode-toggle"
         type="checkbox"
-        className="op-toggle checked:[--tglbg:#3368ff] transition-all checked:bg-white"
+        className="op-toggle op-toggle-sm checked:[--tglbg:#3368ff] transition-all checked:bg-white cursor-pointer shrink-0"
         checked={isDark}
         onChange={handleChange}
       />

@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: ["class", '[data-theme="opensigndark"]'],
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
@@ -216,9 +217,11 @@ module.exports = {
           error: "#f04438",
           "error-content": "#FFFFFF",
 
-          "--rounded-btn": "1.9rem",
+          "--rounded-box": "0.875rem", // 14px para contenedores, modales y tarjetas
+          "--rounded-btn": "0.75rem", // 12px para botones, inputs y menús (redondeo pronunciado pero moderno)
+          "--rounded-badge": "0.5rem",
           "--tab-border": "2px",
-          "--tab-radius": "0.7rem",
+          "--tab-radius": "0.625rem",
 
           // Custom CSS variables for icon and button states
           "--icon-color": "#CCCCCC",
@@ -246,8 +249,8 @@ module.exports = {
           "neutral-content": "#1e3a8a", // Azul oscuro
           "base-100": "#edf4fc", // Fondo azul claro para contrastar con las tarjetas
           "base-200": "#e2eefb", // Azul claro elevación
-          "base-300": "#d0e3f8", // Azul claro acentuado
-          "base-content": "#101828", // gray-900
+          "base-300": "#dbeafe", // Azul claro para hovers y selecciones
+          "base-content": "#000000", // Letras en NEGRO
           info: "#0ba5ec", // blue-light-500
           "info-content": "#ffffff",
           success: "#12b76a",
@@ -256,9 +259,11 @@ module.exports = {
           "warning-content": "#ffffff",
           error: "#f04438",
           "error-content": "#ffffff",
-          "--rounded-btn": "1.9rem",
+          "--rounded-box": "0.875rem",
+          "--rounded-btn": "0.75rem",
+          "--rounded-badge": "0.5rem",
           "--tab-border": "2px",
-          "--tab-radius": "0.7rem"
+          "--tab-radius": "0.625rem"
         }
       }
     ],

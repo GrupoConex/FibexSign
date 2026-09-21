@@ -10,12 +10,15 @@ const Submenu = ({ item, closeSidebar, toggleSubmenu, submenuOpen }) => {
   const { title, icon, children } = item;
   const { selectedMenu } = useSelector((state) => state.sidebar);
 
+  const isExpanded = Boolean(submenuOpen && submenuOpen[item.title]);
+
   return (
-    <li role="none" className="my-0.5">
+    <li role="none">
       <button
+        type="button"
         onClick={() => toggleSubmenu(item.title)}
-        className="flex gap-x-5 items-center justify-start text-left p-3 text-base-content hover:text-base-content focus:bg-base-300 hover:bg-base-300 hover:no-underline focus:outline-none"
-        aria-expanded={submenuOpen}
+        className="flex w-full gap-x-5 items-center justify-start text-left p-3 rounded-lg text-base-content hover:text-base-content hover:no-underline focus:outline-none transition-colors"
+        aria-expanded={isExpanded}
         aria-haspopup="true"
         aria-controls={`submenu-${title}`}
       >
@@ -27,16 +30,21 @@ const Submenu = ({ item, closeSidebar, toggleSubmenu, submenuOpen }) => {
             {t(`sidebar.${item.title}`, { appName })}
           </span>
           <Icon
-            name={submenuOpen[item.title] ? "chevron-down" : "chevron-right"}
+            name={isExpanded ? "chevron-down" : "chevron-right"}
             size={16}
             className="text-current transition-transform duration-200"
           />
         </div>
       </button>
-      {submenuOpen[item.title] && (
-        <ul id={`submenu-${title}`} role="menu" aria-label={`${title} submenu`}>
+      {isExpanded && (
+        <ul
+          id={`submenu-${title}`}
+          role="menu"
+          aria-label={`${title} submenu`}
+          className="bg-transparent border-l-2 border-black/10 dark:border-white/15 ml-5 pl-2.5 my-1 flex flex-col gap-1.5"
+        >
           {children.map((childItem) => (
-            <li key={childItem.title} role="none" className="my-0.5">
+            <li key={childItem.title} role="none">
               <NavLink
                 to={
                   childItem.pageType
@@ -44,11 +52,11 @@ const Submenu = ({ item, closeSidebar, toggleSubmenu, submenuOpen }) => {
                     : `/${childItem.objectId}`
                 }
                 className={({ isActive }) =>
-                  `${isActive && selectedMenu ? "bg-base-300 text-base-content" : ""} pl-4 flex items-center gap-x-5 py-2 text-sm cursor-pointer text-base-content hover:text-base-content focus:bg-base-300 hover:bg-base-300 hover:no-underline focus:outline-none`
+                  `${isActive && selectedMenu ? "bg-base-300 active font-medium" : ""} pl-3 flex items-center gap-x-3.5 py-2 text-sm cursor-pointer rounded-lg text-base-content hover:text-base-content hover:no-underline focus:outline-none transition-colors`
                 }
                 onClick={() => closeSidebar(childItem.title)}
                 role="menuitem"
-                tabIndex={submenuOpen ? 0 : -1}
+                tabIndex={isExpanded ? 0 : -1}
               >
                 <span className="w-[18px] h-[18px] flex items-center justify-center">
                   <Icon

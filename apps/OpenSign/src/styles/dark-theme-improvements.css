@@ -58,11 +58,12 @@
 
   /* Hover states for better interactivity */
   .hover\\:bg-gray-200:hover {
-    background-color: #2A2A2A !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
   }
 
   .hover\\:text-gray-600:hover {
-    color: #E5E7EB !important;
+    color: #ffffff !important;
   }
 
   /* Form elements in disabled state */
@@ -81,8 +82,8 @@
   }
 
   .dropdown-item:hover {
-    background-color: #2A2A2A !important;
-    color: #FFFFFF !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
   }
 
   /* Better text contrast for various elements */
@@ -103,8 +104,14 @@
     box-shadow: none !important;
   }
 
-  /* Tooltip improvements */
+  /* Tooltip improvements: container must be transparent, tooltip bubble uses styling */
   .op-tooltip {
+    background-color: transparent !important;
+    border-color: transparent !important;
+  }
+
+  .op-tooltip:before,
+  .op-tooltip:after {
     background-color: #1F2937 !important;
     color: #E5E7EB !important;
     border-color: #4B5563 !important;

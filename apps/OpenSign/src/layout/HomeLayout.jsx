@@ -158,26 +158,28 @@ const HomeLayout = () => {
   }
 
   return isValidSession && localStorage.getItem("accesstoken") ? (
-    <div className="flex flex-col h-screen overflow-hidden">
-      {/* HEADER */}
-      <header className="z-[501]">
+    <div className="flex flex-col h-screen overflow-hidden bg-base-100">
+      {/* HEADER: Persistente a lo ancho de la pantalla con Logo y Flecha fija */}
+      <header className="z-[400] flex-shrink-0">
         {!isLoader && <Header setIsLoggingOut={setIsLoggingOut} />}
       </header>
-      {isLoader ? (
-        <div className="flex h-[100vh] justify-center items-center">
-          <Loader />
-        </div>
-      ) : (
-        <>
-          {isLoggingOut && (
-            <div className="inset-0 bg-black/30 z-[1000] fixed flex justify-center items-center">
-              <Loader />
-            </div>
-          )}
-          {/* BODY */}
-          <div className="flex flex-1 overflow-hidden">
-            {/* SIDEBAR with width animation */}
-            <Sidebar />
+
+      {/* ÁREA DE TRABAJO: SIDEBAR RETRÁCTIL + CONTENIDO PRINCIPAL */}
+      <div className="flex flex-row flex-1 min-h-0 overflow-hidden relative">
+        {/* SIDEBAR con diseño liquid glass que solo retrae el menú */}
+        {!isLoader && <Sidebar />}
+
+        {isLoader ? (
+          <div className="flex flex-1 h-full justify-center items-center">
+            <Loader />
+          </div>
+        ) : (
+          <>
+            {isLoggingOut && (
+              <div className="inset-0 bg-black/30 z-[1000] fixed flex justify-center items-center">
+                <Loader />
+              </div>
+            )}
             {/* MAIN (includes both content + footer in one scrollable column) */}
             <main
               id="renderList"
@@ -192,18 +194,18 @@ const HomeLayout = () => {
                 </div>
               </div>
             </main>
-          </div>
-          {isTour && (
-            <Tour
-              onRequestClose={closeTour}
-              steps={tourConfigs}
-              isOpen={isTour}
-              // scrollOffset={-100}
-              showCloseButton={isCloseBtn}
-            />
-          )}
-        </>
-      )}
+            {isTour && (
+              <Tour
+                onRequestClose={closeTour}
+                steps={tourConfigs}
+                isOpen={isTour}
+                // scrollOffset={-100}
+                showCloseButton={isCloseBtn}
+              />
+            )}
+          </>
+        )}
+      </div>
     </div>
   ) : (
     <SessionExpiredModal />

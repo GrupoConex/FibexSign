@@ -245,13 +245,209 @@ html[data-theme="opensigncss"] #renderList {
   background-color: #edf4fc !important;
 }
 
-/* Tarjetas generales, navbar y sidebar en blanco limpio para contrastar con el fondo azul claro */
-html[data-theme="opensigncss"] .op-card:not(.dashboard-stat-card),
-html[data-theme="opensigncss"] .card:not(.dashboard-stat-card),
+/* Tarjetas generales en blanco limpio con borde sutil para contrastar con el fondo azul claro */
+html[data-theme="opensigncss"] .op-card:not(.dashboard-stat-card):not(.bg-base-300),
+html[data-theme="opensigncss"] .card:not(.dashboard-stat-card):not(.bg-base-300) {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+/* Modo Oscuro: Tarjetas elevadas con borde sutil para diferenciarlas claramente del fondo oscuro */
+html[data-theme="opensigndark"] .op-card:not(.dashboard-stat-card):not(.bg-base-300),
+html[data-theme="opensigndark"] .card:not(.dashboard-stat-card):not(.bg-base-300) {
+  background-color: #162032 !important;
+  border: 1px solid #243046 !important;
+}
+
+.op-card {
+  border-radius: var(--rounded-box, 0.875rem);
+}
+
+/* Bordes sutiles en tablas y separadores para reemplazar rayas blancas estridentes */
+.op-table tr,
+.op-table thead tr,
+.op-table tbody tr,
+table tr,
+.op-card .border-b,
+.border-y-\[1px\] {
+  border-color: #243046 !important;
+}
+
+html[data-theme="opensigncss"] .op-table tr,
+html[data-theme="opensigncss"] .op-table thead tr,
+html[data-theme="opensigncss"] .op-table tbody tr,
+html[data-theme="opensigncss"] table tr,
+html[data-theme="opensigncss"] .op-card .border-b,
+html[data-theme="opensigncss"] .border-y-\[1px\] {
+  border-color: #e2e8f0 !important;
+}
+
+/* ==========================================================================
+   SIDEBAR & HEADER (UNIFICACIÓN DE COLOR DE FONDO)
+   ========================================================================== */
+.liquid-glass-sidebar {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Modo Claro: Fondo blanco puro (#ffffff) para Sidebar y Header */
+html[data-theme="opensigncss"] .liquid-glass-sidebar,
 html[data-theme="opensigncss"] .op-navbar,
-html[data-theme="opensigncss"] aside {
+html[data-theme="opensigncss"] header {
   background-color: #ffffff !important;
 }
+html[data-theme="opensigncss"] .liquid-glass-sidebar {
+  border-right: 1px solid #e2e8f0 !important;
+  box-shadow: none !important;
+}
+html[data-theme="opensigncss"] .op-navbar,
+html[data-theme="opensigncss"] header {
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+/* Modo Oscuro: Mismo fondo (#0f172a) para Sidebar y Header */
+[data-theme="opensigndark"] .liquid-glass-sidebar,
+[data-theme="opensigndark"] .op-navbar,
+[data-theme="opensigndark"] header {
+  background-color: #0f172a !important;
+}
+[data-theme="opensigndark"] .liquid-glass-sidebar {
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+}
+[data-theme="opensigndark"] .op-navbar,
+[data-theme="opensigndark"] header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Alineación milimétrica de la raya divisoria del Header con el Sidebar */
+html[data-theme="opensigncss"] .header-brand-container.border-r-active {
+  border-right: 1px solid #e2e8f0 !important;
+}
+[data-theme="opensigndark"] .header-brand-container.border-r-active {
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Tooltip contenedor siempre transparente para evitar cajas de fondo detrás de íconos */
+.op-tooltip {
+  background-color: transparent !important;
+  border-color: transparent !important;
+}
+
+/* Botón colapsar/expandir en el borde del sidebar */
+.sidebar-toggle-btn {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+}
+
+.sidebar-toggle-btn:hover {
+  background-color: #f1f5f9 !important;
+  color: #000000 !important;
+}
+
+[data-theme="opensigndark"] .sidebar-toggle-btn {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="opensigndark"] .sidebar-toggle-btn:hover {
+  background-color: #334155 !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Color del texto Sign de FibexSign */
+html[data-theme="opensigncss"] .fibex-sign-text {
+  color: #001244 !important; /* Azul más oscuro en modo claro */
+}
+
+[data-theme="opensigndark"] .fibex-sign-text {
+  color: #60a5fa !important; /* Azul claro legible en modo oscuro */
+}
+
+/* ==========================================================================
+   USER PROFILE DROPDOWN (MODO CLARO Y OSCURO SIN BORDES BLANCOS)
+   ========================================================================== */
+.user-profile-dropdown {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+  overflow: visible !important;
+}
+
+.user-profile-dropdown .dropdown-user-header {
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.user-profile-dropdown .dropdown-user-title {
+  color: #0f172a !important;
+  line-height: 1.35 !important;
+}
+
+.user-profile-dropdown .dropdown-user-subtitle {
+  color: #64748b !important;
+  line-height: 1.35 !important;
+}
+
+.user-profile-dropdown .dropdown-item {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  color: #1e293b !important;
+  width: 100% !important;
+}
+
+.user-profile-dropdown .dropdown-item:hover {
+  background-color: #f1f5f9 !important;
+}
+
+.user-profile-dropdown .dropdown-divider {
+  border-top: 1px solid #e2e8f0 !important;
+}
+
+[data-theme="opensigndark"] .user-profile-dropdown {
+  background-color: #162032 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #f8fafc !important;
+  overflow: visible !important;
+}
+
+[data-theme="opensigndark"] .user-profile-dropdown .dropdown-user-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="opensigndark"] .user-profile-dropdown .dropdown-user-title {
+  color: #f8fafc !important;
+  line-height: 1.35 !important;
+}
+
+[data-theme="opensigndark"] .user-profile-dropdown .dropdown-user-subtitle {
+  color: #94a3b8 !important;
+  line-height: 1.35 !important;
+}
+
+[data-theme="opensigndark"] .user-profile-dropdown .dropdown-item {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  color: #e2e8f0 !important;
+  width: 100% !important;
+}
+
+[data-theme="opensigndark"] .user-profile-dropdown .dropdown-item:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="opensigndark"] .user-profile-dropdown .dropdown-divider {
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
 
 /* Tarjetas de métricas del dashboard en azul rey con transparencia */
 .dashboard-stat-card,
@@ -271,14 +467,14 @@ html[data-theme="opensigncss"] .op-input,
 html[data-theme="opensigncss"] .op-select,
 html[data-theme="opensigncss"] .op-textarea {
   background-color: #ffffff !important;
-  color: #101828 !important;
+  color: #000000 !important;
   border-color: #cbd5e1 !important;
 }
 
 html[data-theme="opensigncss"] input::placeholder,
 html[data-theme="opensigncss"] .op-input::placeholder,
 html[data-theme="opensigncss"] textarea::placeholder {
-  color: #94a3b8 !important;
+  color: #475467 !important;
 }
 
 html[data-theme="opensigncss"] input:focus,
@@ -291,7 +487,106 @@ html[data-theme="opensigncss"] .op-textarea:focus {
   border-color: #1d4ed8 !important;
 }
 
-/* Modo Oscuro: Color blanco mate para el elemento primario en lugar de azul */
+/* ==========================================================================
+   MODO CLARO: Todas las letras en NEGRO (adiós texto gris)
+   ========================================================================== */
+html[data-theme="opensigncss"],
+html[data-theme="opensigncss"] body,
+html[data-theme="opensigncss"] #root {
+  color: #000000 !important;
+}
+
+html[data-theme="opensigncss"] p,
+html[data-theme="opensigncss"] label,
+html[data-theme="opensigncss"] h1,
+html[data-theme="opensigncss"] h2,
+html[data-theme="opensigncss"] h3,
+html[data-theme="opensigncss"] h4,
+html[data-theme="opensigncss"] h5,
+html[data-theme="opensigncss"] h6,
+html[data-theme="opensigncss"] td,
+html[data-theme="opensigncss"] th,
+html[data-theme="opensigncss"] summary,
+html[data-theme="opensigncss"] .text-base-content,
+html[data-theme="opensigncss"] .text-gray-400,
+html[data-theme="opensigncss"] .text-gray-500,
+html[data-theme="opensigncss"] .text-gray-600,
+html[data-theme="opensigncss"] .text-gray-700,
+html[data-theme="opensigncss"] .text-gray-800,
+html[data-theme="opensigncss"] .text-gray-900 {
+  color: #000000 !important;
+}
+
+/* ==========================================================================
+   HOVERS Y ESTADOS DEL SIDEBAR / NAVEGACIÓN
+   ========================================================================== */
+
+/* Asegurar que las listas, contenedores de submenú y menús nunca tengan fondo en bloque y tengan separación limpia */
+.op-menu ul,
+aside .op-menu ul {
+  background-color: transparent !important;
+}
+
+aside .op-menu ul {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.375rem !important; /* 6px de distancia entre cada elemento */
+}
+
+/* Hovers generales y de tablas/dropdowns en modo claro */
+html[data-theme="opensigncss"] .op-dropdown-content li > *:hover,
+html[data-theme="opensigncss"] .op-dropdown-content li > a:hover,
+html[data-theme="opensigncss"] .dropdown-item:hover,
+html[data-theme="opensigncss"] .hover\:bg-gray-50:hover,
+html[data-theme="opensigncss"] .hover\:bg-gray-100:hover,
+html[data-theme="opensigncss"] .hover\:bg-gray-200:hover,
+html[data-theme="opensigncss"] .op-btn-ghost:hover,
+html[data-theme="opensigncss"] .op-table tbody tr:hover,
+html[data-theme="opensigncss"] table tbody tr:hover {
+  background-color: #eff6ff !important; /* Azul más claro (#eff6ff) */
+  color: #000000 !important;
+}
+
+html[data-theme="opensigncss"] .op-dropdown-content li > *:hover *,
+html[data-theme="opensigncss"] .op-dropdown-content li > a:hover * {
+  color: #000000 !important;
+}
+
+/* Hovers en el Sidebar (modo claro): Más claro (#eff6ff) que el seleccionado (#dbeafe) */
+html[data-theme="opensigncss"] aside .op-menu li > a:not(.active):not(.bg-base-300):hover,
+html[data-theme="opensigncss"] aside .op-menu li > button:hover {
+  background-color: #eff6ff !important;
+  color: #000000 !important;
+}
+
+html[data-theme="opensigncss"] aside .op-menu li > a:not(.active):not(.bg-base-300):hover *,
+html[data-theme="opensigncss"] aside .op-menu li > button:hover * {
+  color: #000000 !important;
+}
+
+/* Sidebar item activo / seleccionado en modo claro (#dbeafe) */
+html[data-theme="opensigncss"] aside .op-menu a.bg-base-300,
+html[data-theme="opensigncss"] aside .op-menu a.active,
+html[data-theme="opensigncss"] aside .op-menu .active {
+  background-color: #dbeafe !important;
+  color: #000000 !important;
+}
+html[data-theme="opensigncss"] aside .op-menu a.bg-base-300 *,
+html[data-theme="opensigncss"] aside .op-menu a.active *,
+html[data-theme="opensigncss"] aside .op-menu .active * {
+  color: #000000 !important;
+}
+
+/* Hover sobre el item ya activo/seleccionado: mantiene su color seleccionado */
+html[data-theme="opensigncss"] aside .op-menu a.bg-base-300:hover,
+html[data-theme="opensigncss"] aside .op-menu a.active:hover {
+  background-color: #dbeafe !important;
+  color: #000000 !important;
+}
+
+/* ==========================================================================
+   MODO OSCURO: Primario y Hovers en BLANCO
+   ========================================================================== */
 [data-theme="opensigndark"] .op-btn-primary {
   background-color: #ffffff !important;
   color: #0f172a !important;
@@ -312,4 +607,61 @@ html[data-theme="opensigncss"] .op-textarea:focus {
   background-color: #ffffff !important;
   color: #0f172a !important;
 }
+
+/* Asegurar submenú transparente en modo oscuro */
+[data-theme="opensigndark"] aside .op-menu ul,
+[data-theme="opensigndark"] .op-menu ul {
+  background-color: transparent !important;
+}
+
+/* Hovers en el Sidebar en modo oscuro */
+[data-theme="opensigndark"] aside .op-menu li > a:not(.active):not(.bg-base-300):hover,
+[data-theme="opensigndark"] aside .op-menu li > button:hover {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="opensigndark"] aside .op-menu li > a:not(.active):not(.bg-base-300):hover *,
+[data-theme="opensigndark"] aside .op-menu li > button:hover * {
+  color: #ffffff !important;
+}
+
+/* Hovers generales en modo oscuro */
+[data-theme="opensigndark"] .op-dropdown-content li > *:hover,
+[data-theme="opensigndark"] .op-dropdown-content li > a:hover,
+[data-theme="opensigndark"] .dropdown-item:hover,
+[data-theme="opensigndark"] .hover\:bg-gray-50:hover,
+[data-theme="opensigndark"] .hover\:bg-gray-100:hover,
+[data-theme="opensigndark"] .hover\:bg-gray-200:hover,
+[data-theme="opensigndark"] .op-btn-ghost:hover,
+[data-theme="opensigndark"] .op-table tbody tr:hover,
+[data-theme="opensigndark"] table tbody tr:hover {
+  background-color: #ffffff !important; /* Blanco */
+  color: #0f172a !important; /* Texto oscuro para máximo contraste */
+}
+
+[data-theme="opensigndark"] .op-dropdown-content li > *:hover *,
+[data-theme="opensigndark"] .op-dropdown-content li > a:hover *,
+[data-theme="opensigndark"] .op-btn-ghost:hover * {
+  color: #0f172a !important;
+}
+
+/* Sidebar item activo / seleccionado en modo oscuro */
+[data-theme="opensigndark"] aside .op-menu a.bg-base-300,
+[data-theme="opensigndark"] aside .op-menu a.active,
+[data-theme="opensigndark"] aside .op-menu .active {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+[data-theme="opensigndark"] aside .op-menu a.bg-base-300 *,
+[data-theme="opensigndark"] aside .op-menu a.active *,
+[data-theme="opensigndark"] aside .op-menu .active * {
+  color: #0f172a !important;
+}
+[data-theme="opensigndark"] aside .op-menu a.bg-base-300:hover,
+[data-theme="opensigndark"] aside .op-menu a.active:hover {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
 
