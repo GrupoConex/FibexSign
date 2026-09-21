@@ -768,7 +768,7 @@ function PrefillWidgetModal(props) {
   const handleInputChange = (item, id) => {
     const signerExist = props.forms.some((x) => x.label === item.label);
     if (signerExist) {
-      alert(t("already-exist-signer"));
+      utils.notify.warning(t("already-exist-signer"));
     } else {
       let newForm = [...props.forms];
       let signerId = newForm[id].value;

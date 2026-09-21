@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { lazyWithRetry, hideUpgradeProgress } from "./utils";
 import { Routes, Route, BrowserRouter } from "react-router";
 import { pdfjs } from "react-pdf";
+import { Toaster } from "sonner";
 import Form from "./pages/Form";
 import Report from "./pages/Report";
 import Dashboard from "./pages/Dashboard";
@@ -59,6 +60,25 @@ function App() {
 
   return (
     <div className="bg-base-200">
+      <Toaster
+        position="top-right"
+        closeButton
+        toastOptions={{
+          unstyled: true,
+          classNames: {
+            toast: "op-alert flex items-start gap-3 shadow-lg text-sm",
+            success: "op-alert-success",
+            error: "op-alert-error",
+            warning: "op-alert-warning text-black",
+            info: "op-alert-info",
+            title: "font-medium",
+            description: "opacity-90",
+            actionButton: "op-btn op-btn-sm",
+            cancelButton: "op-btn op-btn-sm op-btn-ghost",
+            closeButton: "op-btn op-btn-ghost op-btn-xs"
+          }
+        }}
+      />
       {isloading ? (
         <AppLoader />
       ) : (

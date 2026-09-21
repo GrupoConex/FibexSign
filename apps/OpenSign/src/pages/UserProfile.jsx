@@ -8,6 +8,7 @@ import { SaveFileSize } from "../constant/saveFileSize";
 import dp from "../assets/images/dp.png";
 import {
   compressImage,
+  notify,
   sanitizeFileName,
   withSessionValidation
 } from "../utils";
@@ -75,7 +76,7 @@ function UserProfile() {
           setIsLoader(false);
         }
       } catch (e) {
-        alert(t("something-went-wrong-mssg"));
+        notify.error(t("something-went-wrong-mssg"));
       }
     }
   };
@@ -108,14 +109,14 @@ function UserProfile() {
                   Name: res.name,
                   Phone: res?.phone || ""
                 });
-                alert(t("profile-update-alert"));
+                notify.success(t("profile-update-alert"));
                 setEditMode(false);
                 setIsLoader(false);
                 //navigate("/dashboard/35KBoSgoAK");
               }
             },
             (error) => {
-              alert(t("something-went-wrong-mssg"));
+              notify.error(t("something-went-wrong-mssg"));
               console.error("Error while updating tour", error);
               setIsLoader(false);
             }
@@ -235,15 +236,15 @@ function UserProfile() {
       });
       if (resEmail?.message === "Email is verified.") {
         setIsEmailVerified(true);
-        alert(t("Email-verified-alert-1"));
+        notify.success(t("Email-verified-alert-1"));
       } else if (resEmail?.message === "Email is already verified.") {
         setIsEmailVerified(true);
-        alert(t("Email-verified-alert-2"));
+        notify.success(t("Email-verified-alert-2"));
       }
       setOtp("");
       setIsVerifyModal(false);
     } catch (error) {
-      alert(error.message);
+      notify.error(error.message);
     } finally {
       setOtpLoader(false);
     }
@@ -254,7 +255,7 @@ function UserProfile() {
     setOtpLoader(true);
     await handleSendOTP(Parse.User.current().getEmail());
     setOtpLoader(false);
-    alert(t("otp-sent-alert"));
+    notify.success(t("otp-sent-alert"));
   };
 
   const handleCancel = () => {

@@ -20,6 +20,7 @@ import PageReorderModal from "./PageReorderModal";
 import { useTranslation } from "react-i18next";
 import { PDFDocument } from "pdf-lib";
 import { maxFileSize } from "../../constant/const";
+import { notify } from "../../utils";
 
 function Header(props) {
   const { t } = useTranslation();
@@ -47,7 +48,7 @@ function Header(props) {
       props?.pageNumber
     );
     if (pdfupdatedData?.totalPages === 1) {
-      alert(t("delete-alert"));
+      notify.warning(t("delete-alert"));
     } else {
       props?.setPdfBase64Url(pdfupdatedData.base64);
       props?.setPdfArrayBuffer(pdfupdatedData.arrayBuffer);
@@ -70,11 +71,11 @@ function Header(props) {
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) {
-      alert(t("please-select-pdf"));
+      notify.warning(t("please-select-pdf"));
       return;
     }
     if (!file.type.includes("pdf")) {
-      alert(t("only-pdf-allowed"));
+      notify.warning(t("only-pdf-allowed"));
       return;
     }
     const fileSize =
@@ -82,7 +83,7 @@ function Header(props) {
     const pdfsize = file?.size;
     const fileSizeBytes = fileSize * 1024 * 1024;
     if (pdfsize > fileSizeBytes) {
-      alert(`${t("file-alert-1")} ${fileSize} MB`);
+      notify.error(`${t("file-alert-1")} ${fileSize} MB`);
       removeFile(e);
       return;
     }
@@ -109,18 +110,18 @@ function Header(props) {
                   // Upload the file to Parse Server
                 } catch (err) {
                   console.error("Incorrect password or decryption failed", err);
-                  alert(t("incorrect-password-or-decryption-failed"));
+                  notify.error(t("incorrect-password-or-decryption-failed"));
                 }
               } else {
-                alert(t("provide-password"));
+                notify.warning(t("provide-password"));
               }
             } else {
               console.log("Err ", err);
-              alert(t("error-uploading-pdf"));
+              notify.error(t("error-uploading-pdf"));
             }
           }
         } else {
-          alert(t("error-uploading-pdf"));
+          notify.error(t("error-uploading-pdf"));
         }
       }
       const uploadedPdfDoc = await PDFDocument.load(uploadedPdfBytes, {
@@ -142,7 +143,7 @@ function Header(props) {
       const pdfsize = pdfBuffer?.byteLength;
       const fileSizeBytes = fileSize * 1024 * 1024;
       if (pdfsize > fileSizeBytes) {
-        alert(`${t("file-alert-1")} ${fileSize} MB`);
+        notify.error(`${t("file-alert-1")} ${fileSize} MB`);
         removeFile(e);
         return;
       }

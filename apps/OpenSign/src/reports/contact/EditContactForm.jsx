@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Loader from "../../primitives/Loader";
 import { useTranslation } from "react-i18next";
 import Parse from "parse";
-import { withSessionValidation } from "../../utils";
+import { notify, withSessionValidation } from "../../utils";
 
 const EditContactForm = (props) => {
   const { t } = useTranslation();
@@ -58,9 +58,9 @@ const EditContactForm = (props) => {
       } catch (err) {
         console.log("err in edit contact ", err);
         if (err.code === 137) {
-          alert(t("contact-already-exists"));
+          notify.error(t("contact-already-exists"));
         } else {
-          alert(t("something-went-wrong-mssg"));
+          notify.error(t("something-went-wrong-mssg"));
         }
       } finally {
         setIsLoader(false);

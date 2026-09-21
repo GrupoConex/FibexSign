@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import ModalUi from "./ModalUi";
 import { useTranslation } from "react-i18next";
+import { notify } from "../utils";
 
 /**
  * PasswordResetModal
@@ -18,8 +19,7 @@ export default function PasswordResetModal({
   userId,
   isOpen,
   onClose,
-  onSubmit,
-  showAlert
+  onSubmit
 }) {
   const { t } = useTranslation();
   const [password, setPassword] = useState("");
@@ -99,7 +99,7 @@ export default function PasswordResetModal({
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(password);
-      showAlert("success", t("copied"), 1200);
+      notify.success(t("copied"), { duration: 1200 });
       setCopied(true);
       setTimeout(() => setCopied(false, 1200));
     } catch (e) {

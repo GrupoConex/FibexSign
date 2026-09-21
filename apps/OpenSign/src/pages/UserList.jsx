@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import Parse from "parse";
-import Alert from "../primitives/Alert";
 import Loader from "../primitives/Loader";
 import { useLocation } from "react-router";
 import ModalUi from "../primitives/ModalUi";
@@ -14,7 +13,7 @@ import DeleteUserModal from "../primitives/DeleteUserModal";
 import axios from "axios";
 import PasswordResetModal from "../primitives/PasswordResetModal";
 import { usersActions } from "../json/ReportJson";
-import { withSessionValidation } from "../utils";
+import { notify, withSessionValidation } from "../utils";
 
 const heading = ["Sr.No", "Name", "Email", "Phone", "Role", "Team", "Active"];
 const UserList = () => {
@@ -30,7 +29,6 @@ const UserList = () => {
   const isDashboard =
     location?.pathname === "/dashboard/35KBoSgoAK" ? true : false;
   const [currentPage, setCurrentPage] = useState(1);
-  const [isAlert, setIsAlert] = useState({ type: "success", msg: "" });
   const [isActiveModal, setIsActiveModal] = useState({});
   const [isActLoader, setIsActLoader] = useState({});
   const [isAdmin, setIsAdmin] = useState(false);
@@ -125,7 +123,7 @@ const UserList = () => {
       setUserList(_userRes);
     } catch (err) {
       console.log("Err in fetch userlist", err);
-      showAlert("danger", t("something-went-wrong-mssg"));
+      notify.error(t("something-went-wrong-mssg"));
     } finally {
       setIsLoader(false);
     }
@@ -183,12 +181,13 @@ const UserList = () => {
         extUser.id = user.objectId;
         extUser.set("IsDisabled", !IsDisabled);
         await extUser.save();
-        showAlert(
-          !IsDisabled === true ? "danger" : "success",
-          !IsDisabled === true ? t("user-deactivated") : t("user-activated")
-        );
+        if (!IsDisabled === true) {
+          notify.error(t("user-deactivated"));
+        } else {
+          notify.success(t("user-activated"));
+        }
       } catch (err) {
-        showAlert("danger", t("something-went-wrong-mssg"));
+        notify.error(t("something-went-wrong-mssg"));
         console.log("err in disable team", err);
       } finally {
         setIsActLoader({});
@@ -197,12 +196,6 @@ const UserList = () => {
   });
   const handleToggleBtn = (user) => {
     setIsActiveModal({ [user.objectId]: true });
-  };
-
-  // `showAlert` handle show/hide alert
-  const showAlert = (type, msg, timer = 1500) => {
-    setIsAlert({ type, msg });
-    setTimeout(() => setIsAlert({ type: "success", msg: "" }), timer);
   };
 
   const handleDeleteAccount = withSessionValidation(async (item) => {
@@ -217,17 +210,17 @@ const UserList = () => {
         setUserList((prev) =>
           prev.filter((user) => user.objectId !== item.objectId)
         );
-        showAlert("success", t("user-deleted-successfully"));
+        notify.success(t("user-deleted-successfully"));
       } catch (err) {
         const message = err?.response?.data?.message || err?.message;
         setDeleteUserRes(message);
-        showAlert("danger", message);
+        notify.error(message);
         console.log("Err in deleteuser acc", err);
       } finally {
         setDeleting(false);
       }
     } else {
-      showAlert("danger", t("something-went-wrong-mssg"));
+      notify.error(t("something-went-wrong-mssg"));
       setDeleteUserRes(t("something-went-wrong-mssg"));
       setDeleting(false);
     }
@@ -271,10 +264,10 @@ const UserList = () => {
     try {
       const params = { userId, password };
       await Parse.Cloud.run("resetpassword", params);
-      showAlert("success", t("password-has-been-reset"));
+      notify.success(t("password-has-been-reset"));
     } catch (err) {
       console.log("err while reset password", err);
-      showAlert("danger", t(err.message), 2000);
+      notify.error(t(err.message));
     } finally {
       setIsLoader(false);
     }
@@ -297,9 +290,6 @@ const UserList = () => {
             <>
               {isAdmin ? (
                 <div className="p-2 w-full bg-base-100 text-base-content op-card shadow-lg">
-                  {isAlert.msg && (
-                    <Alert type={isAlert.type}>{isAlert.msg}</Alert>
-                  )}
                   <div className="flex flex-row items-center justify-between my-2 mx-3 text-[20px] md:text-[23px]">
                     <div className="font-light">
                       {t("report-name.Users")}{" "}
@@ -462,7 +452,6 @@ const UserList = () => {
                                 userId={item?.UserId?.objectId}
                                 onClose={handleCloseModal}
                                 onSubmit={submitPassword}
-                                showAlert={showAlert}
                               />
                             </tr>
                           ))}
@@ -526,7 +515,6 @@ const UserList = () => {
                     handleClose={() => handleModal("form")}
                   >
                     <AddUser
-                      showAlert={showAlert}
                       handleUserData={handleUserData}
                       closePopup={() => handleModal("form")}
                       setFormHeader={setFormHeader}

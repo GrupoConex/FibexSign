@@ -9,10 +9,9 @@ import {
 } from "../constant/Utils";
 import Parse from "parse";
 import { SaveFileSize } from "../constant/saveFileSize";
-import Alert from "../primitives/Alert";
 import Loader from "../primitives/Loader";
 import { useTranslation } from "react-i18next";
-import { sanitizeFileName, withSessionValidation } from "../utils";
+import { notify, sanitizeFileName, withSessionValidation } from "../utils";
 
 const COLOR_CLASS = {
   blue: "text-blue-600",
@@ -32,7 +31,6 @@ const ManageSign = () => {
   const [isvalue, setIsValue] = useState(false);
   const allColor = ["blue", "red", "black"];
   const [isLoader, setIsLoader] = useState(true);
-  const [isAlert, setIsAlert] = useState({ type: "success", message: "" });
   const [Initials, setInitials] = useState("");
   const [isInitials, setIsInitials] = useState(false);
   const [id, setId] = useState("");
@@ -86,7 +84,7 @@ const ManageSign = () => {
         setIsLoader(false);
       } catch (err) {
         console.log("Err", err);
-        alert(`${err.message}`);
+        notify.error(`${err.message}`);
       }
     }
   };
@@ -234,19 +232,19 @@ const ManageSign = () => {
           SaveFileSize(file.size, fileRes?.url, tenantId, userId);
           return fileRes?.url;
         } else {
-          alert(t("something-went-wrong-mssg"));
+          notify.error(t("something-went-wrong-mssg"));
           setIsLoader(false);
           return false;
         }
       } else {
-        alert(t("something-went-wrong-mssg"));
+        notify.error(t("something-went-wrong-mssg"));
         setIsLoader(false);
         return false;
       }
     } catch (err) {
       console.log("sign upload err", err);
       setIsLoader(false);
-      alert(`${err.message}`);
+      notify.error(`${err.message}`);
     }
   };
 
@@ -261,14 +259,13 @@ const ManageSign = () => {
         title: obj.name,
         stamp: obj?.stampUrl
       });
-      setIsAlert({ type: "success", message: t("signature-saved-alert") });
+      notify.success(t("signature-saved-alert"));
       return res;
     } catch (err) {
       console.log(err);
-      setIsAlert({ type: "danger", message: `${err.message}` });
+      notify.error(`${err.message}`);
     } finally {
       setIsLoader(false);
-      setTimeout(() => setIsAlert({}), 2000);
     }
   };
 
@@ -330,7 +327,6 @@ const ManageSign = () => {
           <Loader />
         </div>
       )}
-      {isAlert?.message && <Alert type={isAlert.type}>{isAlert.message}</Alert>}
       <div className="relative w-full">
         <div className="ml-[5px] my-[20px] md:m-[20px]">
           <div className="text-[20px] font-semibold m-[10px] md:m-0 mb-2">

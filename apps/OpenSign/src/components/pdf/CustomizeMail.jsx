@@ -10,6 +10,7 @@ import {
 import { useTranslation } from "react-i18next";
 import Loader from "../../primitives/Loader";
 import { useNavigate } from "react-router";
+import { notify } from "../../utils";
 
 const statusMap = {
   success: "success",
@@ -66,7 +67,7 @@ function CustomizeMail(props) {
       setIsLoader(false);
       props?.setMailStatus(statusMap[mailRes?.status] ?? "failed");
     } else {
-      alert("something-went-wrong-mssg");
+      notify.error("something-went-wrong-mssg");
     }
   };
 

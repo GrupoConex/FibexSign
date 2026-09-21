@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { formJson } from "../json/FormJson";
 import Parse from "parse";
-import Alert from "../primitives/Alert";
 import SelectFolder from "../components/shared/fields/SelectFolder";
 import SignersInput from "../components/shared/fields/SignersInput";
 import PageNotFound from "./PageNotFound";
@@ -31,7 +30,7 @@ import Loader from "../primitives/Loader";
 import { useTranslation } from "react-i18next";
 import { useDispatch } from "react-redux";
 import { sessionStatus } from "../redux/reducers/userReducer";
-import { withSessionValidation } from "../utils";
+import { notify, withSessionValidation } from "../utils";
 import {
   clearAcroFields,
   isPdfPasswordProtected
@@ -83,7 +82,6 @@ const Forms = (props) => {
   const [percentage, setpercentage] = useState(0);
   const [isReset, setIsReset] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [isAlert, setIsAlert] = useState({ type: "success", message: "" });
   const [isSubmit, setIsSubmit] = useState(false);
   const [isPassword, setIsPassword] = useState(false);
   const [isDecrypting, setIsDecrypting] = useState(false);
@@ -150,14 +148,14 @@ const Forms = (props) => {
       const filesNameArr = files.map((f) => f.name);
       setSelectedFiles(filesNameArr);
       if (!files.length) {
-        alert(t("file-alert-2"));
+        notify.warning(t("file-alert-2"));
         return;
       }
       // setFormData((prev) => ({ ...prev, file: files[0] }));
       const totalBytes = Math.round(files.reduce((sum, f) => sum + f.size, 0)); // in bytes
       const fileSizeBytes = fileSize * 1024 * 1024;
       if (totalBytes > fileSizeBytes) {
-        alert(`${t("file-alert-1")} ${fileSize} MB`);
+        notify.error(`${t("file-alert-1")} ${fileSize} MB`);
         setFileUpload("");
         setSelectedFiles([]);
         removeFile(e);
@@ -209,7 +207,7 @@ const Forms = (props) => {
                       setIsDecrypting(false);
                       setfileload(false);
                       removeFile(e);
-                      alert(
+                      notify.error(
                         t("incorrect-password-for-file", { file: file.name })
                       );
                       return;
@@ -298,7 +296,7 @@ const Forms = (props) => {
             if (err?.code === 209) {
               dispatch(sessionStatus(false));
             } else {
-              alert(error);
+              notify.error(error);
             }
             return;
           }
@@ -306,7 +304,7 @@ const Forms = (props) => {
       }
 
       if (!pdfBuffers.length) {
-        alert(t("file-alert-2"));
+        notify.warning(t("file-alert-2"));
         setSelectedFiles([]);
         return;
       }
@@ -361,7 +359,7 @@ const Forms = (props) => {
       if (error?.code === 209) {
         dispatch(sessionStatus(false));
       } else {
-        alert(error.message);
+        notify.error(error.message);
       }
       setSelectedFiles([]);
       removeFile(e);
@@ -381,19 +379,19 @@ const Forms = (props) => {
     e.stopPropagation();
     if (fileupload) {
       if (formData?.Name?.length > maxTitleLength) {
-        alert(t("title-length-alert"));
+        notify.warning(t("title-length-alert"));
         return;
       }
       if (formData?.Note?.length > maxNoteLength) {
-        alert(t("note-length-alert"));
+        notify.warning(t("note-length-alert"));
         return;
       }
       if (formData?.Description?.length > maxDescriptionLength) {
-        alert(t("description-length-alert"));
+        notify.warning(t("description-length-alert"));
         return;
       }
       if (formData.RedirectUrl && !isValidURL(formData?.RedirectUrl)) {
-        alert(t("invalid-redirect-url"));
+        notify.warning(t("invalid-redirect-url"));
         return;
       }
       setIsSubmit(true);
@@ -428,7 +426,7 @@ const Forms = (props) => {
           const AutomaticReminders = formData.autoreminder;
           const reminderCount = TimeToCompleteDays / remindOnceInEvery;
           if (AutomaticReminders && reminderCount > 15) {
-            alert(t("only-15-reminder-allowed"));
+            notify.warning(t("only-15-reminder-allowed"));
             return;
           }
           object.set("SendinOrder", isChecked);
@@ -537,22 +535,15 @@ const Forms = (props) => {
         if (err?.code === 209) {
           dispatch(sessionStatus(false));
         } else if (err.message === "only 15 reminder allowed") {
-          setIsAlert({
-            type: "danger",
-            message: t("only-15-reminder-allowed")
-          });
+          notify.error(t("only-15-reminder-allowed"));
         } else {
-          setIsAlert({
-            type: "danger",
-            message: t("something-went-wrong-mssg")
-          });
+          notify.error(t("something-went-wrong-mssg"));
         }
       } finally {
-        setTimeout(() => setIsAlert({ type: "success", message: "" }), 1000);
         setIsSubmit(false);
       }
     } else {
-      alert(t("file-alert-3"));
+      notify.warning(t("file-alert-3"));
     }
   });
 
@@ -741,7 +732,6 @@ const Forms = (props) => {
     <div
       className={`${isSubmit || isInitializing ? "" : "shadow-md rounded-box my-[2px] p-3 bg-base-100 text-base-content"}`}
     >
-      {isAlert?.message && <Alert type={isAlert.type}>{isAlert.message}</Alert>}
       {isSubmit || isInitializing ? (
         <div className="flex flex-col justify-center items-center h-[100vh]">
           <Loader />

@@ -66,6 +66,7 @@ import PrefillWidgetModal from "../components/pdf/PrefillWidgetsModal";
 import Alert from "../primitives/Alert";
 import LottieWithLoader from "../primitives/DotLottieReact";
 import * as utils from "../utils";
+import { notify } from "../utils";
 import CustomizeMail from "../components/pdf/CustomizeMail";
 import { resetWidgetState, setPrefillImg } from "../redux/reducers/widgetSlice";
 import ShareButton from "../primitives/ShareButton";
@@ -158,7 +159,6 @@ const TemplatePlaceholder = () => {
   const [forms, setForms] = useState([]);
   const [isUiLoading, setIsUiLoading] = useState(false);
   const [isNewContact, setIsNewContact] = useState({ status: false, id: "" });
-  const [alertMsg, setAlertMsg] = useState({ type: "success", message: "" });
   const [isMailModal, setIsMailModal] = useState(false);
   const [customizeMail, setCustomizeMail] = useState({
     body: { basic: "", advanced: "" },
@@ -215,7 +215,7 @@ const TemplatePlaceholder = () => {
       try {
         const tenantDetails = await getTenantDetails(user?.objectId);
         if (tenantDetails && tenantDetails === "user does not exist!") {
-          alert(t("user-not-exist"));
+          notify.error(t("user-not-exist"));
         } else if (tenantDetails) {
           const signatureType = tenantDetails?.SignatureType || [];
           const filterSignTypes = signatureType?.filter(
@@ -243,10 +243,10 @@ const TemplatePlaceholder = () => {
           return filterSignTypes;
         }
       } catch (e) {
-        alert(t("user-not-exist"));
+        notify.error(t("user-not-exist"));
       }
     } else {
-      alert(t("user-not-exist"));
+      notify.error(t("user-not-exist"));
     }
   };
   // `fetchTemplate` function in used to get Template from server and setPlaceholder ,setSigner if present
@@ -905,7 +905,7 @@ const TemplatePlaceholder = () => {
         return pdfUrl;
       } catch (err) {
         console.log("error to convertBase64ToFile in placeholder flow", err);
-        alert(err?.message);
+        notify.error(err?.message);
       }
     } else {
       return pdfDetails[0].URL;
@@ -918,7 +918,7 @@ const TemplatePlaceholder = () => {
       const AutomaticReminders = pdfDetails[0]?.AutomaticReminders;
       const reminderCount = TimeToCompleteDays / remindOnceInEvery;
       if (AutomaticReminders && reminderCount > 15) {
-        alert(t("only-15-reminder-allowed"));
+        notify.warning(t("only-15-reminder-allowed"));
         return;
       }
       setIsUiLoading(true);
@@ -1003,7 +1003,7 @@ const TemplatePlaceholder = () => {
         setIsUiLoading(false);
       } catch (e) {
         setIsUiLoading(false);
-        alert(t("something-went-wrong-mssg"));
+        notify.error(t("something-went-wrong-mssg"));
         console.log("error", e);
       }
     } else {
@@ -1029,17 +1029,14 @@ const TemplatePlaceholder = () => {
         const emptyWidget = res?.emptyResponseObjects
           ?.map((item) => item.options.name)
           ?.join(", ");
-        const timeInMiliSec = 6000;
-        showAlert(
-          "danger",
+        notify.error(
           t("prefill-unfilled-widget", {
             emptyWidget: emptyWidget ? `[${emptyWidget}]` : ""
-          }),
-          timeInMiliSec
+          })
         );
       } else if (res?.status === "unattach signer") {
         setIsUiLoading(false);
-        showAlert("danger", t("attach-all-role-to-signer"));
+        notify.error(t("attach-all-role-to-signer"));
       } else if (res?.status === "success") {
         setDocumentId(res.id);
         const ownerId = pdfDetails[0].ExtUserPtr?.UserId?.objectId;
@@ -1062,7 +1059,7 @@ const TemplatePlaceholder = () => {
       } else if (res?.status === "error") {
         const message = res?.message || "something-went-wrong-mssg";
         setIsUiLoading(false);
-        showAlert("danger", t(message));
+        notify.error(t(message));
       }
     } catch (e) {
       console.log("error in create document function", e);
@@ -1752,10 +1749,6 @@ const TemplatePlaceholder = () => {
       styles: { fontSize: "13px" }
     }
   ];
-  const showAlert = (type, message, duration = 1500) => {
-    setAlertMsg({ type: type, message: message });
-    setTimeout(() => setAlertMsg({ type: "success", message: "" }), duration);
-  };
   const textFieldTour = [
     {
       selector: '[data-tut="IsSigned"]',
@@ -1862,10 +1855,7 @@ const TemplatePlaceholder = () => {
               <span className="text-[13px]">{t("loading-mssg")}</span>
             </div>
           )}
-          {alertMsg.message && (
-            <Alert type={alertMsg.type}>{alertMsg.message}</Alert>
-          )}
-          {/* 
+          {/*
             this component used for UI interaction and show their functionality
             this tour component used in your html component where you want to put
             onRequestClose function to close tour

@@ -6,6 +6,7 @@ import { getTenantDetails } from "../constant/Utils";
 import { emailRegex } from "../constant/const";
 import { useDispatch } from "react-redux";
 import { sessionStatus } from "../redux/reducers/userReducer";
+import { notify } from "../utils";
 
 const AddContact = (props) => {
   const { t } = useTranslation();
@@ -63,7 +64,7 @@ const AddContact = (props) => {
     e.preventDefault();
     e.stopPropagation();
     if (!emailRegex.test(email)) {
-      alert(t("valid-email-alert"));
+      notify.warning(t("valid-email-alert"));
     } else {
       setIsLoader(true);
       const user = JSON.parse(
@@ -105,15 +106,15 @@ const AddContact = (props) => {
           console.log("Err", err);
           setIsLoader(false);
           if (err?.response?.data?.error?.includes("already exists")) {
-            alert(t("add-signer-alert"));
+            notify.warning(t("add-signer-alert"));
           } else {
-            alert(t("something-went-wrong-mssg"));
+            notify.error(t("something-went-wrong-mssg"));
           }
         }
       } else {
         setIsLoader(false);
         dispatch(sessionStatus(false));
-        alert(t("something-went-wrong-mssg"));
+        notify.error(t("something-went-wrong-mssg"));
       }
     }
   };

@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import login_img from "../assets/images/login_img.svg";
 import Parse from "parse";
-import Alert from "../primitives/Alert";
 import { appInfo } from "../constant/appinfo";
 import { useDispatch } from "react-redux";
 import { fetchAppInfo } from "../redux/reducers/infoReducer";
@@ -11,13 +10,13 @@ import {
 } from "../constant/const";
 import { useTranslation } from "react-i18next";
 import Loader from "../primitives/Loader";
+import { notify } from "../utils";
 
 function ForgotPassword() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [state, setState] = useState({ email: "", password: "", hideNav: "" });
-  const [toast, setToast] = useState({ type: "", message: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [image, setImage] = useState();
 
@@ -39,7 +38,7 @@ function ForgotPassword() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!emailRegex.test(state.email)) {
-      alert(t("valid-email-alert"));
+      notify.warning(t("valid-email-alert"));
     } else {
       setIsLoading(true);
       localStorage.setItem("appLogo", appInfo.applogo);
@@ -48,16 +47,12 @@ function ForgotPassword() {
         const username = state.email;
         try {
             await Parse.User.requestPasswordReset(username);
-          setToast({ type: "success", message: t("reset-password-alert-1") });
+          notify.success(t("reset-password-alert-1"));
         } catch (err) {
           console.log("err ", err.code);
-          setToast({
-            type: "danger",
-            message: err.message || t("reset-password-alert-2")
-          });
+          notify.error(err.message || t("reset-password-alert-2"));
         } finally {
           setIsLoading(false);
-          setTimeout(() => setToast({ type: "", message: "" }), 1000);
         }
       }
     }
@@ -86,7 +81,6 @@ function ForgotPassword() {
           <Loader />
         </div>
       )}
-      {toast?.message && <Alert type={toast.type}>{toast.message}</Alert>}
       <div className="md:p-10 lg:p-16">
         <div className="md:p-4 lg:p-10 p-4 bg-base-100 text-base-content op-card">
           <div className="w-[250px] h-[66px] inline-block overflow-hidden">

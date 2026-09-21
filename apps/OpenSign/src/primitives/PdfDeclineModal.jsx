@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "../styles/signature.css";
 import { useTranslation } from "react-i18next";
 import Loader from "./Loader";
+import { notify } from "../utils";
 
 function CustomModal(props) {
   const { t } = useTranslation();
@@ -25,7 +26,7 @@ function CustomModal(props) {
     if (expiryDate) {
       props.handleExpiry && props.handleExpiry(expiryDate);
     } else {
-      alert(t("expiry-date-error"));
+      notify.warning(t("expiry-date-error"));
     }
   };
 
