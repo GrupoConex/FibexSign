@@ -69,14 +69,14 @@ const DocSuccessPage = () => {
       )}
       {sent ? (
         <div className="min-h-screen flex flex-col items-center justify-center p-3 md:p-8 text-center">
-          <div className="max-w-lg md:max-w-2xl bg-white rounded-lg shadow-lg p-3 md:p-10">
+          <div className="max-w-lg md:max-w-2xl bg-white rounded-lg p-3 md:p-10">
             {t("doc-sent")}
           </div>
         </div>
       ) : signed ? (
         <>
           <div className="min-h-screen flex flex-col items-center justify-center p-3 md:p-8 text-center">
-            <div className="max-w-lg md:max-w-2xl bg-white rounded-lg shadow-lg p-3 md:p-10">
+            <div className="max-w-lg md:max-w-2xl bg-white rounded-lg p-3 md:p-10">
               <div className="flex flex-col items-center space-y-4 ">
                 <CheckCircle className="text-green-500 w-12 h-12 md:w-14 md:h-14" />
                 <h1 className="text-xl md:text-2xl font-semibold text-gray-800">

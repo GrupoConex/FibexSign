@@ -296,7 +296,7 @@ const UserList = () => {
           !isLoader && (
             <>
               {isAdmin ? (
-                <div className="p-2 w-full bg-base-100 text-base-content op-card shadow-lg">
+                <div className="p-2 w-full bg-base-100 text-base-content op-card">
                   {isAlert.msg && (
                     <Alert type={isAlert.type}>{isAlert.msg}</Alert>
                   )}

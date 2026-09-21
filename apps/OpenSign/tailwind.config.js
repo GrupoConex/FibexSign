@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: ["class", '[data-theme="opensigndark"]'],
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
@@ -77,19 +78,19 @@ module.exports = {
           900: "#0b4a6f",
           950: "#062c41"
         },
-        orange: {
-          25: "#fffaf5",
-          50: "#fff6ed",
-          100: "#ffead5",
-          200: "#fddcab",
-          300: "#feb273",
-          400: "#fd853a",
-          500: "#fb6514",
-          600: "#ec4a0a",
-          700: "#c4320a",
-          800: "#9c2a10",
-          900: "#7e2410",
-          950: "#511c10"
+        royal: {
+          25: "#f5f8ff",
+          50: "#eff4fe",
+          100: "#dbe6fe",
+          200: "#bfd3fd",
+          300: "#93b5fc",
+          400: "#6090f7",
+          500: "#1d4ed8", // Azul rey mate
+          600: "#1e40af",
+          700: "#1e3a8a",
+          800: "#172554",
+          900: "#0f172a",
+          950: "#020617"
         },
         ice: {
           50: "#f0f9ff",
@@ -102,8 +103,8 @@ module.exports = {
           950: "#121b2d"
         },
         peach: {
-          light: "#fef6ee",
-          dark: "#2c221e"
+          light: "#eff6ff",
+          dark: "#1e293b"
         },
         pink: {
           500: "#ee46bc"
@@ -190,13 +191,13 @@ module.exports = {
     themes: [
       {
         opensigndark: {
-          primary: "#fb6514", // orange-500 - CTA & highlight color
-          "primary-content": "#FFFFFF",
+          primary: "#ffffff", // Blanco mate en dark mode
+          "primary-content": "#0f172a", // Texto oscuro para contraste óptimo
 
-          secondary: "#2c221e", // peach-dark
-          "secondary-content": "#fddcab", // orange-200
+          secondary: "#1e293b", // Slate oscuro
+          "secondary-content": "#93c5fd", // Azul claro
 
-          accent: "#7a5af8", // purple-500
+          accent: "#3b82f6", // Azul
           "accent-content": "#FFFFFF",
 
           neutral: "#1d2939", // gray-800 border
@@ -216,9 +217,11 @@ module.exports = {
           error: "#f04438",
           "error-content": "#FFFFFF",
 
-          "--rounded-btn": "1.9rem",
+          "--rounded-box": "0.875rem", // 14px para contenedores, modales y tarjetas
+          "--rounded-btn": "0.75rem", // 12px para botones, inputs y menús (redondeo pronunciado pero moderno)
+          "--rounded-badge": "0.5rem",
           "--tab-border": "2px",
-          "--tab-radius": "0.7rem",
+          "--tab-radius": "0.625rem",
 
           // Custom CSS variables for icon and button states
           "--icon-color": "#CCCCCC",
@@ -236,18 +239,18 @@ module.exports = {
       },
       {
         opensigncss: {
-          primary: "#fb6514", // orange-500
+          primary: "#1d4ed8", // Azul rey mate
           "primary-content": "#ffffff",
-          secondary: "#fef6ee", // peach-light
-          "secondary-content": "#7e2410", // orange-900
-          accent: "#7a5af8", // purple-500
+          secondary: "#eff6ff", // Azul muy claro mate
+          "secondary-content": "#1d4ed8", // Azul rey
+          accent: "#2563eb", // Azul acento
           "accent-content": "#ffffff",
-          neutral: "#e4e7ec", // gray-200 border
-          "neutral-content": "#344054", // gray-700
-          "base-100": "#ffffff",
-          "base-200": "#f9fafb", // gray-50
-          "base-300": "#f2f4f7", // gray-100
-          "base-content": "#101828", // gray-900
+          neutral: "#dbeafe", // Borde azul claro suave
+          "neutral-content": "#1e3a8a", // Azul oscuro
+          "base-100": "#edf4fc", // Fondo azul claro para contrastar con las tarjetas
+          "base-200": "#e2eefb", // Azul claro elevación
+          "base-300": "#dbeafe", // Azul claro para hovers y selecciones
+          "base-content": "#000000", // Letras en NEGRO
           info: "#0ba5ec", // blue-light-500
           "info-content": "#ffffff",
           success: "#12b76a",
@@ -256,9 +259,11 @@ module.exports = {
           "warning-content": "#ffffff",
           error: "#f04438",
           "error-content": "#ffffff",
-          "--rounded-btn": "1.9rem",
+          "--rounded-box": "0.875rem",
+          "--rounded-btn": "0.75rem",
+          "--rounded-badge": "0.5rem",
           "--tab-border": "2px",
-          "--tab-radius": "0.7rem"
+          "--tab-radius": "0.625rem"
         }
       }
     ],

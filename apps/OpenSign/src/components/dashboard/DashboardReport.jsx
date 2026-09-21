@@ -198,6 +198,7 @@ function DashboardReport(props) {
         <>
           {reportName ? (
             <DocumentsReport
+              isDashboard={true}
               ReportName={reportName}
               List={List}
               setList={setList}

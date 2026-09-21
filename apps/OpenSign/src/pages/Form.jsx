@@ -739,7 +739,7 @@ const Forms = (props) => {
   };
   return (
     <div
-      className={`${isSubmit || isInitializing ? "" : "shadow-md rounded-box my-[2px] p-3 bg-base-100 text-base-content"}`}
+      className={`${isSubmit || isInitializing ? "" : "rounded-box my-[2px] p-3 bg-base-100 text-base-content"}`}
     >
       {isAlert?.message && <Alert type={isAlert.type}>{isAlert.message}</Alert>}
       {isSubmit || isInitializing ? (

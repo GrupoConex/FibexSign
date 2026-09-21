@@ -348,7 +348,7 @@ function Header(props) {
                       </DropdownMenu.Trigger>
                       <DropdownMenu.Portal>
                         <DropdownMenu.Content
-                          className="bg-white shadow-md rounded-md px-3 py-2"
+                          className="bg-white rounded-md px-3 py-2"
                           sideOffset={5}
                         >
                           {props?.setIsEditTemplate && (
@@ -528,7 +528,7 @@ function Header(props) {
                     handleToPrint(e, setIsDownloading, props?.pdfDetails)
                   }
                   type="button"
-                  className="op-btn op-btn-neutral op-btn-sm mr-[3px] shadow"
+                  className="op-btn op-btn-neutral op-btn-sm mr-[3px]"
                 >
                   <i
                     className="fa-light fa-print py-[3px]"
@@ -546,7 +546,7 @@ function Header(props) {
                             setIsDownloading
                           )
                         }
-                        className="op-btn op-btn-secondary op-btn-sm mr-[3px] shadow"
+                        className="op-btn op-btn-secondary op-btn-sm mr-[3px]"
                       >
                         <i
                           className="fa-light fa-award py-[3px]"
@@ -560,7 +560,7 @@ function Header(props) {
                 }
                 <button
                   type="button"
-                  className="op-btn op-btn-primary op-btn-sm mr-[3px] shadow"
+                  className="op-btn op-btn-primary op-btn-sm mr-[3px]"
                   onClick={() => handleDownloadBtn()}
                 >
                   <i
@@ -585,7 +585,7 @@ function Header(props) {
                     )}
                     {!props?.isSelfSign && !isViewerSigner && (
                       <button
-                        className="op-btn op-btn-secondary op-btn-sm mr-[3px] shadow"
+                        className="op-btn op-btn-secondary op-btn-sm mr-[3px]"
                         onClick={() => handleDeclinePdfAlert()}
                       >
                         {t("decline")}
@@ -604,7 +604,7 @@ function Header(props) {
                     {!isViewerSigner && (
                       <button
                         type="button"
-                        className="op-btn op-btn-primary op-btn-sm mr-[3px] shadow"
+                        className="op-btn op-btn-primary op-btn-sm mr-[3px]"
                         onClick={() => props?.embedWidgetsData()}
                       >
                         {finishLabel}
@@ -626,7 +626,7 @@ function Header(props) {
                           setIsDownloading
                         )
                       }
-                      className="op-btn op-btn-secondary op-btn-sm gap-0 font-medium text-[12px] mr-[3px] shadow"
+                      className="op-btn op-btn-secondary op-btn-sm gap-0 font-medium text-[12px] mr-[3px]"
                     >
                       <i className="fa-light fa-award" aria-hidden="true"></i>
                       <span className="hidden lg:block ml-1">
@@ -640,14 +640,14 @@ function Header(props) {
                   handleToPrint(e, setIsDownloading, props?.pdfDetails)
                 }
                 type="button"
-                className="op-btn op-btn-neutral op-btn-sm gap-0 font-medium text-[12px] mr-[3px] shadow"
+                className="op-btn op-btn-neutral op-btn-sm gap-0 font-medium text-[12px] mr-[3px]"
               >
                 <i className="fa-light fa-print" aria-hidden="true"></i>
                 <span className="hidden lg:block ml-1">{t("print")}</span>
               </button>
               <button
                 type="button"
-                className="op-btn op-btn-primary op-btn-sm gap-0 font-medium text-[12px] mr-[3px] shadow"
+                className="op-btn op-btn-primary op-btn-sm gap-0 font-medium text-[12px] mr-[3px]"
                 // onClick={() => props?.setIsDownloadModal(true)}
                 onClick={() => handleDownloadBtn()}
               >
@@ -656,7 +656,7 @@ function Header(props) {
               </button>
               <button
                 type="button"
-                className="op-btn op-btn-info op-btn-sm gap-0 font-medium text-[12px] mr-[3px] shadow"
+                className="op-btn op-btn-info op-btn-sm gap-0 font-medium text-[12px] mr-[3px]"
                 onClick={() => props?.setIsEmail(true)}
               >
                 <i className="fa-light fa-envelope" aria-hidden="true"></i>
@@ -667,7 +667,7 @@ function Header(props) {
             <div className="flex">
               <button
                 type="button"
-                className="op-btn op-btn-primary op-btn-sm  shadow"
+                className="op-btn op-btn-primary op-btn-sm"
                 onClick={() => props?.embedWidgetsData()}
               >
                 {t("sign-now")}

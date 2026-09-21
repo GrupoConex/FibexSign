@@ -85,7 +85,7 @@ const UpdateExistUserAdmin = () => {
           ) : (
             <div className="w-[95%] md:w-[500px]">
               <form onSubmit={handleSubmit}>
-                <div className="w-full my-4 op-card bg-base-100 shadow-md outline outline-1 outline-slate-300/50 overflow-hidden">
+                <div className="w-full my-4 op-card bg-base-100 outline outline-1 outline-slate-300/50 overflow-hidden">
                   {isSubmitLoading && (
                     <div className="absolute z-40 w-full h-full flex justify-center bg-black/30">
                       <Loader />

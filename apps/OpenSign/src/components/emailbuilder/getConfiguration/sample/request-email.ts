@@ -4,9 +4,8 @@ const getRequestEmail = (
 ): TEditorConfiguration => {
   const appName = "FibexSign";
 
-  const logoBlock =
-        {
-          "block-1709571212684": {
+  const logoBlock: TEditorConfiguration = {
+    "block-1709571212684": {
             type: "Text",
             data: {
               style: {

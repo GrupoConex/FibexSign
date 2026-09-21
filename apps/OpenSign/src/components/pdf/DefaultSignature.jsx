@@ -63,7 +63,7 @@ function DefaultSignature(props) {
         </div>
       </div>
       <div className="flex flex-col items-center mt-[10px] font-semibold relative">
-        <div className="op-card shadow-md h-[111px] w-[90%] p-2">
+        <div className="op-card h-[111px] w-[90%] p-2">
           {activeTab === 0 ? (
             <img
               alt="signature"

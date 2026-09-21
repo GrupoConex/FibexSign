@@ -4,6 +4,7 @@ import Parse from "parse";
 import getReplacedHashQuery from "../../constant/getReplacedHashQuery";
 import { useNavigate } from "react-router";
 import Tooltip from "../../primitives/Tooltip";
+import Icon from "../../primitives/Icon";
 import { useTranslation } from "react-i18next";
 import { withSessionValidation } from "../../utils";
 
@@ -311,6 +312,17 @@ const DashboardCard = (props) => {
     }
   }
 
+  const getCardIconName = (label) => {
+    switch (label) {
+      case "Need your Signature":
+        return "file-signature";
+      case "Out for signatures":
+        return "send";
+      default:
+        return "info";
+    }
+  };
+
   return (
     <div
       onClick={() => openReport()}
@@ -318,27 +330,29 @@ const DashboardCard = (props) => {
         props.Data && props.Data.Redirect_type
           ? "cursor-pointer"
           : "cursor-default"
-      }`}
+      } w-full h-full flex items-center relative pr-8`}
     >
-      <div className="flex items-center justify-start gap-5 text-white">
-        <span className="rounded-full bg-base-300 bg-opacity-20 w-[60px] h-[60px] self-start flex justify-center items-center">
-          <i
-            className={`${
-              props.Icon ? props.Icon : "fa-light fa-info"
-            } text-[25px] lg:text-[30px]`}
-          ></i>
-        </span>
-
-        <div className="font-medium">
-          <div className="text-base lg:text-lg">
+      {/* Contenido principal agrupado horizontalmente */}
+      <div className="flex items-center gap-4 text-white w-full">
+        <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-200">
+          <Icon
+            name={getCardIconName(props.Label)}
+            size={26}
+            className="text-white"
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-blue-100 truncate">
             {t(`dashboard-card.${props.Label}`)}
           </div>
-          <div className="text-2xl font-light">
+          <div className="text-3xl font-black text-white mt-0.5 tracking-tight">
             {loading ? <div className="loader-01"></div> : setFormat(response)}
           </div>
         </div>
       </div>
-      <div className="text-xs absolute top-3 right-2">
+
+      {/* Botón de incógnita (?) posicionado limpiamente en la esquina superior derecha */}
+      <div className="absolute top-1 right-1 text-white/80 hover:text-white transition-opacity">
         <Tooltip
           id={props.Label}
           iconColor={"white"}
