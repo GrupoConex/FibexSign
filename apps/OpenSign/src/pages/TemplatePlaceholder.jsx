@@ -68,7 +68,6 @@ import LottieWithLoader from "../primitives/DotLottieReact";
 import * as utils from "../utils";
 import CustomizeMail from "../components/pdf/CustomizeMail";
 import { resetWidgetState, setPrefillImg } from "../redux/reducers/widgetSlice";
-import ShareButton from "../primitives/ShareButton";
 import { useWindowSize } from "../hook/useWindowSize";
 import { useScroll } from "../context/ScrollPdfContext";
 
@@ -1813,13 +1812,6 @@ const TemplatePlaceholder = () => {
               <i className="fa-light fa-copy" />
               <span className=" hidden md:block ml-1 ">{t("copy-link")}</span>
             </button>
-            <ShareButton
-              title={t("sign-url")}
-              text={t("sign-url")}
-              url={data.url}
-            >
-              <i className="fa-light fa-share-from-square op-link op-link-secondary no-underline"></i>
-            </ShareButton>
           </div>
         </div>
       );

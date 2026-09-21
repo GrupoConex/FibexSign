@@ -33,14 +33,12 @@ const GetDashboard = (props) => {
       case "Card":
         return (
           <div
-            className={`${
-              col?.widget?.bgColor ? col.widget.bgColor : "bg-[#2ed8b6]"
-            } op-card w-full h-[140px] px-3 pt-4 mb-3 shadow-md`}
+            className="dashboard-stat-card bg-[#1d4ed8] text-white op-card rounded-box w-full h-[125px] px-6 py-4 border border-blue-400/30 hover:border-blue-300/60 transition-all duration-200 relative group cursor-pointer flex flex-col justify-center"
             data-tut={col.widget.data.tourSection}
           >
             <Suspense
               fallback={
-                <div className="h-[150px] w-full flex justify-center items-center">
+                <div className="h-full w-full flex justify-center items-center">
                   {t("loading")}
                 </div>
               }
@@ -77,9 +75,7 @@ const GetDashboard = (props) => {
       case "Card":
         return (
           <div
-            className={`${
-              col?.widget?.bgColor ? col.widget.bgColor : "bg-[#2ed8b6]"
-            } op-card w-full h-[140px] px-3 pt-4 mb-3 shadow-md"`}
+            className="dashboard-stat-card bg-[#1d4ed8] text-white op-card rounded-box w-full h-[125px] px-6 py-4 border border-blue-400/30 hover:border-blue-300/60 transition-all duration-200 relative group cursor-pointer flex flex-col justify-center"
           >
             <Suspense fallback={<div>please wait</div>}>
               <DashboardCard
@@ -107,37 +103,60 @@ const GetDashboard = (props) => {
         return <></>;
     }
   };
+
+  const cardColumns =
+    props?.dashboard?.columns?.filter((col) => col.widget.type === "Card") || [];
+  const reportColumns =
+    props?.dashboard?.columns?.filter((col) => col.widget.type !== "Card") || [];
+
   return (
-    <div>
-      <div className="mb-3">
-        <div
-          data-tut={"tourbutton"}
-          className="flex flex-col md:flex-row gap-4"
-        >
-          {buttonList.map((btn) => (
-            <Button
-              key={btn.label}
-              label={btn.label}
-              redirectType={btn.redirectType}
-              redirectId={btn.redirectId}
-              icon={btn.icon}
-            />
-          ))}
+    <div className="flex flex-col gap-4">
+      {/* 1. Tarjetas Azules de Estadísticas (PRIMERO) */}
+      {cardColumns.length > 0 && (
+        <div className="grid grid-cols-12 w-full gap-4">
+          {cardColumns.map((col, i) =>
+            col.widget.data && col.widget.data.tourSection ? (
+              <div key={i} className={col?.colsize}>
+                {renderSwitchWithTour(col)}
+              </div>
+            ) : (
+              <div key={i} className={col?.colsize}>
+                {renderSwitch(col)}
+              </div>
+            )
+          )}
         </div>
+      )}
+
+      {/* 2. Botones de Acciones Rápidas ("Firma tu mismo" / "Solicitar firmas") */}
+      <div data-tut={"tourbutton"} className="flex flex-col md:flex-row gap-4">
+        {buttonList.map((btn) => (
+          <Button
+            key={btn.label}
+            label={btn.label}
+            redirectType={btn.redirectType}
+            redirectId={btn.redirectId}
+            icon={btn.icon}
+          />
+        ))}
       </div>
-      <div className="grid grid-cols-12 w-full gap-x-4">
-        {props?.dashboard?.columns?.map((col, i) =>
-          col.widget.data && col.widget.data.tourSection ? (
-            <div key={i} className={col?.colsize}>
-              {renderSwitchWithTour(col)}
-            </div>
-          ) : (
-            <div key={i} className={col?.colsize}>
-              {renderSwitch(col)}
-            </div>
-          )
-        )}
-      </div>
+
+      {/* 3. Reportes y Listas Recientes */}
+      {reportColumns.length > 0 && (
+        <div className="grid grid-cols-12 w-full gap-4">
+          {reportColumns.map((col, i) =>
+            col.widget.data && col.widget.data.tourSection ? (
+              <div key={i} className={col?.colsize}>
+                {renderSwitchWithTour(col)}
+              </div>
+            ) : (
+              <div key={i} className={col?.colsize}>
+                {renderSwitch(col)}
+              </div>
+            )
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -579,7 +579,7 @@ function Opensigndrive() {
     handleHighlightClick();
   };
   return (
-    <div className="bg-base-100 text-base-content rounded-box w-full shadow-md">
+    <div className="bg-base-100 text-base-content rounded-box w-full">
       <ModalUi
         isOpen={isAlert.isShow}
         title={t("alert")}
@@ -881,7 +881,7 @@ function Opensigndrive() {
           </div>
           {/* Mobile search overlay */}
           {mobileSearchOpen && (
-            <div className="top-full left-0 w-full bg-white px-4 py-2 shadow-md md:hidden">
+            <div className="top-full left-0 w-full bg-white px-4 py-2 md:hidden">
               <input
                 type="search"
                 value={searchTerm}

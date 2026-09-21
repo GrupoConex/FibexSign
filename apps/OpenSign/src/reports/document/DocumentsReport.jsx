@@ -6,7 +6,7 @@ import axios from "axios";
 import ModalUi from "../../primitives/ModalUi";
 import Alert from "../../primitives/Alert";
 import Tooltip from "../../primitives/Tooltip";
-import ShareButton from "../../primitives/ShareButton";
+import Icon from "../../primitives/Icon";
 import DatePicker from "../../components/DatePicker";
 import Parse from "parse";
 import {
@@ -47,8 +47,34 @@ const DocumentsReport = (props) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { prefillImg, isBulkLoader } = useSelector((state) => state.widget);
-  const isDashboard =
-    location?.pathname === "/dashboard/35KBoSgoAK" ? true : false;
+  const isDashboard = Boolean(
+    props.isDashboard ||
+      location?.pathname === "/dashboard/35KBoSgoAK" ||
+      location?.pathname?.includes("/dashboard")
+  );
+
+  const getReportIcon = (reportName) => {
+    switch (reportName) {
+      case "Recent signature requests":
+      case "Solicitudes de firma recientes":
+        return { name: "file-signature", color: "text-blue-500 dark:text-blue-400", bg: "bg-blue-500/15" };
+      case "Recently sent for signatures":
+      case "Recientemente enviados para ser firmados":
+        return { name: "send", color: "text-indigo-500 dark:text-indigo-400", bg: "bg-indigo-500/15" };
+      case "Drafts":
+      case "Draft Documents":
+      case "Borradores":
+        return { name: "drafts", color: "text-amber-500 dark:text-amber-400", bg: "bg-amber-500/15" };
+      case "Completed documents":
+        return { name: "file-check", color: "text-emerald-500 dark:text-emerald-400", bg: "bg-emerald-500/15" };
+      case "Declined documents":
+        return { name: "declined", color: "text-rose-500 dark:text-rose-400", bg: "bg-rose-500/15" };
+      case "In-progress documents":
+        return { name: "clock", color: "text-sky-500 dark:text-sky-400", bg: "bg-sky-500/15" };
+      default:
+        return { name: "folder", color: "text-blue-500 dark:text-blue-400", bg: "bg-blue-500/15" };
+    }
+  };
   const [currentPage, setCurrentPage] = useState(1);
   const [actLoader, setActLoader] = useState({});
   const [isDeleteModal, setIsDeleteModal] = useState({});
@@ -699,7 +725,7 @@ const DocumentsReport = (props) => {
 
     return (
       <div className="flex flex-row gap-2 justify-center items-center">
-        <div className="flex justify-center items-center bg-base-300 text-base-content shadow-md op-card w-[65px] h-[32px] cursor-default">
+        <div className="flex justify-center items-center bg-base-300 text-base-content op-card w-[65px] h-[32px] cursor-default">
           {audit?.Activity ? audit?.Activity : "Awaited"}
         </div>
 
@@ -1033,13 +1059,6 @@ const DocumentsReport = (props) => {
               <i className="fa-light fa-copy" />
               <span className=" hidden md:block ml-1 ">{t("copy-link")}</span>
             </button>
-            <ShareButton
-              title={t("sign-url")}
-              text={t("sign-url")}
-              url={data.url}
-            >
-              <i className="fa-light fa-share-from-square op-link op-link-secondary no-underline"></i>
-            </ShareButton>
           </div>
         </div>
       );
@@ -1076,7 +1095,7 @@ const DocumentsReport = (props) => {
           <Loader />
         </div>
       )}
-      <div className="p-2 w-full bg-base-100 text-base-content op-card shadow-lg">
+      <div className="p-2 w-full bg-base-100 text-base-content op-card">
         {alertMsg.message && (
           <Alert type={alertMsg.type}>{alertMsg.message}</Alert>
         )}
@@ -1084,17 +1103,34 @@ const DocumentsReport = (props) => {
           ref={titleRef}
           className="flex flex-row items-center justify-between my-2 mx-3 text-[20px] md:text-[23px]"
         >
-          <div className="font-light">
-            {t(`report-name.${props.ReportName}`)}{" "}
-            {props.report_help && (
-              <span className="text-xs md:text-[13px] font-normal">
-                <Tooltip
-                  id="report_help"
-                  message={t(`report-help.${props.ReportName}`)}
+          {isDashboard ? (
+            <div
+              className="op-tooltip op-tooltip-right flex items-center bg-transparent border-0"
+              data-tip={t(`report-name.${props.ReportName}`)}
+            >
+              <div
+                className={`w-10 h-10 rounded-xl ${getReportIcon(props.ReportName).bg} flex items-center justify-center shrink-0 hover:scale-105 transition-transform`}
+              >
+                <Icon
+                  name={getReportIcon(props.ReportName).name}
+                  size={20}
+                  className={getReportIcon(props.ReportName).color}
                 />
-              </span>
-            )}
-          </div>
+              </div>
+            </div>
+          ) : (
+            <div className="font-light">
+              {t(`report-name.${props.ReportName}`)}{" "}
+              {props.report_help && (
+                <span className="text-xs md:text-[13px] font-normal">
+                  <Tooltip
+                    id="report_help"
+                    message={t(`report-help.${props.ReportName}`)}
+                  />
+                </span>
+              )}
+            </div>
+          )}
           <div className="flex flex-row justify-center items-center gap-3 mb-2">
             {/* Search input for report bigger in width */}
             {titleElement?.width > 500 && (
@@ -1171,7 +1207,7 @@ const DocumentsReport = (props) => {
           </div>
         )}
         <div
-          className={`overflow-auto w-full border-b ${
+          className={`overflow-auto w-full border-b border-slate-700/40 dark:border-slate-800/80 ${
             props.List?.length > 0
               ? isDashboard
                 ? "min-h-[317px]"
@@ -1183,7 +1219,7 @@ const DocumentsReport = (props) => {
         >
           <table className="op-table border-collapse w-full mb-4">
             <thead className="text-[14px] text-center">
-              <tr className="border-y-[1px]">
+              <tr className="border-y-[1px] border-slate-700/40 dark:border-slate-800/80">
                 {props.heading?.map((item, i) => (
                   <th key={i} className="p-2">
                     {props.columnLabels?.[item] ||
@@ -1206,7 +1242,7 @@ const DocumentsReport = (props) => {
                       currentList?.length === props.docPerPage
                         ? "last:border-none"
                         : ""
-                    } border-y-[1px] `}
+                    } border-y-[1px] border-slate-700/30 dark:border-slate-800/60 `}
                     key={index}
                   >
                     {props?.heading?.map((col) => (
@@ -1575,15 +1611,6 @@ const DocumentsReport = (props) => {
                                   {share.email}
                                 </span>
                                 <div className="flex items-center gap-2">
-                                  <ShareButton
-                                    title={t("sign-url")}
-                                    text={t("sign-url")}
-                                    url={share.url}
-                                    className="op-btn op-btn-primary op-btn-outline op-btn-xs md:op-btn-sm "
-                                  >
-                                    <i className="fa-light fa-share-from-square"></i>
-                                    {t("btnLabel.Share")}
-                                  </ShareButton>
                                   <button
                                     className="op-btn op-btn-primary op-btn-outline op-btn-xs md:op-btn-sm"
                                     onClick={() =>
@@ -1813,14 +1840,14 @@ const DocumentsReport = (props) => {
                 </>
               ) : (
                 <>
-                  <div className="w-[60px] h-[60px] overflow-hidden">
-                    <img
-                      className="w-full h-full object-contain"
-                      src={pad}
-                      alt={t("no-data-available")}
+                  <div className="w-16 h-16 rounded-2xl bg-base-200/80 flex items-center justify-center mb-3">
+                    <Icon
+                      name="folder-archive"
+                      size={32}
+                      className="text-gray-400 dark:text-gray-500"
                     />
                   </div>
-                  <div className="text-sm font-semibold">
+                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     {t("no-data-available")}
                   </div>
                 </>

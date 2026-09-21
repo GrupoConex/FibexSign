@@ -9,7 +9,6 @@ import Tour from "../primitives/Tour";
 import { useLocation, useParams } from "react-router";
 import SignerListPlace from "../components/pdf/SignerListPlace";
 import Header from "../components/pdf/PdfHeader";
-import ShareButton from "../primitives/ShareButton";
 import {
   pdfNewWidthFun,
   contractDocument,
@@ -1196,13 +1195,6 @@ function PlaceHolderSign() {
               <i className="fa-light fa-copy" />
               <span className="hidden md:block ml-1 ">{t("copy-link")}</span>
             </button>
-            <ShareButton
-              title={t("sign-url")}
-              text={t("sign-url")}
-              url={data.url}
-            >
-              <i className="fa-light fa-share-from-square op-link opensigncss:op-link-secondary opensigndark:op-link-primary no-underline"></i>
-            </ShareButton>
           </div>
         </div>
       );

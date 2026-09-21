@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Parse from "parse";
 import { appInfo } from "../constant/appinfo";
-import { NavLink, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import {
   getAppLogo,
   openInNewTab,
@@ -265,22 +265,10 @@ const AddAdmin = () => {
           ) : (
             <div className="w-[95%] md:w-[500px]">
               <form onSubmit={handleSubmit}>
-                <div className="w-full my-4 op-card bg-base-100 shadow-md outline outline-1 outline-slate-300/50">
+                <div className="w-full my-4 op-card bg-base-100 outline outline-1 outline-slate-300/50">
                   <h2 className="text-[30px] text-center mt-3 font-medium">
                     {t("opensign-setup", { appName })}
                   </h2>
-                  <NavLink
-                    to="https://discord.com/invite/xe9TDuyAyj"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-center text-sm mt-1 text-[blue] cursor-pointer"
-                  >
-                    {t("join-discord")}
-                    <i
-                      aria-hidden="true"
-                      className="fa-brands fa-discord ml-1"
-                    ></i>
-                  </NavLink>
                   <div className="px-6 py-3 text-xs">
                     <label className="block ">
                       {t("name")}{" "}

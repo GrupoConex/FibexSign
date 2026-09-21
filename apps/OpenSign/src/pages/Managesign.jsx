@@ -324,7 +324,7 @@ const ManageSign = () => {
     }
   };
   return (
-    <div className="relative h-full bg-base-100 text-base-content flex shadow-md rounded-box overflow-auto">
+    <div className="relative h-full bg-base-100 text-base-content flex rounded-box overflow-auto">
       {isLoader && (
         <div className="absolute bg-black bg-opacity-30 z-50 w-full h-full flex justify-center items-center">
           <Loader />
