@@ -114,7 +114,7 @@ function CustomModal(props) {
                 id="expiryDate"
                 type="date"
                 onClick={(e) => e?.currentTarget?.showPicker?.()}
-                className="rounded-full w-full px-4 op-input op-input-bordered op-input-md text-base-content focus:outline-none hover:border-base-content"
+                className="w-full px-4 op-input op-input-bordered op-input-md text-base-content focus:outline-none hover:border-base-content"
                 defaultValue={props?.doc?.ExpiryDate?.iso?.split("T")?.[0]}
                 onChange={(e) => setExpiryDate(e.target.value)}
               />

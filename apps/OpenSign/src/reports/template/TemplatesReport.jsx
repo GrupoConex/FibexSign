@@ -5,7 +5,7 @@ import axios from "axios";
 import ModalUi from "../../primitives/ModalUi";
 import Alert from "../../primitives/Alert";
 import Tooltip from "../../primitives/Tooltip";
-import ShareButton from "../../primitives/ShareButton";
+import Icon from "../../primitives/Icon";
 import Tour from "../../primitives/Tour";
 import Parse from "parse";
 import {
@@ -729,7 +729,7 @@ const TemplatesReport = (props) => {
 
     return (
       <div className="flex flex-row gap-2 justify-center items-center">
-        <div className="flex justify-center items-center bg-base-300 text-base-content shadow-md op-card w-[65px] h-[32px] cursor-default">
+        <div className="flex justify-center items-center bg-base-300 text-base-content op-card w-[65px] h-[32px] cursor-default">
           {audit?.Activity ? audit?.Activity : "Awaited"}
         </div>
 
@@ -1032,13 +1032,6 @@ const TemplatesReport = (props) => {
               <i className="fa-light fa-copy" />
               <span className=" hidden md:block ml-1 ">{t("copy-link")}</span>
             </button>
-            <ShareButton
-              title={t("sign-url")}
-              text={t("sign-url")}
-              url={data.url}
-            >
-              <i className="fa-light fa-share-from-square op-link op-link-secondary no-underline"></i>
-            </ShareButton>
           </div>
         </div>
       );
@@ -1066,7 +1059,7 @@ const TemplatesReport = (props) => {
           <Loader />
         </div>
       )}
-      <div className="p-2 w-full bg-base-100 text-base-content op-card shadow-lg">
+      <div className="p-2 w-full bg-base-100 text-base-content op-card">
         {props.tourData && (
           <>
             <Tour
@@ -1444,15 +1437,6 @@ const TemplatesReport = (props) => {
                                   {share.email}
                                 </span>
                                 <div className="flex items-center gap-2">
-                                  <ShareButton
-                                    title={t("sign-url")}
-                                    text={t("sign-url")}
-                                    url={share.url}
-                                    className="op-btn op-btn-primary op-btn-outline op-btn-xs md:op-btn-sm "
-                                  >
-                                    <i className="fa-light fa-share-from-square"></i>
-                                    {t("btnLabel.Share")}
-                                  </ShareButton>
                                   <button
                                     className="op-btn op-btn-primary op-btn-outline op-btn-xs md:op-btn-sm"
                                     onClick={() =>
@@ -1638,14 +1622,14 @@ const TemplatesReport = (props) => {
                 </>
               ) : (
                 <>
-                  <div className="w-[60px] h-[60px] overflow-hidden">
-                    <img
-                      className="w-full h-full object-contain"
-                      src={pad}
-                      alt={t("no-data-available")}
+                  <div className="w-16 h-16 rounded-2xl bg-base-200/80 border border-slate-700/40 flex items-center justify-center mb-3">
+                    <Icon
+                      name="file-text"
+                      size={32}
+                      className="text-gray-400 dark:text-gray-500"
                     />
                   </div>
-                  <div className="text-sm font-semibold">
+                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     {t("no-data-available")}
                   </div>
                 </>

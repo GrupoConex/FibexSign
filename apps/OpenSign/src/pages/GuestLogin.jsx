@@ -308,7 +308,7 @@ function GuestLogin() {
         <LoaderWithMsg isLoading={isLoading} />
       ) : (
         <div className="pb-1 md:pb-4 pt-10 md:px-10 lg:px-16">
-          <div className="md:p-4 lg:p-10 p-4 text-base-content bg-base-100 op-card shadow-md">
+          <div className="md:p-4 lg:p-10 p-4 text-base-content bg-base-100 op-card">
             <div className="w-[250px] h-[66px] inline-block overflow-hidden mb-6">
               {appLogo && (
                 <img
@@ -324,7 +324,7 @@ function GuestLogin() {
                 <legend className="text-[12px] text-[#878787] mt-2 mb-1">
                   {t("get-otp-alert")}
                 </legend>
-                <div className="p-[20px] outline outline-1 outline-slate-300/50 my-2 op-card shadow-md">
+                <div className="p-[20px] outline outline-1 outline-slate-300/50 my-2 op-card">
                   <input
                     type="email"
                     name="email"
@@ -354,7 +354,7 @@ function GuestLogin() {
                   {t("provide-your-details")}
                 </legend>
                 <form
-                  className="p-[20px] pt-[15px] outline outline-1 outline-slate-300/50 my-2 op-card shadow-md"
+                  className="p-[20px] pt-[15px] outline outline-1 outline-slate-300/50 my-2 op-card"
                   onSubmit={handleUserData}
                 >
                   <div className="mb-2">

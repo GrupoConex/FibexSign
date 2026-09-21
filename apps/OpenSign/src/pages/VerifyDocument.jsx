@@ -601,7 +601,7 @@ const VerifyDocument = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 bg-base-100 shadow-xl rounded-lg mt-10">
+    <div className="container mx-auto p-6 bg-base-100 rounded-lg mt-10">
       <style>{`
         .checkmark__circle {
           stroke-dasharray: 166;
@@ -658,7 +658,7 @@ const VerifyDocument = () => {
         {t("verify-document-signature")}
       </h1>
 
-      <div className="mb-6 p-6 border border-base-300 rounded-lg bg-base-200/30 shadow-sm">
+      <div className="mb-6 p-6 border border-base-300 rounded-lg bg-base-200/30">
         <label
           htmlFor="document-upload"
           className="block text-lg font-medium text-base-content mb-2"
@@ -699,7 +699,7 @@ const VerifyDocument = () => {
 
       {verificationResult &&
         verificationResult !== t("verification-in-progress") && (
-          <div className="mt-8 p-6 border border-base-300 rounded-lg bg-base-200 shadow-md min-h-[120px] flex flex-col items-center justify-center">
+          <div className="mt-8 p-6 border border-base-300 rounded-lg bg-base-200 min-h-[120px] flex flex-col items-center justify-center">
             <h2 className="text-2xl font-bold mb-4 text-base-content text-center">
               {t("verification-status")}
             </h2>
@@ -742,7 +742,7 @@ const VerifyDocument = () => {
                   return (
                     <div
                       key={index}
-                      className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
+                      className="bg-white border border-gray-200 rounded-xl overflow-hidden"
                     >
                       {/* Header Section */}
                       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">

@@ -20,7 +20,6 @@ export const cloudServerUrl =
   (process.env.PORT ? `http://localhost:${process.env.PORT}/app` : '/app');
 export const serverAppId = process.env.APP_ID || 'opensign';
 export const appName = 'FibexSign';
-export const supportEmail = 'contacto@fibexsign.com';
 export const prefillDraftDocWidget = ['date', 'textbox', 'checkbox', 'radio button', 'image'];
 export const prefillDraftTemWidget = [
   'date',

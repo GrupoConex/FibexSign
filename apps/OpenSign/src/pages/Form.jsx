@@ -730,7 +730,7 @@ const Forms = (props) => {
   };
   return (
     <div
-      className={`${isSubmit || isInitializing ? "" : "shadow-md rounded-box my-[2px] p-3 bg-base-100 text-base-content"}`}
+      className={`${isSubmit || isInitializing ? "" : "rounded-box my-[2px] p-3 bg-base-100 text-base-content"}`}
     >
       {isSubmit || isInitializing ? (
         <div className="flex flex-col justify-center items-center h-[100vh]">

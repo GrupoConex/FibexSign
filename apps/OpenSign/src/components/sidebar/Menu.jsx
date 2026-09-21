@@ -10,7 +10,7 @@ const Menu = ({ item, isOpen, closeSidebar }) => {
   const { selectedMenu } = useSelector((state) => state.sidebar);
 
   return (
-    <li key={item.title} role="none" className="my-0.5">
+    <li key={item.title} role="none">
       <NavLink
         to={
           item.pageType
@@ -18,7 +18,7 @@ const Menu = ({ item, isOpen, closeSidebar }) => {
             : `/${item.objectId}`
         }
         className={({ isActive }) =>
-          `${isActive && selectedMenu ? "bg-base-300 text-base-content" : ""} flex gap-x-5 items-center justify-start text-left p-3 text-base-content hover:text-base-content focus:bg-base-300 hover:bg-base-300 hover:no-underline focus:outline-none`
+          `${isActive && selectedMenu ? "bg-base-300 active font-medium" : ""} flex gap-x-5 items-center justify-start text-left p-3 rounded-lg text-base-content hover:text-base-content hover:no-underline focus:outline-none transition-colors`
         }
         onClick={() => closeSidebar(item.title)}
         tabIndex={isOpen ? 0 : -1}

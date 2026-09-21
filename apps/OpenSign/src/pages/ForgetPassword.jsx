@@ -99,7 +99,7 @@ function ForgotPassword() {
                 <span className="text-[12px] text-[#878787]">
                   {t("reset-password-alert-3")}
                 </span>
-                <div className="w-full my-4 op-card bg-base-100 shadow-md outline outline-1 outline-slate-300/50">
+                <div className="w-full my-4 op-card bg-base-100 outline outline-1 outline-slate-300/50">
                   <div className="px-6 py-4">
                     <label className="block text-xs">{t("email")}</label>
                     <input

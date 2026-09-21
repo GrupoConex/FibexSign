@@ -289,7 +289,7 @@ const UserList = () => {
           !isLoader && (
             <>
               {isAdmin ? (
-                <div className="p-2 w-full bg-base-100 text-base-content op-card shadow-lg">
+                <div className="p-2 w-full bg-base-100 text-base-content op-card">
                   <div className="flex flex-row items-center justify-between my-2 mx-3 text-[20px] md:text-[23px]">
                     <div className="font-light">
                       {t("report-name.Users")}{" "}

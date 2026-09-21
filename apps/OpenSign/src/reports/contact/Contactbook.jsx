@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import EditContactForm from "./EditContactForm";
 import ModalUi from "../../primitives/ModalUi";
 import Tooltip from "../../primitives/Tooltip";
+import Icon from "../../primitives/Icon";
 import Loader from "../../primitives/Loader";
 import { serverUrl_fn } from "../../constant/appinfo";
 import { useElSize } from "../../hook/useElSize";
@@ -215,7 +216,7 @@ const Contactbook = (props) => {
           <Loader />
         </div>
       )}
-      <div className="p-2 w-full bg-base-100 text-base-content op-card shadow-lg">
+      <div className="p-2 w-full bg-base-100 text-base-content op-card">
         <div
           ref={titleRef}
           className="flex flex-row items-center justify-between my-2 mx-3 text-[20px] md:text-[23px]"
@@ -412,14 +413,14 @@ const Contactbook = (props) => {
                 </>
               ) : (
                 <>
-                  <div className="w-[60px] h-[60px] overflow-hidden">
-                    <img
-                      className="w-full h-full object-contain"
-                      src={pad}
-                      alt={t("no-data-available")}
+                  <div className="w-16 h-16 rounded-2xl bg-base-200/80 border border-slate-700/40 flex items-center justify-center mb-3">
+                    <Icon
+                      name="contact"
+                      size={32}
+                      className="text-gray-400 dark:text-gray-500"
                     />
                   </div>
-                  <div className="text-sm font-semibold">
+                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     {t("no-data-available")}
                   </div>
                 </>
