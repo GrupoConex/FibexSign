@@ -316,13 +316,13 @@ const Report = () => {
     openColumnModal: () => setIsColumnModal(true)
   };
   return (
-    <>
+    <div className="flex-1 flex flex-col">
       {isLoader ? (
-        <div className="h-[100vh] flex justify-center items-center">
+        <div className="flex-1 flex justify-center items-center min-h-[50vh]">
           <Loader />
         </div>
       ) : (
-        <>
+        <div className="flex-1 flex flex-col">
           {id === "contacts" ? (
             <Contactbook {...commonProps} />
           ) : id === "6TeaPr321t" ? (
@@ -336,7 +336,7 @@ const Report = () => {
           ) : (
             <PageNotFound prefix={"Report"} />
           )}
-        </>
+        </div>
       )}
       <ColumnSelector
         isOpen={isColumnModal}
@@ -356,7 +356,7 @@ const Report = () => {
         }}
         onClose={() => setIsColumnModal(false)}
       />
-    </>
+    </div>
   );
 };
 

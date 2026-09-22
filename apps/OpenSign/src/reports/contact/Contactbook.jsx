@@ -210,13 +210,13 @@ const Contactbook = (props) => {
     setIsModal({});
   };
   return (
-    <div className="relative">
+    <div className="relative flex-1 flex flex-col">
       {Object.keys(actLoader)?.length > 0 && (
         <div className="absolute w-full h-full flex justify-center items-center bg-black/30 rounded-box z-30">
           <Loader />
         </div>
       )}
-      <div className="p-2 w-full bg-base-100 text-base-content op-card">
+      <div className="p-2 w-full bg-base-100 text-base-content op-card flex-1 flex flex-col">
 
         <div
           ref={titleRef}
@@ -289,12 +289,10 @@ const Contactbook = (props) => {
           </div>
         )}
         <div
-          className={`overflow-auto w-full border-b ${
+          className={`overflow-auto w-full border-b flex-1 flex flex-col ${
             props.List?.length > 0
-              ? "min-h-[317px]"
-              : currentList?.length === props.docPerPage
-                ? "h-fit"
-                : "h-screen"
+              ? ""
+              : "justify-center"
           }`}
         >
           <table className="op-table border-collapse w-full mb-4">
@@ -406,7 +404,7 @@ const Contactbook = (props) => {
             </tbody>
           </table>
           {(props.searchLoader || props.List?.length <= 0) && (
-            <div className="flex flex-col items-center justify-center w-ful bg-base-100 text-base-content rounded-xl py-4">
+            <div className="flex-1 min-h-[360px] flex flex-col items-center justify-center w-full bg-base-100 text-base-content rounded-xl py-12">
               {props.searchLoader ? (
                 <>
                   <Loader />
@@ -429,7 +427,7 @@ const Contactbook = (props) => {
             </div>
           )}
         </div>
-        <div className="op-join flex flex-wrap items-center p-2">
+        <div className="op-join flex flex-wrap items-center p-2 mt-auto">
           {props.List.length > props.docPerPage && (
             <button
               onClick={() => paginateBack()}

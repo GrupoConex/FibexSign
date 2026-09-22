@@ -799,7 +799,7 @@ const Forms = (props) => {
   const headerMeta = getHeaderMeta();
 
   return (
-    <div className="w-full p-3 md:p-6">
+    <div className="w-full flex-1 flex flex-col">
       {isSubmit || isInitializing ? (
         <div className="flex flex-col justify-center items-center h-[70vh]">
           <Loader />
@@ -847,9 +847,9 @@ const Forms = (props) => {
             </form>
           </ModalUi>
 
-          {/* CONTENEDOR DE FORMULARIO: op-card automático para light/dark y sin márgenes laterales vacíos */}
-          <div className="op-card w-full p-4 md:p-6">
-            <form onSubmit={handleSubmit} className="flex flex-col">
+          {/* CONTENEDOR DE FORMULARIO: op-card automático para light/dark y responsivo a altura completa */}
+          <div className="op-card w-full p-4 md:p-6 flex-1 flex flex-col">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 justify-between">
               {/* Header del Formulario */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3.5 mb-4 border-b border-base-200">
                 <div className="flex items-center gap-3">
@@ -873,12 +873,12 @@ const Forms = (props) => {
               </div>
 
               {/* Grid 2 Columnas Compacto y Equilibrado */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch flex-1">
                 
                 {/* COLUMNA IZQUIERDA (6 de 12 cols) */}
-                <div className="lg:col-span-6 flex flex-col gap-3.5">
+                <div className="lg:col-span-6 flex flex-col gap-3.5 h-full">
                   {/* Bloque de Carga de Archivo */}
-                  <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-col gap-1.5 flex-1">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-semibold text-base-content flex items-center gap-1.5">
                         <i className="fa-light fa-file-arrow-up text-blue-500"></i>
@@ -938,7 +938,7 @@ const Forms = (props) => {
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
                         onClick={() => inputFileRef.current?.click()}
-                        className={`relative border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center min-h-[140px] group ${
+                        className={`relative border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center min-h-[160px] lg:flex-1 group ${
                           isDragging
                             ? "border-blue-500 bg-blue-50/50 dark:bg-blue-500/10 scale-[1.01]"
                             : "border-slate-200 dark:border-[#243046] hover:border-blue-500/60 bg-slate-50/50 hover:bg-blue-50/20 dark:bg-slate-900/20 dark:hover:bg-slate-900/40"
@@ -1471,7 +1471,7 @@ const Forms = (props) => {
 
 
               {/* Barra Inferior de Acciones */}
-              <div className="flex items-center justify-end gap-2.5 pt-4 mt-4 border-t border-slate-200 dark:border-[#243046]">
+              <div className="flex items-center justify-end gap-2.5 pt-4 mt-auto border-t border-slate-200 dark:border-[#243046]">
                 <button
                   type="button"
                   className="op-btn op-btn-ghost op-btn-sm text-xs font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/40"
