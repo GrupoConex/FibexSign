@@ -8,7 +8,6 @@ import {
   contractUsers,
   saveLanguageInLocal
 } from "../constant/Utils";
-import logo from "../assets/images/logo.svg";
 import { appInfo } from "../constant/appinfo";
 import Parse from "parse";
 import { useTranslation } from "react-i18next";
@@ -17,6 +16,9 @@ import LoaderWithMsg from "../primitives/LoaderWithMsg";
 import ModalUi from "../primitives/ModalUi";
 import Loader from "../primitives/Loader";
 import { notify } from "../utils";
+import { useIsDarkTheme } from "../hook/useIsDarkTheme";
+import logoPositivo from "../assets/images/Fibex-logo-positivo.svg";
+import logoNegativo from "../assets/images/Fibex-logo-negativo.svg";
 
 function GuestLogin() {
   const { t, i18n } = useTranslation();
@@ -32,7 +34,8 @@ function GuestLogin() {
     isLoad: true,
     message: t("loading-mssg")
   });
-  const [appLogo, setAppLogo] = useState("");
+  const isDarkTheme = useIsDarkTheme();
+  const appLogo = isDarkTheme ? logoNegativo : logoPositivo;
   const [documentId, setDocumentId] = useState(id);
   const [contactId, setContactId] = useState(contactBookId);
   const [sendmail, setSendmail] = useState();
@@ -77,7 +80,6 @@ function GuestLogin() {
 
   //function generate serverUrl and parseAppId from url and save it in local storage
   const handleServerUrl = async () => {
-      setAppLogo(logo);
     const favicon = localStorage.getItem("favicon");
 
     localStorage.clear(); // Clears everything
