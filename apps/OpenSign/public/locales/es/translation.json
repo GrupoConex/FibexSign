@@ -1,4 +1,7 @@
 {
+  "signers": "Firmantes",
+  "signers-help": "Seleccione o agregue los firmantes del documento",
+  "select-signers-placeholder": "Seleccionar firmantes...",
   "document-details": "Detalles del documento",
   "drag-and-drop-here": "Arrastra y suelta tu archivo aquí",
   "or-browse-from-computer": "o haz clic para buscar en tu equipo",

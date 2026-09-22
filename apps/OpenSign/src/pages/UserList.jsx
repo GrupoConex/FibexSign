@@ -273,7 +273,7 @@ const UserList = () => {
     }
   });
   return (
-    <div className="relative">
+    <div className="relative flex-1 flex flex-col">
       {isLoader && (
         <div className="absolute w-full h-[300px] md:h-[400px] flex justify-center items-center z-30 rounded-box">
           <Loader />
@@ -289,7 +289,7 @@ const UserList = () => {
           !isLoader && (
             <>
               {isAdmin ? (
-                <div className="p-2 w-full bg-base-100 text-base-content op-card">
+                <div className="p-2 w-full bg-base-100 text-base-content op-card flex-1 flex flex-col">
 
                   <div className="flex flex-row items-center justify-between my-2 mx-3 text-[20px] md:text-[23px]">
                     <div className="font-light">
@@ -307,7 +307,7 @@ const UserList = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="w-full overflow-x-auto">
+                  <div className="w-full overflow-x-auto flex-1 flex flex-col">
                     <table className="op-table border-collapse w-full mb-[50px]">
                       <thead className="text-[14px]">
                         <tr className="border-y-[1px]">
@@ -460,7 +460,7 @@ const UserList = () => {
                       )}
                     </table>
                   </div>
-                  <div className="flex flex-row justify-between items-center text-xs font-medium">
+                  <div className="flex flex-row justify-between items-center text-xs font-medium mt-auto">
                     <div className="op-join flex flex-wrap items-center p-2">
                       {userList.length > recordperPage && (
                         <button
@@ -495,8 +495,8 @@ const UserList = () => {
                   {userList?.length <= 0 && (
                     <div
                       className={`${
-                        isDashboard ? "h-[317px]" : ""
-                      } flex flex-col items-center justify-center w-ful bg-base-100 text-base-content rounded-xl py-4`}
+                        isDashboard ? "h-[317px]" : "flex-1 min-h-[360px]"
+                      } flex flex-col items-center justify-center w-full bg-base-100 text-base-content rounded-xl py-12`}
                     >
                       <div className="w-[60px] h-[60px] overflow-hidden">
                         <img

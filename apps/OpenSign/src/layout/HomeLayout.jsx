@@ -187,7 +187,7 @@ const HomeLayout = () => {
             >
               <div className="flex flex-col min-h-full">
                 {/* your page content */}
-                <div className="p-3">{<Outlet />}</div>
+                <div className="p-3 flex-1 flex flex-col">{<Outlet />}</div>
                 {/* sticky-but-scrollable footer */}
                 <div className="mt-auto z-30">
                   <Footer />

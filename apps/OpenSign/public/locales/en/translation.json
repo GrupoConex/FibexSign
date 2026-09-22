@@ -1,4 +1,7 @@
 {
+  "signers": "Signers",
+  "signers-help": "Select or add document signers",
+  "select-signers-placeholder": "Select signers...",
   "document-details": "Document details",
   "drag-and-drop-here": "Drag and drop your file here",
   "or-browse-from-computer": "or click to browse from your computer",
