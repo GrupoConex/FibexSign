@@ -2,9 +2,6 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { lazyWithRetry, notify, withSessionValidation } from "../utils";
 import "../styles/opensigndrive.css";
 import {
-  getThemeIconColor,
-} from "../constant/const";
-import {
   getDrive
 } from "../constant/Utils";
 import { useNavigate } from "react-router";
@@ -19,8 +16,6 @@ import { useTranslation } from "react-i18next";
 const DriveBody = lazyWithRetry(
   () => import("../components/opensigndrive/DriveBody")
 );
-const dropdowncss =
-  "absolute right-0 py-2 text-[1rem] text-left bg-base-100 border-[1px] border-gray-300 min-w-1 rounded-[0.25rem] z-[800]";
 const AppLoader = () => {
   return (
     <div className="h-[100vh] flex justify-center items-center">
@@ -451,16 +446,21 @@ function Opensigndrive() {
 
   const handleFolderTab = (folderData) => {
     return folderData.map((data, id) => {
+      const isLast = id === folderData.length - 1;
       return (
         <React.Fragment key={id}>
+          {id > 0 && (
+            <i className="fa-light fa-chevron-right text-[10px] text-base-content/40 mx-1"></i>
+          )}
           <span
             onClick={() => handleRoute(id, folderData)}
-            className="text-[#a64b4e] font-normal cursor-pointer"
+            className={`transition-colors text-xs md:text-sm ${
+              isLast
+                ? "text-base-content font-bold cursor-default"
+                : "text-base-content/70 hover:text-primary font-medium cursor-pointer"
+            }`}
           >
             {data.name}
-            <span className="text-[#a64b4e] font-extralight cursor-pointer mx-[4px]">
-              &gt;
-            </span>
           </span>
         </React.Fragment>
       );
@@ -579,7 +579,7 @@ function Opensigndrive() {
     handleHighlightClick();
   };
   return (
-    <div className="bg-base-100 text-base-content rounded-box w-full">
+    <div className="w-full flex-1 flex flex-col">
       <ModalUi
         isOpen={isAlert.isShow}
         title={t("alert")}
@@ -587,26 +587,28 @@ function Opensigndrive() {
           setIsAlert({ isShow: false, alertMessage: "" });
         }}
       >
-        <div className="h-full p-[20px] pb-[15px]">
-          <p>{isAlert.alertMessage}</p>
-          <div className="h-[1px] bg-[#9f9f9f] w-full my-[15px]"></div>
-          <button
-            onClick={() => setIsAlert({ isShow: false, alertMessage: "" })}
-            type="button"
-            className="op-btn op-btn-neutral op-btn-sm"
-          >
-            {t("close")}
-          </button>
+        <div className="p-5 text-base-content">
+          <p className="text-sm mb-4">{isAlert.alertMessage}</p>
+          <div className="flex justify-end">
+            <button
+              onClick={() => setIsAlert({ isShow: false, alertMessage: "" })}
+              type="button"
+              className="op-btn op-btn-neutral op-btn-sm rounded-lg"
+            >
+              {t("close")}
+            </button>
+          </div>
         </div>
       </ModalUi>
+
       <ModalUi
         isOpen={isFolder}
         title={t("add-new-folder")}
         handleClose={oncloseFolder}
       >
-        <div className="h-full p-[20px] pt-[10px] pb-[15px]">
+        <div className="p-5 text-base-content">
           {folderLoader ? (
-            <div className="h-[200px] flex justify-center items-center">
+            <div className="h-[150px] flex justify-center items-center">
               <Loader />
             </div>
           ) : (
@@ -614,9 +616,9 @@ function Opensigndrive() {
               onSubmit={handleAddFolder}
               className="flex flex-col text-base-content"
             >
-              <label className="py-[8px] text-[15px] font-[400] mb-0">
+              <label className="text-xs font-semibold mb-1.5 text-base-content">
                 {t("name")}
-                <span className="text-[red]">*</span>
+                <span className="text-error ml-0.5">*</span>
               </label>
               <input
                 onInvalid={(e) =>
@@ -624,282 +626,300 @@ function Opensigndrive() {
                 }
                 onInput={(e) => e.target.setCustomValidity("")}
                 required
-                className="op-input op-input-bordered op-input-sm"
+                className="op-input op-input-bordered op-input-sm text-xs rounded-lg focus:outline-none hover:border-base-content"
                 type="text"
+                placeholder={t("folder-name-placeholder") || "Nombre de la carpeta"}
                 value={newFolderName}
                 onChange={(e) => handleFolderName(e)}
               />
-              <span className="text-[red] text-[12px] mt-[6px]">{error}</span>
-              <div className="w-full h-[1px] bg-[#9f9f9f] my-[15px]"></div>
-              <div className="flex flex-row">
-                <button type="submit" className="op-btn op-btn-primary">
-                  {t("add")}
-                </button>
+              {error && <span className="text-error text-xs mt-1.5">{error}</span>}
+              <div className="flex justify-end gap-2 mt-5">
                 <button
                   type="button"
-                  className="op-btn op-btn-ghost text-base-content ml-1"
+                  className="op-btn op-btn-ghost op-btn-sm rounded-lg text-base-content"
                   onClick={oncloseFolder}
                 >
                   {t("close")}
+                </button>
+                <button type="submit" className="op-btn op-btn-primary op-btn-sm rounded-lg">
+                  {t("add")}
                 </button>
               </div>
             </form>
           )}
         </div>
       </ModalUi>
+
       {isLoading.isLoad ? (
-        <div className="flex flex-col justify-center items-center h-[100vh] w-full">
+        <div className="flex flex-col justify-center items-center h-[70vh] w-full">
           <Loader />
-          <span className="text-[13px] text-base-content">
+          <span className="text-xs text-base-content/70 mt-2">
             {isLoading.message}
           </span>
         </div>
       ) : handleError ? (
-        <div className="flex justify-center items-center h-[100vh] w-full">
-          <span className="text-[20px] text-base-content">{handleError}</span>
+        <div className="flex justify-center items-center h-[70vh] w-full">
+          <span className="text-sm font-medium text-error">{handleError}</span>
         </div>
       ) : (
-        <>
-          <div className="flex flex-row justify-between items-center px-[15px] md:px-[25px] pt-2 md:pt-[20px]">
-            {tourData && (
-              <Tour
-                onRequestClose={closeTour}
-                steps={tourData}
-                isOpen={isTour}
-                scrollOffset={-100}
-              />
-            )}
-            <div
-              data-tut="reactourFirst"
-              onMouseEnter={(e) => handleMouseEnter(e)}
-              onClick={handleHighlightClick}
-              ref={scrollRef}
-              className="w-full whitespace-nowrap cursor-pointer select-none overflow-x-auto"
-            >
-              {handleFolderTab(folderName)}
+        <div className="op-card w-full p-3 sm:p-4 md:p-6 flex-1 flex flex-col shadow-sm">
+          {tourData && (
+            <Tour
+              onRequestClose={closeTour}
+              steps={tourData}
+              isOpen={isTour}
+              scrollOffset={-100}
+            />
+          )}
+
+          {/* Header estandarizado con la estética de Form.jsx */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-3.5 mb-4 border-b border-base-200">
+            {/* Izquierda: Icono + Breadcrumbs + Badge + Subtítulo */}
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 text-lg">
+                <i className="fa-light fa-folder-tree"></i>
+              </div>
+              <div className="flex flex-col">
+                <div
+                  data-tut="reactourFirst"
+                  onMouseEnter={(e) => handleMouseEnter(e)}
+                  onClick={handleHighlightClick}
+                  ref={scrollRef}
+                  className="flex items-center gap-2 flex-wrap"
+                >
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {handleFolderTab(folderName)}
+                  </div>
+                  <span className="op-badge op-badge-primary op-badge-outline text-[11px] font-medium py-1.5 px-2">
+                    Drive
+                  </span>
+                </div>
+                <p className="text-xs text-base-content/60 mt-0.5">
+                  {t("drive-subtitle") && t("drive-subtitle") !== "drive-subtitle"
+                    ? t("drive-subtitle")
+                    : "Organiza, gestiona y firma tus documentos y carpetas en la nube"}
+                </p>
+              </div>
             </div>
-            <div className="flex flex-row items-center justify-center md:gap-1">
+
+            {/* Derecha: Buscador + Nuevo + Ordenar + Toggle Grid/List */}
+            <div className="flex flex-wrap items-center gap-2">
               {/* Desktop search input */}
-              <div className="hidden md:block p-2">
+              <div className="relative hidden md:block">
+                <i className="fa-light fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40 text-xs pointer-events-none"></i>
                 <input
                   type="search"
                   value={searchTerm}
                   onChange={handleSearchChange}
                   placeholder={t("search-documents")}
                   onPaste={handleSearchPaste}
-                  className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-64 text-xs"
+                  className="op-input op-input-bordered op-input-sm pl-8 pr-3 focus:outline-none hover:border-base-content w-48 lg:w-56 text-xs rounded-lg"
                 />
               </div>
+
               {/* Mobile search toggle */}
               <button
-                className="md:hidden p-2 flex justify-center items-center focus:outline-none rounded-md hover:bg-base-300 text-[18px]"
+                className="md:hidden op-btn op-btn-ghost op-btn-sm op-btn-square text-base-content"
                 aria-label="Search"
                 onClick={() => setMobileSearchOpen((open) => !open)}
               >
-                <i
-                  style={{ color: `${getThemeIconColor()}` }}
-                  className="fa-solid fa-magnifying-glass"
-                ></i>
+                <i className="fa-light fa-magnifying-glass text-base"></i>
               </button>
+
+              {/* Botón Nuevo con Menú desplegable */}
               <div
                 id="folder-menu"
-                className={`${isOptions ? "dropdown show dropDownStyle" : "dropdown"} hidden md:block cursor-pointer hover:bg-base-300 p-2 rounded-md`}
-                onClick={handleFolderOptions}
+                className="relative"
+                data-tut="reactourSecond"
               >
-                <div data-tut="reactourSecond">
-                  <i
-                    className="fa-light fa-plus-square text-[24px]"
-                    aria-hidden="true"
-                    style={{ color: `${getThemeIconColor()}` }}
-                  ></i>
-                </div>
-                <div
-                  className={`${isOptions ? "block" : "hidden"} ${dropdowncss}`}
-                  aria-labelledby="dropdownMenuButton"
-                  aria-expanded={isOptions ? "true" : "false"}
+                <button
+                  type="button"
+                  onClick={handleFolderOptions}
+                  className="op-btn op-btn-primary op-btn-sm rounded-lg gap-1.5 font-medium shadow-sm"
                 >
-                  <div className="flex flex-col">
-                    <span
-                      className="dropdown-item text-[10px] md:text-[13px]"
+                  <i className="fa-light fa-plus text-sm"></i>
+                  <span className="hidden sm:inline">{t("Nuevo") || "Nuevo"}</span>
+                  <i className="fa-light fa-chevron-down text-[10px] opacity-70"></i>
+                </button>
+                {isOptions && (
+                  <div
+                    className="absolute left-0 sm:left-auto sm:right-0 mt-1.5 w-52 bg-base-100 border border-base-200 shadow-xl rounded-xl p-1.5 z-[900] text-base-content"
+                    onClick={() => setIsOptions(false)}
+                  >
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg hover:bg-base-200/60 transition-colors text-left font-medium"
                       onClick={() => setIsFolder(true)}
                     >
-                      <i
-                        className="fa-light fa-plus mr-[5px]"
-                        aria-hidden="true"
-                      ></i>
-                      {t("create-folder")}
-                    </span>
-                    <span
-                      className="dropdown-item text-[10px] md:text-[13px]"
+                      <i className="fa-light fa-folder-plus text-primary text-sm"></i>
+                      <span>{t("create-folder")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg hover:bg-base-200/60 transition-colors text-left font-medium"
                       onClick={() => navigate("/form/sHAnZphf69")}
                     >
-                      <i className="fa-light fa-pen-nib mr-[5px]"></i>
-                      {t("Sign Yourself")}
-                    </span>
-                    <span
-                      className="dropdown-item text-[10px] md:text-[13px]"
+                      <i className="fa-light fa-pen-nib text-secondary text-sm"></i>
+                      <span>{t("Sign Yourself")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg hover:bg-base-200/60 transition-colors text-left font-medium"
                       onClick={() => navigate("/form/8mZzFxbG1z")}
                     >
-                      <i className="fa-light fa-file-signature mr-[5px]"></i>
-                      {t("Request Signatures")}
-                    </span>
+                      <i className="fa-light fa-file-signature text-accent text-sm"></i>
+                      <span>{t("Request Signatures")}</span>
+                    </button>
                   </div>
-                </div>
+                )}
               </div>
+
+              {/* Botón Ordenar */}
               <div
                 id="menu-container"
-                className={isShowSort ? "dropdown show" : "dropdown"}
-                onClick={handleSortOptions}
+                className="relative"
+                data-tut="reactourThird"
               >
-                <div
-                  data-tut="reactourThird"
-                  className="cursor-pointer flex flex-row items-center justify-center p-2 hover:bg-base-300 rounded-md"
-                  data-toggle="dropdown"
+                <button
+                  type="button"
+                  onClick={handleSortOptions}
+                  className="op-btn op-btn-ghost op-btn-sm border border-base-200 rounded-lg gap-1.5 text-xs text-base-content"
                 >
-                  <i
-                    className="fa-light fa-sort-amount-asc mr-[5px] text-[19px]"
-                    aria-hidden="true"
-                    style={{ color: `${getThemeIconColor()}` }}
-                  ></i>
-                  <span
-                    style={{
-                      fontSize: "15px",
-                      color: `${getThemeIconColor()}`
-                    }}
+                  <i className="fa-light fa-arrow-down-short-wide text-sm text-base-content/70"></i>
+                  <span className="font-normal">{t(`sort-order.${selectedSort}`) || selectedSort}</span>
+                  <i className="fa-light fa-chevron-down text-[10px] opacity-60"></i>
+                </button>
+                {isShowSort && (
+                  <div
+                    className="absolute right-0 mt-1.5 w-44 bg-base-100 border border-base-200 shadow-xl rounded-xl p-1.5 z-[900] text-base-content"
+                    onClick={() => setIsShowSort(false)}
                   >
-                    {selectedSort}
-                  </span>
-                </div>
-                <div
-                  className={`${isShowSort ? "dropdown-menu show" : "dropdown-menu"} bg-base-100 border-[1px] border-gray-300`}
-                  aria-labelledby="dropdownMenuButton"
-                  aria-expanded={isShowSort ? "true" : "false"}
-                >
-                  {sortingValue.map((value, ind) => (
-                    <span
-                      key={ind}
-                      onClick={() => {
-                        setSelectedSort(value);
-                        sortingData(value, null, pdfData);
-                      }}
-                      className="dropdown-item text-[10px] md:text-[13px]"
-                      style={{
-                        paddingLeft: selectedSort !== value && "31px"
-                      }}
-                    >
-                      {selectedSort === value && (
-                        <i className="fa-light fa-check" aria-hidden="true"></i>
-                      )}
-                      <span className="ml-[5px]">
-                        {t(`sort-order.${value}`)}
-                      </span>
-                    </span>
-                  ))}
-                  <hr className="hrStyle" />
-                  {sortOrder.map((order, ind) => (
-                    <span
-                      key={ind}
-                      onClick={() => {
-                        setSortingOrder(order);
-                        sortingData(null, order, pdfData);
-                      }}
-                      className="dropdown-item text-[10px] md:text-[13px]"
-                      style={{
-                        paddingLeft: sortingOrder !== order && "31px"
-                      }}
-                    >
-                      {sortingOrder === order && (
-                        <i className="fa-light fa-check" aria-hidden="true"></i>
-                      )}
-                      <span className="ml-[5px]">
-                        {t(`sort-order.${order}`)}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div
-                className="cursor-pointer p-2 hover:bg-base-300 rounded-md flex justify-center items-center"
-                data-tut="reactourForth"
-                onClick={handleViewOption}
-              >
-                <i
-                  className={`${isList ? "fa-light fa-th-large" : "fa-light fa-list"} text-[20px]`}
-                  style={{ color: `${getThemeIconColor()}` }}
-                  aria-hidden="true"
-                ></i>
-              </div>
-              <div
-                id="folder-menu"
-                className={`${isOptions ? "dropdown show dropDownStyle" : "dropdown"} md:hidden`}
-                onClick={() => setIsOptions(!isOptions)}
-              >
-                <div
-                  className="p-3 flex items-center justify-center cursor-pointer rounded-md hover:bg-base-300"
-                  data-tut="reactourSecond"
-                >
-                  <i
-                    className="fa-light fa-ellipsis-vertical fa-lg"
-                    aria-hidden="true"
-                    style={{ color: `${getThemeIconColor()}` }}
-                  ></i>
-                </div>
-                <div
-                  className={`${isOptions ? "block" : "hidden"} ${dropdowncss}`}
-                  aria-labelledby="dropdownMenuButton"
-                  aria-expanded={isOptions ? "true" : "false"}
-                >
-                  <div className="flex flex-col">
-                    <span
-                      className="dropdown-item text-[10px] md:text-[13px]"
-                      onClick={() => setIsFolder(true)}
-                    >
-                      <i
-                        className="fa-light fa-plus mr-[5px]"
-                        aria-hidden="true"
-                      ></i>
-                      {t("create-folder")}
-                    </span>
-                    <span
-                      className="dropdown-item text-[10px] md:text-[13px]"
-                      onClick={() => navigate("/form/sHAnZphf69")}
-                    >
-                      <i className="fa-light fa-pen-nib mr-[5px]"></i>
-                      {t("Sign Yourself")}
-                    </span>
-                    <span
-                      className="dropdown-item text-[10px] md:text-[13px]"
-                      onClick={() => navigate("/form/8mZzFxbG1z")}
-                    >
-                      <i className="fa-light fa-file-signature mr-[5px]"></i>
-                      {t("Request Signatures")}
-                    </span>
+                    <div className="px-2 py-1 text-[11px] font-semibold text-base-content/50 uppercase tracking-wider">
+                      {t("sort-by") || "Ordenar por"}
+                    </div>
+                    {sortingValue.map((value, ind) => (
+                      <button
+                        key={ind}
+                        type="button"
+                        onClick={() => {
+                          setSelectedSort(value);
+                          sortingData(value, null, pdfData);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors ${
+                          selectedSort === value
+                            ? "bg-primary/10 text-primary font-semibold"
+                            : "hover:bg-base-200/60 text-base-content"
+                        }`}
+                      >
+                        <span>{t(`sort-order.${value}`)}</span>
+                        {selectedSort === value && (
+                          <i className="fa-light fa-check text-xs"></i>
+                        )}
+                      </button>
+                    ))}
+                    <div className="h-[1px] bg-base-200 my-1"></div>
+                    <div className="px-2 py-1 text-[11px] font-semibold text-base-content/50 uppercase tracking-wider">
+                      {t("order") || "Dirección"}
+                    </div>
+                    {sortOrder.map((order, ind) => (
+                      <button
+                        key={ind}
+                        type="button"
+                        onClick={() => {
+                          setSortingOrder(order);
+                          sortingData(null, order, pdfData);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors ${
+                          sortingOrder === order
+                            ? "bg-primary/10 text-primary font-semibold"
+                            : "hover:bg-base-200/60 text-base-content"
+                        }`}
+                      >
+                        <span>{t(`sort-order.${order}`)}</span>
+                        {sortingOrder === order && (
+                          <i className="fa-light fa-check text-xs"></i>
+                        )}
+                      </button>
+                    ))}
                   </div>
-                </div>
+                )}
+              </div>
+
+              {/* Botón Toggle Vista Grid / Lista */}
+              <div
+                className="join border border-base-200 rounded-lg p-0.5"
+                data-tut="reactourForth"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isList) handleViewOption();
+                  }}
+                  className={`op-btn op-btn-xs rounded-md ${
+                    !isList
+                      ? "op-btn-active bg-base-200 text-base-content shadow-sm"
+                      : "op-btn-ghost text-base-content/60"
+                  }`}
+                  title={t("view-grid") || "Cuadrícula"}
+                >
+                  <i className="fa-light fa-grid-2 text-xs"></i>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isList) handleViewOption();
+                  }}
+                  className={`op-btn op-btn-xs rounded-md ${
+                    isList
+                      ? "op-btn-active bg-base-200 text-base-content shadow-sm"
+                      : "op-btn-ghost text-base-content/60"
+                  }`}
+                  title={t("view-list") || "Lista"}
+                >
+                  <i className="fa-light fa-list text-xs"></i>
+                </button>
               </div>
             </div>
           </div>
-          {/* Mobile search overlay */}
+
+          {/* Mobile search bar expands below header */}
           {mobileSearchOpen && (
-            <div className="top-full left-0 w-full bg-white px-4 py-2 md:hidden">
+            <div className="w-full pb-3 md:hidden">
               <input
                 type="search"
                 value={searchTerm}
                 onChange={handleSearchChange}
                 placeholder={t("search-documents")}
                 onPaste={handleSearchPaste}
-                className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
+                className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs rounded-lg"
               />
             </div>
           )}
+
+          {/* Body Content */}
           {pdfData && pdfData.length === 0 ? (
-            <div className="flex justify-center items-center w-full h-[50vh]">
-              <span className="text-base-content font-bold">
-                {t("no-data")}
-              </span>
+            <div className="flex-1 flex flex-col justify-center items-center py-16 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-base-200/70 text-base-content/30 flex items-center justify-center text-3xl mb-3">
+                <i className="fa-light fa-folder-open"></i>
+              </div>
+              <h3 className="text-sm font-semibold text-base-content mb-1">
+                {t("empty-folder-title") || "Esta carpeta está vacía"}
+              </h3>
+              <p className="text-xs text-base-content/60 max-w-sm mb-4">
+                {t("empty-folder-desc") ||
+                  "Crea una nueva carpeta o genera documentos para comenzar a organizar tu espacio de trabajo."}
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsFolder(true)}
+                className="op-btn op-btn-primary op-btn-sm rounded-lg gap-2"
+              >
+                <i className="fa-light fa-folder-plus"></i>
+                <span>{t("create-folder")}</span>
+              </button>
             </div>
           ) : (
-            <div data-tut="reactourFifth">
+            <div data-tut="reactourFifth" className="flex-1 flex flex-col">
               <React.Suspense fallback={<AppLoader />}>
                 <DriveBody
                   dataTutSixth="reactourSixth"
@@ -919,12 +939,14 @@ function Opensigndrive() {
                 {/* sentinel */}
                 <div ref={bottomRef} className="h-1" />
                 {loading && (
-                  <div className="text-center pb-[20px]">{t("loading")}</div>
+                  <div className="text-center py-3 text-xs text-base-content/60">
+                    <Loader />
+                  </div>
                 )}
               </React.Suspense>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

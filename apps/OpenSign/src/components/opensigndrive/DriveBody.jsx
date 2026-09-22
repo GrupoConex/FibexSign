@@ -3,7 +3,6 @@ import "../../styles/opensigndrive.css";
 import axios from "axios";
 import { ContextMenu } from "radix-ui";
 import { useNavigate } from "react-router";
-import Table from "react-bootstrap/Table";
 import { HoverCard } from "radix-ui";
 import ModalUi from "../../primitives/ModalUi";
 import FolderModal from "../shared/fields/FolderModal";
@@ -299,6 +298,42 @@ function DriveBody(props) {
     }
   };
 
+  const getStatusBadgeConfig = (status) => {
+    switch (status) {
+      case "Completed":
+        return {
+          badgeClass:
+            "op-badge-success bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+          icon: "fa-light fa-check-circle"
+        };
+      case "Declined":
+        return {
+          badgeClass:
+            "op-badge-error bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
+          icon: "fa-light fa-circle-xmark"
+        };
+      case "Expired":
+        return {
+          badgeClass:
+            "op-badge-ghost bg-slate-500/10 text-slate-500 dark:text-slate-400 border-slate-500/20",
+          icon: "fa-light fa-hourglass-end"
+        };
+      case "Draft":
+        return {
+          badgeClass:
+            "op-badge-info bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20",
+          icon: "fa-light fa-file-lines"
+        };
+      case "In Progress":
+      default:
+        return {
+          badgeClass:
+            "op-badge-warning bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+          icon: "fa-light fa-paper-plane"
+        };
+    }
+  };
+
   //component to handle type of document and render according to type
   const handleFolderData = (data, ind, listType) => {
     let createddate, status, isDecline, signerExist, isComplete;
@@ -331,6 +366,8 @@ function DriveBody(props) {
       }
     }
 
+    const { badgeClass, icon: statusIcon } = getStatusBadgeConfig(status);
+
     const signersName = () => {
       const getSignersName =
         signerExist?.length > 0 && signerExist?.map((data) => data?.Name || "");
@@ -338,7 +375,7 @@ function DriveBody(props) {
         getSignersName?.length > 0 ? getSignersName?.join(", ") : "";
 
       return (
-        <span className="text-[12px] font-medium w-[90%] break-words">
+        <span className="text-[11px] font-medium text-base-content/80 break-words">
           {signerName && signerName}
         </span>
       );
@@ -346,78 +383,122 @@ function DriveBody(props) {
 
     return listType === "table" ? (
       data.Type === "Folder" ? (
-        <tr onClick={() => handleOnclikFolder(data)}>
-          <td className="cursor-pointer flex items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 512 512"
-              className="w-[26px] h-[26px] fill-current"
-            >
-              <path d="M64 480H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H288c-10.1 0-19.6-4.7-25.6-12.8L243.2 57.6C231.1 41.5 212.1 32 192 32H64C28.7 32 0 60.7 0 96V416c0 35.3 28.7 64 64 64z" />
-            </svg>
-            <span className="text-[12px] font-medium">{data.Name}</span>
+        <tr
+          key={ind}
+          onClick={() => handleOnclikFolder(data)}
+          className="hover:bg-base-200/50 transition-colors cursor-pointer border-b border-base-200/60"
+        >
+          <td className="py-2.5 px-4 font-medium">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center text-sm flex-shrink-0">
+                <i className="fa-solid fa-folder"></i>
+              </div>
+              <span className="text-xs font-semibold text-base-content">
+                {data.Name}
+              </span>
+            </div>
           </td>
-          <td>_</td>
-          <td>{t("folder")}</td>
-          <td>_</td>
-          <td>_</td>
+          <td className="py-2.5 px-4 text-xs text-base-content/40">—</td>
+          <td className="py-2.5 px-4">
+            <span className="op-badge op-badge-ghost op-badge-xs py-1.5 px-2 text-[10px] font-medium">
+              {t("folder") || "Carpeta"}
+            </span>
+          </td>
+          <td className="py-2.5 px-4 text-xs text-base-content/40">—</td>
+          <td className="py-2.5 px-4 text-right">
+            <div className="text-base-content/40 pr-2">
+              <i className="fa-light fa-chevron-right text-xs"></i>
+            </div>
+          </td>
         </tr>
       ) : (
-        <tr onClick={() => checkPdfStatus(data)}>
-          <td className="cursor-pointer flex items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 384 512"
-              className="w-[26px] h-[26px] fill-current op-text-primary"
-            >
-              <path d="M374.629 150.627L233.371 9.373C227.371 3.371 219.23 0 210.746 0H64C28.652 0 0 28.652 0 64V448C0 483.345 28.652 512 64 512H320C355.348 512 384 483.345 384 448V173.254C384 164.767 380.629 156.629 374.629 150.627ZM224 22.629L361.375 160H248C234.781 160 224 149.234 224 136V22.629ZM368 448C368 474.467 346.469 496 320 496H64C37.531 496 16 474.467 16 448V64C16 37.533 37.531 16 64 16H208V136C208 158.062 225.938 176 248 176H368V448ZM96 264C96 268.406 99.594 272 104 272H280C284.406 272 288 268.406 288 264S284.406 256 280 256H104C99.594 256 96 259.594 96 264ZM280 320H104C99.594 320 96 323.594 96 328S99.594 336 104 336H280C284.406 336 288 332.406 288 328S284.406 320 280 320ZM280 384H104C99.594 384 96 387.594 96 392S99.594 400 104 400H280C284.406 400 288 396.406 288 392S284.406 384 280 384Z" />
-            </svg>
-            <span className="text-[12px] font-medium">{data.Name}</span>
+        <tr
+          key={ind}
+          onClick={() => checkPdfStatus(data)}
+          className="hover:bg-base-200/50 transition-colors cursor-pointer border-b border-base-200/60"
+        >
+          <td className="py-2.5 px-4 font-medium">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-sm flex-shrink-0">
+                <i className="fa-solid fa-file-lines"></i>
+              </div>
+              <span className="text-xs font-semibold text-base-content line-clamp-1">
+                {data.Name}
+              </span>
+            </div>
           </td>
-          <td>{createddate}</td>
-          <td>{t("pdf")}</td>
-          <td>{t(`drive-document-status.${status}`)}</td>
-          <td>
-            <i
+          <td className="py-2.5 px-4 text-xs text-base-content/70">
+            {createddate}
+          </td>
+          <td className="py-2.5 px-4">
+            <span className="op-badge op-badge-ghost op-badge-xs py-1.5 px-2 text-[10px] font-bold uppercase tracking-wider">
+              PDF
+            </span>
+          </td>
+          <td className="py-2.5 px-4">
+            <span
+              className={`op-badge op-badge-xs py-2 px-2.5 text-[10px] font-medium border ${badgeClass}`}
+            >
+              <i className={`${statusIcon} text-[9px] mr-1`}></i>
+              {t(`drive-document-status.${status}`)}
+            </span>
+          </td>
+          <td className="py-2.5 px-4 text-right">
+            <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 handleMenuItemClick("Download", data);
               }}
-              className="fa-light fa-download mr-[8px] op-text-primary cursor-pointer"
-              aria-hidden="true"
-            ></i>
+              className="op-btn op-btn-ghost op-btn-xs op-btn-square text-base-content/70 hover:text-primary rounded-md"
+              title={t("download") || "Descargar"}
+            >
+              <i className="fa-light fa-download text-xs"></i>
+            </button>
           </td>
         </tr>
       )
     ) : listType === "list" && data.Type === "Folder" ? (
-      <div className="relative w-[100px] h-[100px] mx-2 my-3">
-        <ContextMenu.Root>
-          <ContextMenu.Trigger className="flex flex-col justify-center items-center select-none-cls">
-            {/* folder */}
-            <div
-              data-tut={props.dataTutSeventh}
-              onClick={() => {
-                if (!rename) {
-                  handleOnclikFolder(data);
-                }
-              }}
-              className="cursor-pointer"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 512 512"
-                className="w-[100px] h-[100px] fill-current"
-              >
-                <path d="M64 480H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H288c-10.1 0-19.6-4.7-25.6-12.8L243.2 57.6C231.1 41.5 212.1 32 192 32H64C28.7 32 0 60.7 0 96V416c0 35.3 28.7 64 64 64z" />
-              </svg>
+      <ContextMenu.Root key={ind}>
+        <ContextMenu.Trigger asChild>
+          <div
+            data-tut={props.dataTutSeventh}
+            onClick={() => {
+              if (!rename) {
+                handleOnclikFolder(data);
+              }
+            }}
+            className="group relative flex flex-col justify-between p-3.5 pt-3 rounded-2xl liquid-folder-card cursor-pointer h-[185px] w-full select-none-cls transition-all duration-300"
+          >
+            {/* Pestaña física superior de la carpeta */}
+            <div className="folder-tab-badge"></div>
+
+            {/* Cabecera sutil para emparejar con el archivo */}
+            <div className="flex items-center justify-end w-full h-5">
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity text-base-content/40 hover:text-base-content px-1">
+                <i className="fa-light fa-ellipsis text-xs"></i>
+              </div>
+            </div>
+
+            {/* Centro: Ilustración realista de Carpeta Apple multicapa */}
+            <div className="flex flex-col items-center justify-center my-auto">
+              <div className="relative w-16 h-12 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                {/* Tapa trasera */}
+                <div className="absolute top-0 w-14 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 shadow-sm opacity-90"></div>
+                {/* Tab posterior */}
+                <div className="absolute -top-1.5 left-1 w-6 h-3 rounded-t-md bg-amber-400 opacity-90"></div>
+                {/* Solapa frontal con efecto traslúcido */}
+                <div className="absolute bottom-0 w-16 h-10 rounded-xl bg-gradient-to-b from-amber-400/90 via-amber-500/80 to-amber-600/90 backdrop-blur-md shadow-md group-hover:-rotate-2 group-hover:translate-y-0.5 transition-all duration-300 flex items-center justify-center">
+                  <i className="fa-solid fa-folder text-amber-100/60 text-base"></i>
+                </div>
+              </div>
+            </div>
+
+            {/* Pie: Nombre de carpeta truncado con elipsis + Badge */}
+            <div className="w-full text-center">
               {rename === data.objectId ? (
                 <input
-                  onFocus={() => {
-                    const input = inputRef.current;
-                    if (input) {
-                      input.select();
-                    }
-                  }}
+                  onFocus={(e) => e.target.select()}
                   autoFocus={true}
                   type="text"
                   onBlur={() => handledRenameDoc(data)}
@@ -425,133 +506,137 @@ function DriveBody(props) {
                   ref={inputRef}
                   defaultValue={renameValue}
                   onChange={(e) => setRenameValue(e.target.value)}
-                  className="op-input op-input-bordered op-input-xs w-[100px] focus:outline-none hover:border-base-content text-[10px]"
+                  onClick={(e) => e.stopPropagation()}
+                  className="op-input op-input-bordered op-input-xs w-full text-xs rounded-lg text-center font-medium focus:outline-none"
                 />
               ) : (
-                <span className="fileName select-none-cls">{data.Name}</span>
+                <h4
+                  className="text-xs font-semibold text-base-content truncate w-full block group-hover:text-amber-500 transition-colors leading-tight"
+                  title={data.Name}
+                >
+                  {data.Name}
+                </h4>
               )}
+              <div className="mt-1.5 pt-1.5 border-t border-base-content/10 flex items-center justify-center">
+                <span className="text-[10px] font-medium text-base-content/70 bg-base-200/80 px-2 py-0.5 rounded-full">
+                  {t("folder") || "Carpeta"}
+                </span>
+              </div>
             </div>
-          </ContextMenu.Trigger>
-          <ContextMenu.Portal>
-            <ContextMenu.Content
-              className="ContextMenuContent"
-              sideOffset={5}
-              align="end"
+          </div>
+        </ContextMenu.Trigger>
+        <ContextMenu.Portal>
+          <ContextMenu.Content
+            className="ContextMenuContent"
+            sideOffset={5}
+            align="end"
+          >
+            <ContextMenu.Item
+              onClick={() => handleMenuItemClick("Rename", data)}
+              className="ContextMenuItem"
             >
-              <ContextMenu.Item
-                onClick={() => handleMenuItemClick("Rename", data)}
-                className="ContextMenuItem"
-              >
-                <i className="fa-light fa-font mr-[8px]"></i>
-                <span>{t(`context-menu.Rename`)}</span>
-              </ContextMenu.Item>
-              <ContextMenu.Item
-                onClick={() => handleMenuItemClick("Delete", data, data.Type)}
-                className="ContextMenuItem"
-              >
-                <i className="fa-light fa-trash mr-[8px]"></i>
-                <span>{t(`context-menu.Delete`)}</span>
-              </ContextMenu.Item>
-            </ContextMenu.Content>
-          </ContextMenu.Portal>
-        </ContextMenu.Root>
-      </div>
+              <i className="fa-light fa-font mr-[8px]"></i>
+              <span>{t(`context-menu.Rename`)}</span>
+            </ContextMenu.Item>
+            <ContextMenu.Item
+              onClick={() => handleMenuItemClick("Delete", data, data.Type)}
+              className="ContextMenuItem text-error"
+            >
+              <i className="fa-light fa-trash mr-[8px]"></i>
+              <span>{t(`context-menu.Delete`)}</span>
+            </ContextMenu.Item>
+          </ContextMenu.Content>
+        </ContextMenu.Portal>
+      </ContextMenu.Root>
     ) : (
       <HoverCard.Root
+        key={ind}
         open={rename || isMobile ? false : undefined}
-        openDelay={0}
+        openDelay={300}
         closeDelay={100}
       >
         <HoverCard.Trigger asChild>
           <div>
             <ContextMenu.Root>
-              <div className="relative w-[100px] h-[100px] mx-2 my-3">
-                <ContextMenu.Trigger
-                  asChild
-                  className="flex flex-col justify-center items-center select-none-cls"
+              <ContextMenu.Trigger asChild>
+                <div
+                  data-tut={props.dataTutSixth}
+                  onClick={() => {
+                    if (!rename) {
+                      checkPdfStatus(data);
+                    }
+                  }}
+                  className="group relative flex flex-col justify-between p-3.5 pt-3 rounded-2xl liquid-file-card liquid-glass-card cursor-pointer h-[185px] w-full select-none-cls transition-all duration-300"
                 >
-                  {/* pdf */}
-                  <div
-                    data-tut={props.dataTutSixth}
-                    onClick={() => {
-                      if (!rename) {
-                        checkPdfStatus(data);
-                      }
-                    }}
-                    className="cursor-pointer"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 384 512"
-                      className="w-[100px] h-[100px] fill-current op-text-primary"
+                  {/* Cabecera del archivo: Badge de Estado arriba centrado */}
+                  <div className="flex items-center justify-center w-full h-5">
+                    <div
+                      className={`op-badge op-badge-xs py-1 px-3 gap-1.5 font-medium shadow-sm backdrop-blur-md max-w-full ${badgeClass}`}
+                      title={t(`drive-document-status.${status}`)}
                     >
-                      <path d="M374.629 150.627L233.371 9.373C227.371 3.371 219.23 0 210.746 0H64C28.652 0 0 28.652 0 64V448C0 483.345 28.652 512 64 512H320C355.348 512 384 483.345 384 448V173.254C384 164.767 380.629 156.629 374.629 150.627ZM224 22.629L361.375 160H248C234.781 160 224 149.234 224 136V22.629ZM368 448C368 474.467 346.469 496 320 496H64C37.531 496 16 474.467 16 448V64C16 37.533 37.531 16 64 16H208V136C208 158.062 225.938 176 248 176H368V448ZM96 264C96 268.406 99.594 272 104 272H280C284.406 272 288 268.406 288 264S284.406 256 280 256H104C99.594 256 96 259.594 96 264ZM280 320H104C99.594 320 96 323.594 96 328S99.594 336 104 336H280C284.406 336 288 332.406 288 328S284.406 320 280 320ZM280 384H104C99.594 384 96 387.594 96 392S99.594 400 104 400H280C284.406 400 288 396.406 288 392S284.406 384 280 384Z" />
-                    </svg>
+                      <i className={`${statusIcon} text-[9px] flex-shrink-0`}></i>
+                      <span className="text-[10px] truncate font-semibold">
+                        {t(`drive-document-status.${status}`)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Centro: Ícono PDF vítreo centrado al medio (sin deformación) */}
+                  <div className="flex flex-col items-center justify-center my-auto">
+                    <div className="w-14 h-14 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center text-2xl group-hover:scale-105 transition-transform duration-300 flex-shrink-0">
+                      <i className="fa-solid fa-file-pdf"></i>
+                    </div>
+                  </div>
+
+                  {/* Pie: Nombre de archivo truncado con elipsis + Metadata con Tag PDF */}
+                  <div className="w-full text-center">
                     {rename === data.objectId ? (
                       <input
+                        onFocus={(e) => e.target.select()}
                         autoFocus={true}
                         type="text"
-                        onFocus={() => {
-                          const input = inputRef.current;
-                          if (input) {
-                            input.select();
-                          }
-                        }}
                         onBlur={() => handledRenameDoc(data)}
                         onKeyDown={(e) => handleEnterPress(e, data, data.Type)}
                         ref={inputRef}
                         defaultValue={renameValue}
                         onChange={(e) => setRenameValue(e.target.value)}
-                        className="op-input op-input-bordered op-input-xs w-[100px] focus:outline-none hover:border-base-content text-[10px]"
+                        onClick={(e) => e.stopPropagation()}
+                        className="op-input op-input-bordered op-input-xs w-full text-xs rounded-lg font-medium focus:outline-none text-center"
                       />
                     ) : (
-                      <span className="fileName select-none-cls">
+                      <h4
+                        className="text-xs font-semibold text-base-content truncate w-full block group-hover:text-primary transition-colors leading-tight"
+                        title={data.Name}
+                      >
                         {data.Name}
-                      </span>
+                      </h4>
                     )}
-                  </div>
-                </ContextMenu.Trigger>
-                {status === "Completed" ? (
-                  <div className="status-badge completed">
-                    <i className="fa-light fa-check-circle"></i>
-                  </div>
-                ) : status === "Declined" ? (
-                  <div className="status-badge declined">
-                    <i className="fa-light fa-thumbs-down"></i>
-                  </div>
-                ) : status === "Expired" ? (
-                  <div className="status-badge expired">
-                    <i className="fa-light fa-hourglass-end"></i>
-                  </div>
-                ) : status === "Draft" ? (
-                  <div className="status-badge draft">
-                    <i className="fa-light fa-file"></i>
-                  </div>
-                ) : (
-                  status === "In Progress" && (
-                    <div className="status-badge in-progress">
-                      <i className="fa-light fa-paper-plane"></i>
+                    <div className="flex items-center justify-between text-[10px] text-base-content/60 mt-1.5 pt-1.5 border-t border-base-content/10 font-medium">
+                      <span className="truncate pr-1">{createddate}</span>
+                      <span className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded bg-base-200/80 text-base-content/70 flex-shrink-0">
+                        PDF
+                      </span>
                     </div>
-                  )
-                )}
-              </div>
+                  </div>
+                </div>
+              </ContextMenu.Trigger>
               <ContextMenu.Portal>
                 <ContextMenu.Content
                   className="ContextMenuContent"
                   sideOffset={5}
                   align="end"
                 >
-                  {contextMenu.map((menu, ind) => {
+                  {contextMenu.map((menu, indMenu) => {
                     return (
                       <ContextMenu.Item
-                        key={ind}
+                        key={indMenu}
                         onClick={() => handleMenuItemClick(menu.type, data)}
-                        className="ContextMenuItem"
+                        className={`ContextMenuItem ${
+                          menu.type === "Delete" ? "text-error" : ""
+                        }`}
                       >
-                        <i className={menu.icon}></i>
-                        <span className="ml-[8px]">
-                          {t(`context-menu.${menu.type}`)}
-                        </span>
+                        <i className={`${menu.icon} mr-[8px]`}></i>
+                        <span>{t(`context-menu.${menu.type}`)}</span>
                       </ContextMenu.Item>
                     );
                   })}
@@ -561,32 +646,37 @@ function DriveBody(props) {
           </div>
         </HoverCard.Trigger>
         <HoverCard.Portal>
-          <HoverCard.Content className="HoverCardContent" sideOffset={5}>
-            <strong className="text-[13px]">
-              {t("report-heading.Title")}:{" "}
-            </strong>
-            <span className="text-[12px] font-medium mb-0"> {data.Name}</span>
-            <br />
-            <strong className="text-[13px]">
-              {t("report-heading.Status")}:{" "}
-            </strong>
-            <span className="text-[12px] font-medium">
-              {t(`drive-document-status.${status}`)}
-            </span>
-            <br />
-            <strong className="text-[13px]">
-              {t("report-heading.created-date")}:{" "}
-            </strong>
-            <span className="text-[12px] font-medium">{createddate}</span>
-            <br />
-            {signerExist && (
-              <>
-                <strong className="text-[13px]">
-                  {t("report-heading.Signers")}:{" "}
-                </strong>
-                {signersName()}
-              </>
-            )}
+          <HoverCard.Content
+            className="HoverCardContent text-left p-3.5 rounded-xl text-base-content shadow-xl border border-base-200"
+            sideOffset={5}
+          >
+            <div className="text-xs font-bold text-base-content mb-2 line-clamp-2">
+              {data.Name}
+            </div>
+            <div className="space-y-1.5 text-[11px] text-base-content/80">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-base-content/50">
+                  {t("report-heading.Status")}:
+                </span>
+                <span className="font-medium text-base-content">
+                  {t(`drive-document-status.${status}`)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-base-content/50">
+                  {t("report-heading.created-date")}:
+                </span>
+                <span>{createddate}</span>
+              </div>
+              {signerExist && signerExist?.length > 0 && (
+                <div className="pt-1.5 border-t border-base-200">
+                  <span className="font-semibold text-base-content/50 block mb-0.5">
+                    {t("report-heading.Signers")}:
+                  </span>
+                  {signersName()}
+                </div>
+              )}
+            </div>
             <HoverCard.Arrow className="HoverCardArrow" />
           </HoverCard.Content>
         </HoverCard.Portal>
@@ -598,28 +688,28 @@ function DriveBody(props) {
   return (
     <>
       {props.isList ? (
-        <div className="container" style={{ overflowX: "auto" }}>
-          <Table striped bordered hover>
-            <thead>
+        <div className="overflow-x-auto w-full mt-1 rounded-xl border border-base-200/80">
+          <table className="table op-table op-table-sm w-full">
+            <thead className="bg-base-200/50 text-base-content/70 text-[11px] uppercase tracking-wider font-bold">
               <tr>
-                <th>{t("report-heading.Name")}</th>
-                <th>{t("report-heading.created-date")}</th>
-                <th>{t("report-heading.Type")}</th>
-                <th>{t("report-heading.Status")}</th>
-                <th>{t("action")}</th>
+                <th className="py-3 px-4">{t("report-heading.Name")}</th>
+                <th className="py-3 px-4">{t("report-heading.created-date")}</th>
+                <th className="py-3 px-4">{t("report-heading.Type")}</th>
+                <th className="py-3 px-4">{t("report-heading.Status")}</th>
+                <th className="py-3 px-4 text-right">{t("action")}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-base-200/60 text-xs">
               {props?.pdfData?.map((data, ind) => (
                 <React.Fragment key={ind}>
                   {handleFolderData(data, ind, "table")}
                 </React.Fragment>
               ))}
             </tbody>
-          </Table>
+          </table>
         </div>
       ) : (
-        <div className="flex flex-row flex-wrap items-center mt-1 pb-[20px] mx-[5px]">
+        <div className="grid grid-cols-1 min-[340px]:grid-cols-2 min-[560px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-[repeat(auto-fill,minmax(165px,1fr))] gap-3 sm:gap-4 mt-3 pb-8">
           {props?.pdfData?.map((data, ind) => (
             <React.Fragment key={ind}>
               {handleFolderData(data, ind, "list")}
@@ -642,34 +732,35 @@ function DriveBody(props) {
         title={t("delete-document")}
         handleClose={() => setIsDeleteDoc({})}
       >
-        <div className="h-full p-[20px] text-base-content">
-          {isDeleteDoc.deleteType ? (
-            <p>{t("delete-folder-alert")}</p>
-          ) : (
-            <p>{t("delete-document-alert")}</p>
-          )}
+        <div className="p-5 text-base-content">
+          <p className="text-sm mb-4">
+            {isDeleteDoc.deleteType
+              ? t("delete-folder-alert")
+              : t("delete-document-alert")}
+          </p>
 
-          <div className="h-[1px] w-full bg-[#9f9f9f] my-[15px]"></div>
-          <button
-            onClick={() => {
-              if (isDeleteDoc.deleteType) {
-                handleDeleteFolder(selectDoc);
-              } else {
-                handleDeleteDocument(selectDoc);
-              }
-            }}
-            type="button"
-            className="op-btn op-btn-primary mr-2"
-          >
-            {t("yes")}
-          </button>
-          <button
-            onClick={() => setIsDeleteDoc({})}
-            type="button"
-            className="op-btn op-btn-neutral"
-          >
-            {t("no")}
-          </button>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setIsDeleteDoc({})}
+              type="button"
+              className="op-btn op-btn-ghost op-btn-sm rounded-lg"
+            >
+              {t("no")}
+            </button>
+            <button
+              onClick={() => {
+                if (isDeleteDoc.deleteType) {
+                  handleDeleteFolder(selectDoc);
+                } else {
+                  handleDeleteDocument(selectDoc);
+                }
+              }}
+              type="button"
+              className="op-btn op-btn-error op-btn-sm rounded-lg"
+            >
+              {t("yes")}
+            </button>
+          </div>
         </div>
       </ModalUi>
     </>
