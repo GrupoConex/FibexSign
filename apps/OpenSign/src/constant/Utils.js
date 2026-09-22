@@ -2585,8 +2585,7 @@ export const embedWidgetsToDoc = async (
     return pdfBytes;
   } else {
     return {
-      error:
-        "This pdf is not compatible with Firma please contact <soporte@fibexsign.com>"
+      error: "This pdf is not compatible with Firma."
     };
   }
 };

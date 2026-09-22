@@ -45,9 +45,9 @@ describe('brand name is "Firma" instead of "FibexSign" in backend-emitted text',
     expect(packageJson.repository.url).toBe('https://github.com/GrupoConex/FibexSign');
   });
 
-  it('does not mention "FibexSign" as a standalone product name in docxtopdf.js error messages while keeping soporte@fibexsign.com intact', () => {
+  it('does not mention "FibexSign" or external support email in docxtopdf.js error messages', () => {
     const content = fs.readFileSync(docxToPdfPath, 'utf8');
     expect(content).not.toMatch(/FibexSign(?!\.com)/i);
-    expect(content).toContain('soporte@fibexsign.com');
+    expect(content).not.toContain('soporte@fibexsign.com');
   });
 });

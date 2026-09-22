@@ -448,14 +448,9 @@ const AddAdmin = () => {
                     >
                       {t("agree")}
                     </label>
-                    <a
-                      href="https://fibexsign.com/terms-and-conditions"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline ml-1 text-xs"
-                    >
+                    <span className="ml-1 text-xs text-base-content/80 font-medium">
                       {t("term")}
-                    </a>
+                    </span>
                     <span className="text-xs">.</span>
                   </div>
                 </div>

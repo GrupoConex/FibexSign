@@ -95,20 +95,10 @@ function AgreementContent(props) {
           <span className="mt-2 font-medium">
             {t("term-cond-p28", { appName: appName })}
           </span>
-              <hr className="bg-[#9f9f9f] w-full my-[15px]" />
-              <span className="mt-2">
-                {t("term-cond-p29", { appName: appName })}
-              </span>
-              <a
-                href="https://fibexsign.com"
-                target="_blank"
-                className="text-blue-700 cursor-pointer"
-              >
-                fibexsign.com
-              </a>
-
-              <span>{t("term-cond-p30")}</span>
-              <span className="font-medium"> soporte@fibexsign.com </span>
+          <hr className="bg-[#9f9f9f] w-full my-[15px]" />
+          <span className="mt-2">
+            {t("term-cond-p29", { appName: appName })}
+          </span>
           <hr className="bg-[#9f9f9f] w-full my-[15px]" />
           <div className="mt-6 flex justify-start gap-2">
             <button
