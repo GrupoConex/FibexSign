@@ -3,10 +3,11 @@ import Parse from "parse";
 import CreateFolder from "./CreateFolder";
 import ModalUi from "../../../primitives/ModalUi";
 import { useTranslation } from "react-i18next";
+import { appInfo } from "../../../constant/appinfo";
 
 const FolderModal = (props) => {
   const { t } = useTranslation();
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const drivename = appName;
   const [clickFolder, setClickFolder] = useState("");
   const [folderList, setFolderList] = useState([]);

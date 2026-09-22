@@ -205,14 +205,12 @@ export default async function docxtopdf(req, res) {
       err?.response?.data?.error || err?.response?.data || err?.message || 'Something went wrong.';
     // Friendly message to the client
     const message =
-      'We are currently experiencing some issues with processing DOCX files. Please upload the PDF version or contact us on soporte@fibexsign.com';
+      'We are currently experiencing some issues with processing DOCX files. Please upload the PDF version.';
 
     if (msg.includes('timed out')) {
-      msg =
-        'Document conversion is taking too long. Please try a smaller file or contact soporte@fibexsign.com';
+      msg = 'Document conversion is taking too long. Please try a smaller file.';
     } else if (msg.includes('too large') || msg.includes('size')) {
-      msg =
-        'File is too large to process. Please reduce the file size or contact soporte@fibexsign.com';
+      msg = 'File is too large to process. Please reduce the file size.';
     } else {
       msg = message;
     }

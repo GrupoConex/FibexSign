@@ -16,9 +16,10 @@ import Loader from "../primitives/Loader";
 import { useTranslation } from "react-i18next";
 import { sessionStatus } from "../redux/reducers/userReducer";
 import SessionExpiredModal from "../primitives/SessionExpiredModal";
+import { appInfo } from "../constant/appinfo";
 
 const HomeLayout = () => {
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const tourArr = useSelector((state) => state.TourSteps);

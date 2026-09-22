@@ -25,9 +25,10 @@ import {
   setAlertInfo
 } from "../redux/reducers/userReducer";
 import { useDispatch, useSelector } from "react-redux";
+import { appInfo } from "../constant/appinfo";
 
 const Preferences = () => {
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const { isLoader, isTopLoader, alertInfo } = useSelector(

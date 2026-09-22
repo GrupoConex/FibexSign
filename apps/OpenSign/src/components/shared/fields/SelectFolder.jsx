@@ -4,9 +4,10 @@ import CreateFolder from "./CreateFolder";
 import ModalUi from "../../../primitives/ModalUi";
 import Tooltip from "../../../primitives/Tooltip";
 import { useTranslation } from "react-i18next";
+import { appInfo } from "../../../constant/appinfo";
 
 const SelectFolder = ({ required, onSuccess, folderCls, isReset }) => {
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const drivename = appName;
   const { t } = useTranslation();
   const [isOpen, SetIsOpen] = useState(false);

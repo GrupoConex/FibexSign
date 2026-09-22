@@ -17,7 +17,7 @@ import AuthLayout from "../components/auth/AuthLayout";
 import Icon from "../primitives/Icon";
 
 const AddAdmin = () => {
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -448,14 +448,9 @@ const AddAdmin = () => {
                     >
                       {t("agree")}
                     </label>
-                    <a
-                      href="https://fibexsign.com/terms-and-conditions"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline ml-1 text-xs"
-                    >
+                    <span className="ml-1 text-xs text-base-content/80 font-medium">
                       {t("term")}
-                    </a>
+                    </span>
                     <span className="text-xs">.</span>
                   </div>
                 </div>

@@ -8,12 +8,13 @@ import {
   fileNameWithUnderscore
 } from "../constant/Utils";
 import Loader from "./Loader";
+import { appInfo } from "../constant/appinfo";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { notify } from "../utils";
 
 function DownloadPdfZip(props) {
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const { t } = useTranslation();
   const [selectType, setSelectType] = useState(1);
   const [isDownloading, setIsDownloading] = useState(false);

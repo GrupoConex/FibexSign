@@ -35,6 +35,7 @@ import {
   clearAcroFields,
   isPdfPasswordProtected
 } from "../utils/acroFieldExtractor";
+import { appInfo } from "../constant/appinfo";
 
 // `Form` render all type of Form on this basis of their provided in path
 function Form() {
@@ -49,7 +50,7 @@ function Form() {
 }
 
 const Forms = (props) => {
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const { t } = useTranslation();
   const abortController = new AbortController();
   const inputFileRef = useRef(null);

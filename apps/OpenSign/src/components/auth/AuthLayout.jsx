@@ -14,16 +14,16 @@ const AuthLayout = ({ children }) => {
           <div className="flex flex-col items-center mb-6 text-center select-none">
             <img
               src={logoPositivo}
-              alt="FibexSign"
+              alt="Firma"
               className="h-10 object-contain dark:hidden"
             />
             <img
               src={logoNegativo}
-              alt="FibexSign"
+              alt="Firma"
               className="h-10 object-contain hidden dark:block"
             />
             <p className="mt-2 text-xl font-bold tracking-tight text-base-content">
-              Fibex<span className="fibex-sign-text">Sign</span>
+              <span className="firma-text">Firma</span>
             </p>
           </div>
 

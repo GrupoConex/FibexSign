@@ -7,12 +7,13 @@ import { notify, withSessionValidation } from "../../utils";
 import { useDispatch } from "react-redux";
 import { setTenantInfo, setUserInfo } from "../../redux/reducers/userReducer";
 import EmailEditor from "../emaileditor";
+import { appInfo } from "../../constant/appinfo";
 
 const MailTemplateEditor = ({
   info,
   tenantId,
 }) => {
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [requestBody, setRequestBody] = useState({ basic: "", advanced: "" });

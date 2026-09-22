@@ -5,8 +5,9 @@ import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { emailRegex } from "../constant/const";
 import { notify } from "../utils";
+import { appInfo } from "../constant/appinfo";
 const UpdateExistUserAdmin = () => {
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [formdata, setFormdata] = useState({ email: "", masterkey: "" });

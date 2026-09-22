@@ -1,5 +1,5 @@
 /**
- * Tailwind Dark Mode Usage Examples for FibexSign
+ * Tailwind Dark Mode Usage Examples for Firma
  * 
  * This file demonstrates how to use the new Tailwind utilities
  * for better dark mode visibility of buttons and icons.

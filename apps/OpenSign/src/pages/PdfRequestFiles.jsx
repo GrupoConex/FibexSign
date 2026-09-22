@@ -64,7 +64,7 @@ import LoaderWithMsg from "../primitives/LoaderWithMsg";
 import DownloadPdfZip from "../primitives/DownloadPdfZip";
 import Loader from "../primitives/Loader";
 import PdfDeclineModal from "../primitives/PdfDeclineModal";
-import { serverUrl_fn } from "../constant/appinfo";
+import { serverUrl_fn, appInfo } from "../constant/appinfo";
 import AgreementSign from "../components/pdf/AgreementSign";
 import WidgetComponent from "../components/pdf/WidgetComponent";
 import PlaceholderCopy from "../components/pdf/PlaceholderCopy";
@@ -85,7 +85,7 @@ function PdfRequestFiles(
   const isShowModal = useSelector((state) => state.widget.isShowModal);
   const defaultSignImg = useSelector((state) => state.widget.defaultSignImg);
   const myInitial = useSelector((state) => state.widget.myInitial);
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const [pdfDetails, setPdfDetails] = useState([]);
   const [signedSigners, setSignedSigners] = useState([]);
   const [unsignedSigners, setUnSignedSigners] = useState([]);
