@@ -141,9 +141,6 @@ function RenderPdf(props) {
 
   useEffect(() => {
     dispatch(toggleSidebar(false));
-    return () => {
-      dispatch(toggleSidebar(true));
-    };
   }, []);
 
   // enable pinch to zoom only on actual pdf wrapper

@@ -4,12 +4,16 @@ import { contractDocument } from "../../constant/Utils";
 import HandleError from "../../primitives/HandleError";
 import { useLocation, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import { useDispatch } from "react-redux";
+import { toggleSidebar } from "../../redux/reducers/sidebarReducer";
+
 function useQuery() {
   return new URLSearchParams(useLocation().search);
 }
 function DraftDocument() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const query = useQuery();
   const docId = query.get("docId");
   const [isLoading, setIsLoading] = useState({
@@ -17,6 +21,7 @@ function DraftDocument() {
     message: t("loading-mssg")
   });
   useEffect(() => {
+    dispatch(toggleSidebar(false));
     getDocumentDetails();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

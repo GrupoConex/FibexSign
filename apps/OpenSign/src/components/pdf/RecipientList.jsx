@@ -107,15 +107,19 @@ const RecipientList = (props) => {
             data-tut="prefillTour"
             className={`${
               props.uniqueId === obj.Id
-                ? "op-bg-primary text-white"
-                : "transparent text-base-content"
-            } cursor-pointer px-2 py-1 m-1 mb-2 border-[1px] gap-1 rounded-xl flex justify-center items-center op-border-primary text-[12px] font-bold whitespace-nowrap text-ellipsis`}
+                ? "bg-blue-600 dark:bg-blue-600 text-white border-blue-600 dark:border-blue-500 shadow-md"
+                : "bg-base-200/50 hover:bg-base-200 text-base-content border-base-content/15"
+            } cursor-pointer px-3 py-1.5 m-1 mb-2 border rounded-xl flex justify-center items-center gap-2 text-[12px] font-semibold whitespace-nowrap transition-all`}
             onClick={(e) => handleSelectRecipient(e, ind, obj, true)}
           >
             <i
-              className={`${props.uniqueId === obj.Id ? "bg-white op-text-primary" : "op-bg-primary text-white"} w-[20px] h-[20px] flex justify-center items-center text-[10px] fa-light fa-signature rounded-full`}
+              className={`${
+                props.uniqueId === obj.Id
+                  ? "bg-white/25 text-white"
+                  : "bg-blue-600 text-white"
+              } w-5 h-5 flex justify-center items-center text-[10px] fa-light fa-signature rounded-full flex-shrink-0`}
             ></i>
-            <span>{obj.Name}</span>
+            <span className="truncate">{obj.Name}</span>
           </div>
         ))}
       {props.signersdata.length > 0 &&

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import "../../styles/opensigndrive.css";
 import ModalUi from "../../primitives/ModalUi";
 import RecipientList from "./RecipientList";
 import WidgetList from "./WidgetList";
@@ -150,48 +151,64 @@ function WidgetComponent(props) {
     )?.blockColor;
     return widgetBoxColor;
   };
+  const [isScreenMobile, setIsScreenMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 768 : isMobile
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsScreenMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   return (
     <>
-      {isMobile ? (
+      {isScreenMobile ? (
         !props.isMailSend && (
-          <div id="navbar" className="fixed z-[99] bottom-0 right-0 w-full">
+          <div id="navbar" className="liquid-glass-dock fixed z-[99] bottom-0 left-0 right-0 w-full pt-2 pb-2 shadow-2xl">
             {props.isSigners && (
-              <div className="w-full mb-[5px] flex justify-center items-center gap-1">
-                <div className="w-full ml-[5px]" onClick={() => handleModal()}>
-                  <select
-                    data-tut="recipientArea"
-                    className="w-full op-select op-select-bordered  pointer-events-none"
-                    value={handleSelectRecipient()}
+              <div className="px-3 pb-2 flex items-center gap-2">
+                <div
+                  className="flex-1 flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-base-content/10 bg-base-100/60 cursor-pointer shadow-sm"
+                  onClick={() => handleModal()}
+                  data-tut="recipientArea"
+                >
+                  <span
+                    className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm"
                     style={{
                       backgroundColor:
                         props.roleName === "prefill"
-                          ? "#edf6fc"
-                          : handleBlockColor() || "#edf6fc"
+                          ? "#38bdf8"
+                          : handleBlockColor() || "#3b82f6"
                     }}
-                  >
-                    <option value={handleSelectRecipient()}>
-                      {handleSelectRecipient()}
-                    </option>
-                  </select>
+                  ></span>
+                  <span className="text-xs font-semibold text-base-content truncate">
+                    {handleSelectRecipient() || t("select-recipient")}
+                  </span>
+                  <i className="fa-light fa-chevron-down text-[10px] ml-auto text-base-content/50"></i>
                 </div>
 
-                <div className="w-[18%]">
+                <div className="flex-shrink-0">
                   {props.handleAddSigner ? (
                     <button
                       data-tut="reactourAddbtn"
                       onClick={() => props.handleAddSigner()}
-                      className="op-btn op-btn-accent"
+                      className="liquid-tool-btn border border-base-content/10 bg-base-100/60 shadow-sm"
+                      title={t("add-recipient")}
                     >
-                      <i className="fa-light fa-plus "></i>
+                      <i className="fa-light fa-plus text-sm"></i>
                     </button>
                   ) : (
                     props.setIsAddSigner && (
                       <button
                         data-tut="addRecipient"
                         onClick={() => props.setIsAddSigner(true)}
-                        className="op-btn op-btn-accent"
+                        className="liquid-tool-btn border border-base-content/10 bg-base-100/60 shadow-sm"
+                        title={t("add-recipient")}
                       >
-                        <i className="fa-light fa-plus"></i>
+                        <i className="fa-light fa-plus text-sm"></i>
                       </button>
                     )
                   )}
@@ -199,17 +216,14 @@ function WidgetComponent(props) {
               </div>
             )}
 
-            <div
-              data-tut="addWidgets"
-              className="bg-base-100 border-[2px] border-t-primary"
-            >
-              <div className="flex whitespace-nowrap overflow-x-scroll pt-[10px] pb-[5px] pr-[5px]">
+            <div data-tut="addWidgets" className="px-3 pb-1">
+              <div className="flex items-center gap-2.5 overflow-x-auto hide-scrollbar scroll-smooth py-1">
                 <WidgetList
                   updateWidgets={handleWidgetType}
                   handleDivClick={props.handleDivClick}
                   handleMouseLeave={props.handleMouseLeave}
                   signRef={signRef}
-                  marginLeft={5}
+                  isMobileView={true}
                   addPositionOfSignature={props.addPositionOfSignature}
                 />
               </div>
@@ -220,21 +234,35 @@ function WidgetComponent(props) {
         <div
           data-tut={props.dataTut}
           className={`${
-            props.isMailSend ? "bg-opacity-50 pointer-events-none" : ""
-          } hidden md:block h-full bg-base-100`}
+            props.isMailSend ? "opacity-50 pointer-events-none" : ""
+          } hidden md:flex flex-col h-[calc(100vh-64px)] liquid-glass-panel sticky top-0 select-none`}
         >
-          <div className="mx-2 pr-2 pt-2 pb-1 text-[15px] text-base-content font-semibold border-b-[1px] border-base-300">
-            <span>
-              {t("widgets")}
-              {props?.isSignYourself && (
-                <sup onClick={() => props.setIsTour && props.setIsTour(true)}>
-                  <i className="ml-1 cursor-pointer fa-light fa-question rounded-full border-[1px] border-base-content text-[11px] py-[1px] px-[3px]"></i>
-                </sup>
-              )}
-            </span>
+          {/* Header del Panel de Widgets con Liquid Glass */}
+          <div className="px-3.5 py-2.5 flex items-center justify-between border-b border-base-content/10 bg-base-100/40 flex-shrink-0">
+            <div className="flex items-center gap-2">
+
+              <div className="w-6 h-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs">
+                <i className="fa-light fa-shapes"></i>
+              </div>
+              <span className="text-xs font-bold uppercase tracking-wider text-base-content/90">
+                {t("widgets")}
+              </span>
+            </div>
+            {props?.isSignYourself && (
+              <button
+                type="button"
+                onClick={() => props.setIsTour && props.setIsTour(true)}
+                className="w-6 h-6 rounded-full flex items-center justify-center text-base-content/50 hover:text-primary hover:bg-primary/10 transition-colors"
+                title="Ayuda / Tour"
+              >
+                <i className="fa-light fa-circle-question text-xs"></i>
+              </button>
+            )}
           </div>
+
+          {/* Grilla 2 Columnas de Widgets Cuadrados compactos */}
           <div
-            className="p-[12px] grid lg:grid-cols-2 gap-x-2 lg:gap-y-1.5 pt-3"
+            className="p-3 grid grid-cols-2 gap-2.5 content-start overflow-y-auto autoSignScroll flex-1"
             data-tut="addWidgets"
             role="list"
             aria-label="Add widgets"
@@ -244,6 +272,7 @@ function WidgetComponent(props) {
               handleDivClick={props.handleDivClick}
               handleMouseLeave={props.handleMouseLeave}
               signRef={signRef}
+              isMobileView={false}
               addPositionOfSignature={props.addPositionOfSignature}
             />
           </div>

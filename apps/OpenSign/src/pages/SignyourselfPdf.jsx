@@ -76,6 +76,7 @@ import {
   applyNumberFormulasToPages,
   notify,
 } from "../utils";
+import { toggleSidebar } from "../redux/reducers/sidebarReducer";
 
 import { useScroll } from "../context/ScrollPdfContext";
 //For signYourself inProgress section signer can add sign and complete doc sign.
@@ -181,9 +182,13 @@ function SignYourSelf() {
 
   useEffect(() => {
     dispatch(resetWidgetState([]));
+    dispatch(toggleSidebar(false));
     if (documentId) {
       getDocumentDetails(true);
     }
+    return () => {
+      dispatch(toggleSidebar(true));
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -191,22 +196,33 @@ function SignYourSelf() {
   useEffect(() => {
     const updateSize = () => {
       if (divRef.current) {
-        const pdfWidth = divRef.current.offsetWidth;
-        setPdfNewWidth(pdfWidth);
-        setContainerWH({
-          width: divRef.current.offsetWidth,
-          height: divRef.current.offsetHeight
-        });
-        setScale(1);
-        setZoomPercent(0);
+        const measuredWidth =
+          divRef.current.offsetWidth ||
+          divRef.current.parentElement?.offsetWidth ||
+          0;
+        if (measuredWidth > 0) {
+          setPdfNewWidth((prev) => (prev !== measuredWidth ? measuredWidth : prev));
+          setContainerWH((prev) => {
+            if (prev.width === measuredWidth) return prev;
+            return {
+              width: measuredWidth,
+              height: divRef.current.offsetHeight || 800
+            };
+          });
+        }
       }
     };
 
-    // Use setTimeout to wait for the transition to complete
-    const timer = setTimeout(updateSize, 150); // match the transition duration
-    return () => clearTimeout(timer);
+    updateSize();
+    const timer = setTimeout(updateSize, 80);
+    const timer2 = setTimeout(updateSize, 250);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(timer2);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [divRef.current, isSidebar, windowSize?.width]);
+  }, [isLoading?.isLoad, isSidebar, windowSize?.width, pdfBase64Url]);
   //function for get document details for perticular signer with signer'object id
   const getDocumentDetails = async (showComplete) => {
     try {
@@ -1357,7 +1373,7 @@ function SignYourSelf() {
               isMergePdfBtn={!pdfDetails?.[0]?.IsCompleted}
               pdfDetails={pdfDetails}
             />
-            <div className="w-full md:w-[57%] flex mr-4">
+            <div className="w-full md:w-[57%] flex md:mr-4 justify-center">
               <PdfTools
                 clickOnZoomIn={clickOnZoomIn}
                 clickOnZoomOut={clickOnZoomOut}
@@ -1376,6 +1392,7 @@ function SignYourSelf() {
                 pdfDetails={pdfDetails}
               />
               <div className="w-full md:w-[95%]">
+
                 <ModalUi
                   isOpen={isAlert.isShow}
                   title={isAlert?.header || t("alert")}
@@ -1465,8 +1482,8 @@ function SignYourSelf() {
                   signerPos={xyPosition}
                   pdfBase64={pdfBase64Url}
                 />
-                <div ref={divRef} data-tut="reactourSecond" className="h-fit">
-                  {containerWH?.width && (
+                <div ref={divRef} data-tut="reactourSecond" className="w-full h-fit pb-28 md:pb-4">
+                  {Boolean(containerWH?.width && containerWH.width > 0) && (
                     <RenderPdf
                       pageNumber={pageNumber}
                       setPageNumber={setPageNumber}
@@ -1517,8 +1534,8 @@ function SignYourSelf() {
                 </div>
               </div>
             </div>
-            <div className="w-full md:w-[23%] bg-base-100 overflow-y-auto hide-scrollbar">
-              <div className="max-h-screen">
+            <div className="w-full md:w-[23%] bg-transparent hide-scrollbar">
+              <div className="h-full">
                 {!isCompleted ? (
                   <WidgetComponent
                     pdfUrl={pdfUrl}
@@ -1535,6 +1552,7 @@ function SignYourSelf() {
                 )}
               </div>
             </div>
+
           </div>
         </div>
       )}

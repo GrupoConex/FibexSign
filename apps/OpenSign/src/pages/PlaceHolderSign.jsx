@@ -50,6 +50,7 @@ import DropdownWidgetOption from "../components/pdf/DropdownWidgetOption";
 import WidgetNameModal from "../components/pdf/WidgetNameModal";
 import { SaveFileSize } from "../constant/saveFileSize";
 import { useDispatch, useSelector } from "react-redux";
+import { toggleSidebar } from "../redux/reducers/sidebarReducer";
 import PdfTools from "../components/pdf/PdfTools";
 import { useTranslation, Trans } from "react-i18next";
 import RotateAlert from "../components/RotateAlert";
@@ -170,9 +171,13 @@ function PlaceHolderSign() {
   const documentId = docId;
   useEffect(() => {
     dispatch(resetWidgetState([]));
+    dispatch(toggleSidebar(false));
     if (documentId) {
       getDocumentDetails();
     }
+    return () => {
+      dispatch(toggleSidebar(true));
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -227,21 +232,33 @@ function PlaceHolderSign() {
   useEffect(() => {
     const updateSize = () => {
       if (divRef.current) {
-        const pdfWidth = pdfNewWidthFun(divRef);
-        setPdfNewWidth(pdfWidth);
-        setContainerWH({
-          width: divRef.current.offsetWidth,
-          height: divRef.current.offsetHeight
-        });
-        setScale(1);
-        setZoomPercent(0);
+        const measuredWidth =
+          pdfNewWidthFun(divRef) ||
+          divRef.current.offsetWidth ||
+          divRef.current.parentElement?.offsetWidth ||
+          0;
+        if (measuredWidth > 0) {
+          setPdfNewWidth((prev) => (prev !== measuredWidth ? measuredWidth : prev));
+          setContainerWH((prev) => {
+            if (prev.width === measuredWidth) return prev;
+            return {
+              width: measuredWidth,
+              height: divRef.current.offsetHeight || 800
+            };
+          });
+        }
       }
     };
-    // Use setTimeout to wait for the transition to complete
-    const timer = setTimeout(updateSize, 150); // match the transition duration
-    return () => clearTimeout(timer);
+    updateSize();
+    const timer = setTimeout(updateSize, 80);
+    const timer2 = setTimeout(updateSize, 250);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(timer2);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [divRef.current, isSidebar, windowSize?.width]);
+  }, [isLoading?.isLoad, isSidebar, windowSize?.width, pdfBase64Url]);
   //function for get document details
   const getDocumentDetails = async () => {
     const tenantSignTypes = await fetchTenantDetails();
@@ -2208,10 +2225,10 @@ function PlaceHolderSign() {
               <div
                 ref={divRef}
                 data-tut="pdfArea"
-                className="h-fit"
+                className="w-full h-fit"
                 onClick={() => setPlaceholderTour(false)}
               >
-                {containerWH?.width && (
+                {Boolean(containerWH?.width && containerWH.width > 0) && (
                   <RenderPdf
                     scrollRef={scrollRef}
                     pageNumber={pageNumber}
@@ -2269,8 +2286,9 @@ function PlaceHolderSign() {
           </div>
 
           {/* signature button */}
-          <div className="w-full md:w-[23%] bg-base-100 overflow-y-auto hide-scrollbar">
-            <div className={`max-h-screen`}>
+          <div className="w-full md:w-[23%] bg-transparent hide-scrollbar">
+            <div className="h-full">
+
               {isMobile ? (
                 <div>
                   <WidgetComponent

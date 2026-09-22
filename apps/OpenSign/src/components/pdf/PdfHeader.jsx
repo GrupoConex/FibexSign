@@ -13,6 +13,8 @@ import {
   reorderPdfPages
 } from "../../constant/Utils";
 import "../../styles/signature.css";
+import "../../styles/opensigndrive.css";
+import { useDraggable } from "../../hook/useDraggable";
 import { DropdownMenu } from "radix-ui";
 import ModalUi from "../../primitives/ModalUi";
 import Loader from "../../primitives/Loader";
@@ -28,6 +30,8 @@ function Header(props) {
   const [isDownloading, setIsDownloading] = useState("");
   const [isDeletePage, setIsDeletePage] = useState(false);
   const [isReorderModal, setIsReorderModal] = useState(false);
+  const { dragProps, resetPosition } = useDraggable();
+
   const mergePdfInputRef = useRef(null);
   const enabledBackBtn = props?.disabledBackBtn === true ? false : true;
   const isViewerSigner = false;
@@ -189,22 +193,25 @@ function Header(props) {
     }
   };
   return (
-    <div className="flex py-[5px]">
+    <div className="w-full py-1">
       {isMobile && props?.isShowHeader ? (
         <div
           id="navbar"
-          className="stickyHead touch-none"
-          style={{
-            width: window.innerWidth + "px"
-          }}
+          className="w-full px-3 py-1.5 flex items-center justify-between liquid-glass-panel border-b border-base-content/10 shadow-sm"
         >
-          <div className="flex justify-between items-center py-[5px] pl-[10px] ">
-            <div onClick={() => window.history.go(-2)}>
+          <div className="flex justify-between items-center w-full">
+            <button
+              type="button"
+              onClick={() => window.history.go(-2)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-base-content/70 hover:text-primary hover:bg-primary/10 transition-colors"
+              title="Atrás"
+            >
               <i
-                className="fa-light fa-arrow-left text-base-content"
+                className="fa-light fa-arrow-left text-sm"
                 aria-hidden="true"
               ></i>
-            </div>
+            </button>
+
             <PrevNext
               pageNumber={props?.pageNumber}
               allPages={props?.allPages}
@@ -480,39 +487,56 @@ function Header(props) {
           </div>
         </div>
       ) : (
-        <div className="flex flex-wrap justify-between items-center w-full gap-y-1 ml-1">
-          <PrevNext
-            pageNumber={props?.pageNumber}
-            allPages={props?.allPages}
-            changePage={props?.changePage}
-          />
+        <div
+          {...dragProps}
+          className="flex justify-between items-center w-full py-1.5 px-3.5 my-1.5 rounded-2xl liquid-glass-panel border border-base-content/10 shadow-md select-none sticky top-2 z-20"
+          title="Barra de navegación (Arrastra para mover por la pantalla)"
+        >
+          <div className="flex items-center gap-2">
+            {/* Grip handle de arrastre */}
+            <div
+              className="cursor-grab active:cursor-grabbing text-base-content/30 hover:text-base-content/70 px-1 py-1 transition-colors"
+              title="Arrastrar barra (Doble clic para restablecer)"
+              onDoubleClick={resetPosition}
+            >
+              <i className="fa-light fa-grip-dots-vertical text-xs"></i>
+            </div>
+            <PrevNext
+              pageNumber={props?.pageNumber}
+              allPages={props?.allPages}
+              changePage={props?.changePage}
+            />
+          </div>
           {props?.isPlaceholder ? (
             <>
               <div className="flex mx-[100px] lg:mx-0 order-last lg:order-none"></div>
-              <div className="flex">
+              <div className="flex items-center gap-2">
                 {props?.setIsEditTemplate && (
                   <button
                     onClick={() => props?.setIsEditTemplate(true)}
-                    className="outline-none border-none text-center mr-[3px]"
+                    className="w-8 h-8 rounded-xl border border-base-content/10 bg-base-100/50 hover:bg-primary/10 hover:text-primary text-base-content flex items-center justify-center transition-all shadow-sm"
+                    title="Configuración"
                   >
-                    <i className="fa-light fa-gear fa-lg text-base-content"></i>
+                    <i className="fa-light fa-gear text-sm"></i>
                   </button>
                 )}
                 {enabledBackBtn && (
                   <button
                     onClick={() => window.history.go(-2)}
                     type="button"
-                    className="op-btn op-btn-ghost text-base-content op-btn-sm mr-[3px]"
+                    className="px-3.5 py-1.5 rounded-xl border border-base-content/10 bg-base-100/50 hover:bg-base-content/10 text-base-content text-xs font-semibold transition-all shadow-sm flex items-center gap-1.5"
                   >
+                    <i className="fa-light fa-arrow-left text-xs"></i>
                     {t("back")}
                   </button>
                 )}
                 <button
                   disabled={props?.isMailSend && true}
                   data-tut="headerArea"
-                  className="op-btn op-btn-primary op-btn-sm mr-[3px]"
+                  className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20 active:scale-95 flex items-center gap-1.5"
                   onClick={() => props?.handleSaveDoc()}
                 >
+                  <i className="fa-light fa-paper-plane text-xs"></i>
                   {props?.completeBtnTitle
                     ? props?.completeBtnTitle
                     : props?.isMailSend
@@ -523,20 +547,21 @@ function Header(props) {
             </>
           ) : props?.isPdfRequestFiles || props?.isSelfSign ? (
             props?.alreadySign || (props?.isSelfSign && props?.isCompleted) ? (
-              <div className="flex flex-row">
+              <div className="flex flex-row items-center gap-2">
                 <button
                   onClick={(e) =>
                     handleToPrint(e, setIsDownloading, props?.pdfDetails)
                   }
                   type="button"
-                  className="op-btn op-btn-neutral op-btn-sm mr-[3px]"
+                  className="px-3 py-1.5 rounded-xl border border-base-content/10 bg-base-100/50 hover:bg-base-content/10 text-base-content text-xs font-semibold transition-all shadow-sm flex items-center gap-1.5"
                 >
                   <i
-                    className="fa-light fa-print py-[3px]"
+                    className="fa-light fa-print text-xs"
                     aria-hidden="true"
                   ></i>
                   <span className="hidden lg:block">{t("print")}</span>
                 </button>
+
                 {
                     props?.isCompleted && (
                       <button
@@ -595,7 +620,7 @@ function Header(props) {
                     {!props?.templateId && (
                       <button
                         type="button"
-                        className="op-btn op-btn-ghost text-base-content op-btn-sm mr-[3px]"
+                        className="px-3.5 py-1.5 rounded-xl border border-base-content/10 bg-base-100/50 hover:bg-base-content/10 text-base-content text-xs font-semibold transition-all shadow-sm mr-2 flex items-center gap-1.5"
                         onClick={() => handleDownloadDoc()}
                       >
                         <i className="fa-light fa-arrow-down font-semibold lg:hidden"></i>
@@ -605,15 +630,17 @@ function Header(props) {
                     {!isViewerSigner && (
                       <button
                         type="button"
-                        className="op-btn op-btn-primary op-btn-sm mr-[3px]"
+                        className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20 active:scale-95 flex items-center gap-1.5 cursor-pointer"
                         onClick={() => props?.embedWidgetsData()}
                       >
+                        <i className="fa-light fa-circle-check text-xs"></i>
                         {finishLabel}
                       </button>
                     )}
                   </>
                 )}
               </div>
+
             )
           ) : props?.isCompleted ? (
             <div className="flex flex-row">

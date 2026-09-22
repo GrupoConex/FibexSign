@@ -1,26 +1,50 @@
-import { isMobile } from "../../constant/Utils";
+import React from "react";
+import "../../styles/opensigndrive.css";
 
 // `getWidgetType` is used to load ui of widget in side list
-const getWidgetType = (item, widgetName) => {
+const getWidgetType = (item, widgetName, isMobileView = false) => {
+  if (isMobileView) {
+    return (
+      <div
+        title={widgetName}
+        className="liquid-glass-widget-btn-mobile group"
+        role="button"
+        tabIndex={0}
+      >
+        <div className="liquid-glass-widget-icon-box">
+          <i className={item.icon}></i>
+        </div>
+        <span className="liquid-glass-widget-label capitalize">
+          {widgetName}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div
       title={widgetName}
-      className="op-btn w-fit md:w-[100%] op-btn-primary op-btn-outline op-btn-sm focus:outline-none ml-[6px] outline outline-[1px] md:ml-0 p-0 overflow-hidden"
+      className="liquid-glass-widget-btn group"
+      role="button"
+      tabIndex={0}
     >
-      <div className="w-full h-full flex md:justify-between items-center">
-        <div className="flex justify-start items-center ml-1 overflow-hidden">
-          {!isMobile && (
-            <i className="fa-light fa-grip-vertical ml-[3px] text-[13px] lg:text-[13px]"></i>
-          )}
-          <span className="md:inline-block text-center text-[11px] lg:text-[13px] mx-[3px] truncate font-medium capitalize">
-            {widgetName}
-          </span>
-        </div>
-        <div className="text-[13px] lg:text-[14px] op-btn op-btn-primary rounded-none w-[20px] h-full flex justify-center items-center">
-          <i className={item.icon}></i>
-        </div>
+      {/* Sutil grip indicator en la esquina para indicar drag */}
+      <span className="absolute top-2 right-2 text-[9px] opacity-25 group-hover:opacity-60 transition-opacity">
+        <i className="fa-light fa-grip-vertical"></i>
+      </span>
+
+      {/* Símbolo / Icono cuadrado central */}
+      <div className="liquid-glass-widget-icon-box">
+        <i className={item.icon}></i>
       </div>
+
+      {/* Nombre del widget */}
+      <span className="liquid-glass-widget-label capitalize">
+        {widgetName}
+      </span>
     </div>
   );
 };
+
 export default getWidgetType;
+
