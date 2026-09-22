@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
+import "../../styles/opensigndrive.css";
 import { useTranslation } from "react-i18next";
+import { useDraggable } from "../../hook/useDraggable";
 import {
   base64ToArrayBuffer,
   decryptPdf,
@@ -23,6 +25,9 @@ function PdfTools(props) {
   const mergePdfInputRef = useRef(null);
   const [isDeletePage, setIsDeletePage] = useState(false);
   const [isReorderModal, setIsReorderModal] = useState(false);
+  const [showMobileTools, setShowMobileTools] = useState(false);
+  const { dragProps, resetPosition } = useDraggable();
+
   const handleDetelePage = async () => {
     props.setIsUploadPdf && props.setIsUploadPdf(true);
     try {
@@ -197,16 +202,30 @@ function PdfTools(props) {
     props.handleRotationFun(-90);
     props.setIsTour && props.setIsTour(false);
   };
+
   return (
     <>
-      <span
+      {/* Barra de Herramientas Flotante Desktop con Arrastre Libre */}
+      <div
         data-tut="pdftools"
-        className="hidden h-max md:flex flex-col gap-1 text-center md:w-[5%] mt-[42px]"
+        {...dragProps}
+        className="hidden md:flex flex-col items-center liquid-glass-tools-bar self-start mt-6 mr-3 z-30 sticky top-16 shadow-xl"
+        title="Barra de herramientas (Arrastra para mover por la pantalla)"
       >
+        {/* Handle de arrastre visual */}
+        <div
+          className="w-full flex items-center justify-center py-1 cursor-grab active:cursor-grabbing text-base-content/30 hover:text-base-content/70 transition-colors"
+          title="Arrastrar barra (Doble clic para restablecer)"
+          onDoubleClick={resetPosition}
+        >
+          <i className="fa-light fa-grip-dots-vertical text-xs"></i>
+        </div>
+
         {!props.isDisableEditTools && (
           <>
-            <span
-              className="bg-gray-50 px-[4px] 2xl:py-[10px] cursor-pointer"
+            <button
+              type="button"
+              className="liquid-tool-btn"
               onClick={() => mergePdfInputRef.current.click()}
               title={t("add-pages")}
             >
@@ -217,58 +236,132 @@ function PdfTools(props) {
                 ref={mergePdfInputRef}
                 onChange={handleFileUpload}
               />
-              <i className="fa-light fa-plus text-gray-500 2xl:text-[25px]"></i>
-            </span>
-            <span
-              className="bg-gray-50 px-[4px] 2xl:py-[10px] cursor-pointer"
+              <i className="fa-light fa-plus text-base"></i>
+            </button>
+
+            <button
+              type="button"
+              className="liquid-tool-btn hover:!text-red-500 hover:!bg-red-500/10"
               onClick={handleDeletePage}
               title={t("delete-page")}
             >
-              <i className="fa-light fa-trash text-gray-500 2xl:text-[25px]"></i>
-            </span>
-            <span
-              className="bg-gray-50 px-[4px] 2xl:py-[10px] cursor-pointer"
+              <i className="fa-light fa-trash text-base"></i>
+            </button>
+
+            <button
+              type="button"
+              className="liquid-tool-btn"
               onClick={handleReorderPages}
               title={t("reorder-pages")}
             >
-              <i className="fa-light fa-list-ol text-gray-500 2xl:text-[25px]"></i>
-            </span>
+              <i className="fa-light fa-list-ol text-base"></i>
+            </button>
+
+            <div className="liquid-tools-divider"></div>
           </>
         )}
-        <span
-          className="bg-gray-50 px-[4px] 2xl:py-[10px] cursor-pointer"
+
+        <button
+          type="button"
+          className="liquid-tool-btn"
           onClick={handleZoomIn}
           title={t("zoom-in")}
         >
-          <i className="fa-light fa-magnifying-glass-plus text-gray-500 2xl:text-[25px]"></i>
-        </span>
+          <i className="fa-light fa-magnifying-glass-plus text-base"></i>
+        </button>
 
-        {!props.isDisableEditTools && (
-          <>
-            <span
-              className="bg-gray-50 px-[4px] 2xl:py-[10px] cursor-pointer"
-              onClick={handleRotate}
-              title={t("rotate-right")}
-            >
-              <i className="fa-light fa-rotate-right text-gray-500 2xl:text-[25px]"></i>
-            </span>
-            <span
-              className="bg-gray-50 px-[4px] 2xl:py-[10px] cursor-pointer"
-              title={t("rotate-left")}
-              onClick={handleAntiRotate}
-            >
-              <i className="fa-light fa-rotate-left text-gray-500 2xl:text-[25px]"></i>
-            </span>
-          </>
-        )}
-        <span
-          className="bg-gray-50 px-[4px] 2xl:py-[10px] cursor-pointer"
+        <button
+          type="button"
+          className="liquid-tool-btn"
           onClick={handleZoomOut}
           title={t("zoom-out")}
         >
-          <i className="fa-light fa-magnifying-glass-minus text-gray-500 2xl:text-[30px]"></i>
-        </span>
-      </span>
+          <i className="fa-light fa-magnifying-glass-minus text-base"></i>
+        </button>
+
+        {!props.isDisableEditTools && (
+          <>
+            <div className="liquid-tools-divider"></div>
+
+            <button
+              type="button"
+              className="liquid-tool-btn"
+              onClick={handleRotate}
+              title={t("rotate-right")}
+            >
+              <i className="fa-light fa-rotate-right text-base"></i>
+            </button>
+
+            <button
+              type="button"
+              className="liquid-tool-btn"
+              title={t("rotate-left")}
+              onClick={handleAntiRotate}
+            >
+              <i className="fa-light fa-rotate-left text-base"></i>
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Vista Móvil: Botón flotante para abrir las herramientas (oculto por defecto) */}
+      <div className="md:hidden">
+        {showMobileTools && (
+          <div className="fixed bottom-24 left-3 z-40 liquid-glass-tools-bar flex flex-col gap-1.5 p-2 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <button
+              type="button"
+              className="liquid-tool-btn !w-9 !h-9"
+              onClick={handleZoomIn}
+              title={t("zoom-in")}
+            >
+              <i className="fa-light fa-magnifying-glass-plus text-sm"></i>
+            </button>
+            <button
+              type="button"
+              className="liquid-tool-btn !w-9 !h-9"
+              onClick={handleZoomOut}
+              title={t("zoom-out")}
+            >
+              <i className="fa-light fa-magnifying-glass-minus text-sm"></i>
+            </button>
+            {!props.isDisableEditTools && (
+              <>
+                <div className="liquid-tools-divider !w-4"></div>
+                <button
+                  type="button"
+                  className="liquid-tool-btn !w-9 !h-9"
+                  onClick={handleRotate}
+                  title={t("rotate-right")}
+                >
+                  <i className="fa-light fa-rotate-right text-sm"></i>
+                </button>
+                <button
+                  type="button"
+                  className="liquid-tool-btn !w-9 !h-9"
+                  onClick={handleReorderPages}
+                  title={t("reorder-pages")}
+                >
+                  <i className="fa-light fa-list-ol text-sm"></i>
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Botón flotante activador en móvil */}
+        <button
+          type="button"
+          onClick={() => setShowMobileTools(!showMobileTools)}
+          className={`fixed bottom-20 left-3 z-40 w-9 h-9 rounded-full liquid-glass-panel flex items-center justify-center shadow-lg border border-base-content/15 transition-all active:scale-95 ${
+            showMobileTools ? "bg-primary text-white" : "text-primary hover:bg-primary/10"
+          }`}
+          title="Herramientas del documento"
+        >
+          <i className={showMobileTools ? "fa-light fa-xmark text-sm" : "fa-light fa-sliders text-xs"}></i>
+        </button>
+      </div>
+
+
 
       <ModalUi
         isOpen={isDeletePage}

@@ -13,30 +13,31 @@ function PrevNext({ pageNumber, allPages, changePage }) {
   }
 
   return (
-    <div className="flex items-center">
+    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-xl border border-base-content/10 bg-base-100/50 shadow-sm">
       <button
-        className="op-btn op-btn-neutral op-btn-xs md:op-btn-sm font-semibold text-xs"
+        type="button"
+        className="w-6 h-6 rounded-lg flex items-center justify-center text-base-content/70 hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-25 disabled:cursor-not-allowed"
         disabled={pageNumber <= 1}
         onClick={previousPage}
+        title="Página anterior"
       >
-        <span className="block">
-          <i className="fa-light fa-chevron-up" aria-hidden="true"></i>
-        </span>
+        <i className="fa-light fa-chevron-up text-xs" aria-hidden="true"></i>
       </button>
-      <span className="text-xs text-base-content font-medium mx-2 2xl:text-[20px]">
-        {pageNumber || (allPages ? 1 : "--")} {t("of")} {allPages || "--"}
+      <span className="text-xs text-base-content font-bold px-1.5 tracking-tight">
+        {pageNumber || (allPages ? 1 : "--")} <span className="font-normal text-base-content/60">{t("of")}</span> {allPages || "--"}
       </span>
       <button
-        className="op-btn op-btn-neutral op-btn-xs md:op-btn-sm font-semibold text-xs"
+        type="button"
+        className="w-6 h-6 rounded-lg flex items-center justify-center text-base-content/70 hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-25 disabled:cursor-not-allowed"
         disabled={pageNumber >= allPages}
         onClick={nextPage}
+        title="Página siguiente"
       >
-        <span className="block">
-          <i className="fa-light fa-chevron-down" aria-hidden="true"></i>
-        </span>
+        <i className="fa-light fa-chevron-down text-xs" aria-hidden="true"></i>
       </button>
     </div>
   );
+
 }
 
 export default PrevNext;

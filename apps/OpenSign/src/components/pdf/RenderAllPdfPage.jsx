@@ -175,28 +175,31 @@ function RenderAllPdfPage(props) {
     }
   };
   return (
-    <div ref={pageContainer} className="hidden w-[20%] bg-base-100 md:block">
-      <div className="mx-2 pr-2 pt-2 pb-1 text-[15px] text-base-content font-semibold border-b-[1px] border-base-300">
-        {t("pages")}
+    <div ref={pageContainer} className="hidden w-[20%] border-r border-base-content/10 bg-base-100/30 md:flex flex-col h-[calc(100vh-64px)] sticky top-0 select-none">
+      <div className="px-3.5 py-2.5 flex items-center gap-2 border-b border-base-content/10 bg-base-100/40 flex-shrink-0">
+        <div className="w-6 h-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs">
+          <i className="fa-light fa-file-lines"></i>
+        </div>
+        <span className="text-xs font-bold uppercase tracking-wider text-base-content/90">
+          {t("pages")}
+        </span>
       </div>
-      <div
-        className={`flex h-[90%] flex-col items-center m-2  
-         autoSignScroll hide-scrollbar max-h-[100vh] `}
-      >
+      <div className="flex-1 overflow-y-auto autoSignScroll flex flex-col items-center p-2 hide-scrollbar">
         <Document
           error=""
           loading={t("loading-doc")}
           onLoadSuccess={onDocumentLoad}
           file={pdfDataBase64}
         >
+
           {Array.from(new Array(props?.allPages), (el, index) => (
             <div
               key={index}
               className={`${
                 props?.pageNumber - 1 === index
-                  ? "border-[red]"
-                  : "border-[#878787]"
-              } border-2 m-[10px] flex justify-center items-center relative`}
+                  ? "ring-2 ring-primary/80 border-primary/60 shadow-md"
+                  : "border-base-content/15 hover:border-primary/40 opacity-85 hover:opacity-100"
+              } border rounded-xl my-2 mx-1 flex justify-center items-center relative overflow-hidden transition-all duration-200 cursor-pointer shadow-sm`}
               onClick={() => {
                 props?.setPageNumber(index + 1);
                 if (props?.setSignBtnPosition) {
@@ -216,6 +219,7 @@ function RenderAllPdfPage(props) {
             </div>
           ))}
         </Document>
+
         {props?.isMergePdfBtn && (
           <button
             className="mb-2 bg-base-100 px-2 py-2 ring-[0.5px] ring-base-content rounded-box flex gap-1 justify-center items-center"
