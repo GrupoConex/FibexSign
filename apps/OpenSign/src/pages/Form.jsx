@@ -1148,7 +1148,7 @@ const Forms = (props) => {
                   {props.signers && (
                     <div>
                       <SignersInput
-                        label={t("signers")}
+                        label={t("signers", "Firmantes")}
                         onChange={handleSigners}
                         isReset={isReset}
                         zindex={50}

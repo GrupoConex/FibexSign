@@ -149,22 +149,20 @@ const SignersInput = (props) => {
     }
   };
   return (
-    <div className="text-xs mt-2 ">
-      <label className="block relative">
-        {props.label ? props.label : t("signers")}
-        {props.required && <span className="text-red-500 text-[13px]">*</span>}
-        <span
-          className={`z-[${props?.zindex ? props.zindex : 30}] absolute ml-1 text-xs`}
-        >
+    <div className="text-xs">
+      <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-base-content mb-1">
+        <span>{props.label ? props.label : t("signers", "Firmantes")}</span>
+        {props.required && <span className="text-red-500 text-xs">*</span>}
+        <span className="inline-flex items-center text-xs text-blue-500">
           <Tooltip
             id={`${props.label ? props.label : "signers"}-tooltip`}
-            message={props.helpText ? props.helpText : t("signers-help")}
+            message={props.helpText ? props.helpText : t("signers-help", "Seleccione o agregue los firmantes del documento")}
           />
         </span>
       </label>
-      <div className="flex gap-x-[5px]">
+      <div className="flex items-center gap-2">
         <div
-          className={`w-full z-[${props?.zindex ? props.zindex : 40}]`}
+          className={`flex-1 min-w-0 z-[${props?.zindex ? props.zindex : 40}]`}
         >
           <AsyncSelect
             onSortEnd={onSortEnd}
@@ -172,28 +170,47 @@ const SignersInput = (props) => {
             isMulti
             cacheOptions
             defaultOptions
+            placeholder={props.placeholder || t("select-signers-placeholder", "Seleccionar firmantes...")}
             options={state || []}
             value={selected}
             onChange={onChange}
             closeMenuOnSelect={false}
             required={props.required}
-            loadingMessage={() => t("loading")}
-            noOptionsMessage={() => t("contact-not-found")}
+            loadingMessage={() => t("loading", "Cargando...")}
+            noOptionsMessage={() => t("contact-not-found", "Contacto no encontrado")}
             loadOptions={loadOptions}
             unstyled
             classNames={{
-              control: () =>
-                "op-input op-input-sm focus:outline-none border border-slate-300 dark:border-[#243046] hover:border-blue-500/60 w-full h-full text-[11px] bg-slate-50/50 dark:bg-[#0f172a]/60 text-base-content",
-              valueContainer: () =>
-                "flex flex-row gap-x-[2px] gap-y-[2px] md:gap-y-0 w-full my-[2px]",
-              multiValue: () => "op-badge op-badge-primary h-full text-[11px]",
-              multiValueLabel: () => "mb-[2px]",
+              control: ({ isFocused }) =>
+                `op-input flex items-center min-h-[36px] w-full px-2.5 py-1 text-xs rounded-lg border transition-all ${
+                  isFocused
+                    ? "border-blue-500 ring-1 ring-blue-500/20"
+                    : "hover:border-blue-500/50"
+                }`,
+              valueContainer: () => "flex flex-wrap items-center gap-1.5 flex-1 min-w-0 py-0.5",
+              input: () => "text-xs text-base-content m-0 p-0",
+              placeholder: () => "text-xs text-base-content/40 select-none",
+              singleValue: () => "text-xs text-base-content",
+              multiValue: () =>
+                "inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-400 border border-blue-500/30 text-[11px] font-medium",
+              multiValueLabel: () => "truncate max-w-[180px]",
+              multiValueRemove: () =>
+                "text-blue-400 hover:text-red-400 hover:bg-red-500/20 rounded p-0.5 transition-colors cursor-pointer",
+              indicatorsContainer: () => "flex items-center gap-1 text-base-content/50 hover:text-base-content",
+              dropdownIndicator: () => "p-0.5 cursor-pointer text-base-content/50",
+              clearIndicator: () => "p-0.5 cursor-pointer hover:text-red-400 transition-colors",
               menu: () =>
-                "mt-1 shadow-md rounded-lg bg-base-200 text-base-content border border-slate-300 dark:border-[#243046]",
-              menuList: () => "shadow-md rounded-lg overflow-hidden",
-              option: () =>
-                "bg-base-200 text-base-content rounded-lg m-1 hover:bg-base-300 p-2",
-              noOptionsMessage: () => "p-2 bg-base-200 rounded-lg m-1 p-2"
+                "mt-1.5 shadow-xl rounded-xl bg-base-100 text-base-content border border-[#243046] overflow-hidden z-[9999]",
+              menuList: () => "p-1.5 max-h-60 overflow-y-auto",
+              option: ({ isFocused, isSelected }) =>
+                `px-3 py-2 text-xs rounded-lg cursor-pointer transition-colors ${
+                  isSelected
+                    ? "bg-blue-600 text-white font-medium"
+                    : isFocused
+                    ? "bg-blue-500/15 text-blue-400"
+                    : "text-base-content hover:bg-base-200"
+                }`,
+              noOptionsMessage: () => "p-3 text-xs text-base-content/50 text-center"
             }}
           />
         </div>
@@ -203,8 +220,8 @@ const SignersInput = (props) => {
             setIsModel(true);
             openModal();
           }}
-          className="cursor-pointer op-btn op-btn-sm bg-slate-100 dark:bg-slate-800/40 hover:bg-blue-600 hover:text-white border border-slate-300 dark:border-[#243046] hover:border-blue-600 min-w-[42px] h-[36px] flex justify-center items-center rounded-lg transition-all flex-shrink-0 text-slate-600 dark:text-slate-300"
-          title={t("add-contact")}
+          className="cursor-pointer op-btn op-btn-sm bg-blue-600 hover:bg-blue-700 text-white border-none min-w-[36px] h-[36px] flex justify-center items-center rounded-lg transition-all flex-shrink-0 shadow-sm"
+          title={t("add-contact", "Agregar contacto")}
         >
           <i className="fa-light fa-plus text-sm"></i>
         </button>
