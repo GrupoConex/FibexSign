@@ -1,54 +1,10 @@
-import axios from 'axios';
-import { cloudServerUrl, serverAppId } from '../../Utils.js';
-const serverUrl = cloudServerUrl; //process.env.SERVER_URL;
-const APPID = serverAppId;
-const masterKEY = process.env.MASTER_KEY;
+import createUserAccount from './shared/createUserAccount.js';
 
-async function saveUser(userDetails) {
-  const normalizedEmail = normalizeEmail(userDetails.email.toLowerCase().replace(/\s/g, ''));
-  const userQuery = new Parse.Query(Parse.User);
-  userQuery.equalTo('username', userDetails.email);
-  const userRes = await userQuery.first({ useMasterKey: true });
-
-  if (userRes) {
-    const url = `${serverUrl}/loginAs`;
-    const axiosRes = await axios({
-      method: 'POST',
-      url: url,
-      headers: {
-        'Content-Type': 'application/json;charset=utf-8',
-        'X-Parse-Application-Id': APPID,
-        'X-Parse-Master-Key': masterKEY,
-      },
-      params: {
-        userId: userRes.id,
-      },
-    });
-    const login = await axiosRes.data;
-    // console.log("login ", login);
-    return { id: login.objectId, sessionToken: login.sessionToken };
-  } else {
-    const user = new Parse.User();
-    user.set('username', userDetails.email);
-    user.set('password', userDetails.password);
-    user.set('email', userDetails?.email?.toLowerCase()?.replace(/\s/g, ''));
-    user.set('normalizedEmail', normalizedEmail);
-
-    if (userDetails?.phone) {
-      user.set('phone', userDetails.phone);
-    }
-    user.set('name', userDetails.name);
-
-    const res = await user.signUp();
-    // console.log("res ", res);
-    return { id: res.id, sessionToken: res.getSessionToken() };
-  }
-}
 export default async function usersignup(request) {
   const userDetails = request.params.userDetails;
 
   try {
-    const user = await saveUser(userDetails);
+    const user = await createUserAccount(userDetails);
     const extClass = userDetails.role.split('_')[0];
 
     const extQuery = new Parse.Query(extClass + '_Users');
@@ -130,5 +86,6 @@ export default async function usersignup(request) {
     }
   } catch (err) {
     console.log('Err ', err);
+    throw err;
   }
 }

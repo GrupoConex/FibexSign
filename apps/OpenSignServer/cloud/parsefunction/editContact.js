@@ -1,3 +1,5 @@
+import getUserId from './getUserId.js';
+
 export default async function editContact(request) {
   const { contactId, name, email, phone, tenantId } = request.params;
   const company = request.params?.company;
@@ -71,7 +73,7 @@ export default async function editContact(request) {
         console.log('err ', err);
         if (err.code === 202) {
           const params = { email: email };
-          const userRes = await Parse.Cloud.run('getUserId', params);
+          const userRes = await getUserId({ params });
           contactQuery.set('CreatedBy', createdBy);
           contactQuery.set('UserId', {
             __type: 'Pointer',

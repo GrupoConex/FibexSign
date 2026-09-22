@@ -1,8 +1,3 @@
-import axios from 'axios';
-import { cloudServerUrl, serverAppId } from '../../Utils.js';
-const serverUrl = cloudServerUrl; //process.env.SERVER_URL;
-const APPID = serverAppId;
-const masterKEY = process.env.MASTER_KEY;
 async function addTeamAndOrg(extUser) {
   try {
     const extUserCls = new Parse.Query('contracts_Users');
@@ -59,46 +54,11 @@ async function addTeamAndOrg(extUser) {
   }
 }
 
-async function saveUser(userDetails) {
-  const userQuery = new Parse.Query(Parse.User);
-  userQuery.equalTo('username', userDetails.email?.toLowerCase()?.replace(/\s/g, ''));
-  const userRes = await userQuery.first({ useMasterKey: true });
+import createUserAccount from './shared/createUserAccount.js';
 
-  if (userRes) {
-    const url = `${serverUrl}/loginAs`;
-    const axiosRes = await axios({
-      method: 'POST',
-      url: url,
-      headers: {
-        'Content-Type': 'application/json;charset=utf-8',
-        'X-Parse-Application-Id': APPID,
-        'X-Parse-Master-Key': masterKEY,
-      },
-      params: {
-        userId: userRes.id,
-      },
-    });
-    const login = await axiosRes.data;
-    // console.log("login ", login);
-    return { id: login.objectId, sessionToken: login.sessionToken };
-  } else {
-    const user = new Parse.User();
-    user.set('username', userDetails.email?.toLowerCase()?.replace(/\s/g, ''));
-    user.set('password', userDetails.password);
-    user.set('email', userDetails.email?.toLowerCase()?.replace(/\s/g, ''));
-    if (userDetails?.phone) {
-      user.set('phone', userDetails.phone);
-    }
-    user.set('name', userDetails.name);
-
-    const res = await user.signUp();
-    // console.log("res ", res);
-    return { id: res.id, sessionToken: res.getSessionToken() };
-  }
-}
 export default async function AddAdmin(request) {
   const userDetails = request.params.userDetails;
-  const user = await saveUser(userDetails);
+  const user = await createUserAccount(userDetails);
 
   try {
     const extQuery = new Parse.Query('contracts_Users');

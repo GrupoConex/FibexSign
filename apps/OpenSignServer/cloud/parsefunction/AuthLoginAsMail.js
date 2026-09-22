@@ -1,5 +1,9 @@
 import axios from 'axios';
 import { cloudServerUrl, serverAppId } from '../../Utils.js';
+
+const MAX_OTP_ATTEMPTS = 5;
+const GENERIC_INVALID_OTP_MESSAGE = 'Invalid Otp';
+
 async function AuthLoginAsMail(request) {
   try {
     //function for login user using user objectId without touching user's password
@@ -19,8 +23,12 @@ async function AuthLoginAsMail(request) {
 
     if (res !== undefined) {
       let resOtp = res.get('OTP');
+      let expiresAt = res.get('ExpiresAt');
+      let failedAttempts = res.get('FailedAttempts') || 0;
+      let isExpired = expiresAt ? new Date(expiresAt).getTime() < Date.now() : false;
+      let isLockedOut = failedAttempts >= MAX_OTP_ATTEMPTS;
 
-      if (resOtp === otp) {
+      if (!isLockedOut && !isExpired && resOtp === otp) {
         var result = await getToken(request);
         if (result && !result?.emailVerified) {
           const userQuery = new Parse.Query(Parse.User);
@@ -82,7 +90,11 @@ async function AuthLoginAsMail(request) {
           });
         }
       } else {
-        message = `Invalid Otp`;
+        if (!isLockedOut && !isExpired) {
+          res.set('FailedAttempts', failedAttempts + 1);
+          await res.save(null, { useMasterKey: true });
+        }
+        message = GENERIC_INVALID_OTP_MESSAGE;
         return message;
       }
     } else {

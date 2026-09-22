@@ -18,6 +18,8 @@ import { appName, cloudServerUrl, serverAppId, smtpenable, smtpsecure, useLocal 
 import { SSOAuth } from './auth/authadapter.js';
 import runDbMigrations from './migrationdb/index.js';
 import { validateSignedLocalUrl } from './cloud/parsefunction/getSignedUrl.js';
+import { buildCorsOptions } from './utils/corsOptions.js';
+import { buildAuthRateLimiterMiddleware } from './utils/authRateLimiter.js';
 let fsAdapter;
 
 if (useLocal !== 'true') {
@@ -101,6 +103,15 @@ if (smtpenable) {
   }
 }
 const mailsender = smtpenable ? process.env.SMTP_USER_EMAIL : process.env.MAILGUN_SENDER;
+const masterKeyIps = process.env.MASTER_KEY_IPS
+  ? process.env.MASTER_KEY_IPS.split(',')
+      .map(ip => ip.trim())
+      .filter(Boolean)
+  : ['127.0.0.1', '::1'];
+const accountLockoutDurationMinutes = Number(process.env.ACCOUNT_LOCKOUT_DURATION_MINUTES) || 5;
+const accountLockoutThreshold = Number(process.env.ACCOUNT_LOCKOUT_THRESHOLD) || 5;
+const sessionLengthSeconds = Number(process.env.SESSION_LENGTH_SECONDS) || 60 * 60 * 24 * 30;
+export const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS) || 0;
 export const config = {
   databaseURI:
     process.env.DATABASE_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/dev',
@@ -112,7 +123,7 @@ export const config = {
   maxLimit: 500,
   maxUploadSize: '100mb',
   masterKey: process.env.MASTER_KEY, //Add your master key here. Keep it secret!
-  masterKeyIps: ['0.0.0.0/0', '::/0'], // '::1'
+  masterKeyIps,
   serverURL: cloudServerUrl, // Don't forget to change to https if needed
   verifyUserEmails: false,
   publicServerURL: process.env.SERVER_URL || cloudServerUrl,
@@ -123,6 +134,11 @@ export const config = {
   enableInsecureAuthAdapters: false,
   databaseOptions: { allowPublicExplain: false },
   encodeParseObjectInCloudFunction: true,
+  accountLockout: {
+    duration: accountLockoutDurationMinutes,
+    threshold: accountLockoutThreshold,
+  },
+  sessionLength: sessionLengthSeconds,
   ...(isMailAdapter === true
     ? {
         emailAdapter: {
@@ -167,9 +183,18 @@ export const config = {
 // javascriptKey, restAPIKey, dotNetKey, clientKey
 
 export const app = express();
-app.use(cors());
+if (trustProxyHops > 0) {
+  app.set('trust proxy', trustProxyHops);
+} else {
+  app.set('trust proxy', false);
+  console.warn(
+    'TRUST_PROXY_HOPS is not set (defaulting to 0/disabled) - if this server runs behind a reverse proxy or load balancer in production, set TRUST_PROXY_HOPS to the correct hop count or the auth rate limiter will not isolate attackers from legitimate users.'
+  );
+}
+app.use(cors(buildCorsOptions()));
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
+app.use(buildAuthRateLimiterMiddleware());
 app.use(function (req, res, next) {
   req.headers['x-real-ip'] = getUserIP(req);
   const publicUrl = 'https://' + req?.get('host');

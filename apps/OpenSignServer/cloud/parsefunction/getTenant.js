@@ -48,12 +48,17 @@ async function getTenantByUserId(userId, contactId) {
   }
 }
 export default async function getTenant(request) {
-  const userId = request.params.userId || '';
+  const requestedUserId = request.params.userId || '';
   const contactId = request.params.contactId || '';
 
-  if (userId || contactId) {
-    return await getTenantByUserId(userId, contactId);
-  } else {
+  if (contactId) {
+    return await getTenantByUserId('', contactId);
+  }
+  if (!requestedUserId) {
     return {};
   }
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'User is not authenticated.');
+  }
+  return await getTenantByUserId(request.user.id, '');
 }

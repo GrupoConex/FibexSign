@@ -59,7 +59,7 @@ const AddUser = (props) => {
       const res = await Parse.Cloud.run("getUserDetails", {
         email: formdata.email
       });
-      if (res) {
+      if (res?.exists) {
         return true;
       } else {
         return false;
