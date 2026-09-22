@@ -74,6 +74,7 @@ import CellsSettingModal from "../components/pdf/CellsSettingModal";
 import { useWindowSize } from "../hook/useWindowSize";
 import {
   applyNumberFormulasToPages,
+  notify,
 } from "../utils";
 
 import { useScroll } from "../context/ScrollPdfContext";
@@ -499,7 +500,7 @@ function SignYourSelf() {
     setOtpLoader(true);
     await handleSendOTP(Parse.User.current().getEmail());
     setOtpLoader(false);
-    alert(t("otp-sent-alert"));
+    notify.success(t("otp-sent-alert"));
   };
   //`handleVerifyEmail` function is used to verify email with otp
   const handleVerifyEmail = async (e) => {
@@ -512,16 +513,16 @@ function SignYourSelf() {
       });
       if (resEmail?.message === "Email is verified.") {
         setIsEmailVerified(true);
-        alert(t("Email-verified-alert-1"));
+        notify.success(t("Email-verified-alert-1"));
       } else if (resEmail?.message === "Email is already verified.") {
         setIsEmailVerified(true);
-        alert(t("Email-verified-alert-2"));
+        notify.success(t("Email-verified-alert-2"));
       }
       setOtp("");
       setIsVerifyModal(false);
       // handleRecipientSign();
     } catch (error) {
-      alert(error.message);
+      notify.error(error.message);
     } finally {
       setOtpLoader(false);
     }
@@ -608,7 +609,7 @@ function SignYourSelf() {
       }
     } catch (e) {
       console.log("error", e);
-      alert(t("something-went-wrong-mssg"));
+      notify.error(t("something-went-wrong-mssg"));
     }
   };
   //function for send placeholder's co-ordinate(x,y) position embed signature url or stamp url
@@ -759,7 +760,7 @@ function SignYourSelf() {
     let isCustomCompletionMail = false;
     const tenantDetails = await getTenantDetails(jsonSender.objectId);
     if (tenantDetails && tenantDetails === "user does not exist!") {
-      alert(t("user-not-exist"));
+      notify.error(t("user-not-exist"));
     } else {
       if (
         tenantDetails?.CompletionBody &&
@@ -789,7 +790,7 @@ function SignYourSelf() {
         base64Sign = await fetchImageBase64(base64Sign);
       } catch (e) {
         console.log("error", e);
-        alert(t("something-went-wrong-mssg"));
+        notify.error(t("something-went-wrong-mssg"));
       }
     }
     //change image width and height to 300/120 in png base64
@@ -1012,7 +1013,7 @@ function SignYourSelf() {
         );
       } catch (err) {
         console.log("axois err ", err);
-        alert(t("something-went-wrong-mssg"));
+        notify.error(t("something-went-wrong-mssg"));
       }
     }
   };

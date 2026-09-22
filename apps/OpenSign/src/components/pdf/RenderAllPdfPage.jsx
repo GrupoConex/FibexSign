@@ -13,6 +13,7 @@ import {
   clearAcroFields,
   isPdfPasswordProtected
 } from "../../utils/acroFieldExtractor";
+import { notify } from "../../utils";
 
 function RenderAllPdfPage(props) {
   const { t } = useTranslation();
@@ -81,11 +82,11 @@ function RenderAllPdfPage(props) {
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) {
-      alert(t("please-select-pdf"));
+      notify.warning(t("please-select-pdf"));
       return;
     }
     if (!file.type.includes("pdf")) {
-      alert(t("only-pdf-allowed"));
+      notify.warning(t("only-pdf-allowed"));
       return;
     }
     const fileSize =
@@ -93,7 +94,7 @@ function RenderAllPdfPage(props) {
     const pdfsize = file?.size;
     const fileSizeBytes = fileSize * 1024 * 1024;
     if (pdfsize > fileSizeBytes) {
-      alert(`${t("file-alert-1")} ${fileSize} MB`);
+      notify.error(`${t("file-alert-1")} ${fileSize} MB`);
       removeFile(e);
       return;
     }
@@ -122,22 +123,22 @@ function RenderAllPdfPage(props) {
                   // Upload the file to Parse Server
                 } catch (err) {
                   console.error("Incorrect password or decryption failed", err);
-                  alert(t("incorrect-password-or-decryption-failed"));
+                  notify.error(t("incorrect-password-or-decryption-failed"));
                   return;
                 }
               } else {
-                alert(t("provide-password"));
+                notify.warning(t("provide-password"));
                 return;
               }
             } else {
               console.error("Decryption error ", error);
-              alert(t("error-uploading-pdf"));
+              notify.error(t("error-uploading-pdf"));
               return;
             }
           }
         } else {
           console.error("File upload error ", error);
-          alert(t("error-uploading-pdf"));
+          notify.error(t("error-uploading-pdf"));
           return;
         }
       }
@@ -160,7 +161,7 @@ function RenderAllPdfPage(props) {
       const pdfsize = pdfBuffer?.byteLength;
       const fileSizeBytes = fileSize * 1024 * 1024;
       if (pdfsize > fileSizeBytes) {
-        alert(`${t("file-alert-1")} ${fileSize} MB`);
+        notify.error(`${t("file-alert-1")} ${fileSize} MB`);
         removeFile(e);
         return;
       }

@@ -32,7 +32,7 @@ import { themeColor } from "../../constant/const";
 import { useGuidelinesContext } from "../../context/GuidelinesContext";
 import DatePicker from "react-datepicker";
 import DateWidgetModal from "../../primitives/DateWidgetModal";
-import { dateFormat } from "../../utils";
+import { dateFormat, notify } from "../../utils";
 
 /**
  * Custom input UI for DatePicker
@@ -131,7 +131,7 @@ function Placeholder(props) {
   };
   const saveDateSetting = (data) => {
     if (formdata?.isReadOnly && !selectDate.date && !isToday) {
-      alert(t("read-only-date-error"));
+      notify.warning(t("read-only-date-error"));
       return;
     }
     handleSaveDate(data);

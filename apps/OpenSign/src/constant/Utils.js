@@ -20,7 +20,8 @@ import i18n from "../i18n";
 import {
   applyNumberFormulasToPages,
   buildDownloadFilename,
-  addPreferenceOpt
+  addPreferenceOpt,
+  notify
 } from "../utils";
 
 export const fontsizeArr = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28];
@@ -2940,20 +2941,20 @@ export const handleSendOTP = async (email) => {
     };
     await axios.post(url, body, { headers: headers });
   } catch (error) {
-    alert(error.message);
+    notify.error(error.message);
   }
 };
 export const fetchUrl = async (url, fileName) => {
   try {
     const response = await fetch(url);
     if (!response.ok) {
-      alert(i18n.t("something-went-wrong-mssg"));
+      notify.error(i18n.t("something-went-wrong-mssg"));
       throw new Error("Network response was not ok");
     }
     const blob = await response.blob();
     saveAs(blob, fileName);
   } catch (error) {
-    alert(i18n.t("something-went-wrong-mssg"));
+    notify.error(i18n.t("something-went-wrong-mssg"));
     console.error("Error downloading the file:", error);
   }
 };
@@ -3035,7 +3036,7 @@ export const handleDownloadPdf = async (
     } catch (err) {
       console.log("err in getsignedurl", err);
       setIsDownloading("");
-      alert(i18n.t("something-went-wrong-mssg"));
+      notify.error(i18n.t("something-went-wrong-mssg"));
     }
   }
 };
@@ -3093,7 +3094,7 @@ export const handleToPrint = async (event, setIsDownloading, pdfDetails) => {
   } catch (err) {
     setIsDownloading("");
     console.log("err in getsignedurl", err);
-    alert(i18n.t("something-went-wrong-mssg"));
+    notify.error(i18n.t("something-went-wrong-mssg"));
   }
 };
 const downloadCertificate = async (certificate, isZip, asBlob) => {
@@ -3174,7 +3175,7 @@ export const handleDownloadCertificate = async (
     } catch (err) {
       setIsDownloading("certificate_err");
       console.error("download certificate err", err);
-      alert(i18n.t("something-went-wrong-mssg"));
+      notify.error(i18n.t("something-went-wrong-mssg"));
     }
   }
   return null;

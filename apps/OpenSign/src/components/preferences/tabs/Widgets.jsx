@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { dateFormat, formatDate, withSessionValidation } from "../../../utils";
+import {
+  dateFormat,
+  formatDate,
+  notify,
+  withSessionValidation
+} from "../../../utils";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -88,7 +93,7 @@ const WidgetsTab = () => {
         !selectDate.date &&
         !dateWidget.isSigningDate
       ) {
-        alert(t("read-only-date-error"));
+        notify.warning(t("read-only-date-error"));
         return;
       }
       const res = await Parse.Cloud.run("setwidgetpreferences", {

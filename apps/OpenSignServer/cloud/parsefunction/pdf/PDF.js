@@ -8,7 +8,6 @@ import {
   saveFileUsage,
   getSecureUrl,
   appName,
-  supportEmail,
   serverAppId,
 } from '../../../Utils.js';
 import GenerateCertificate from './GenerateCertificate.js';
@@ -39,7 +38,6 @@ const serverUrl = cloudServerUrl; // process.env.SERVER_URL;
 const APPID = serverAppId;
 const masterKEY = process.env.MASTER_KEY;
 const eSignName = appName;
-const eSigncontact = supportEmail;
 const docUrl = `${serverUrl}/classes/contracts_Document`;
 const headers = {
   'Content-Type': 'application/json',
@@ -314,7 +312,7 @@ async function sendMailsaveCertifcate(doc, pfx, isCustomMail, mailProvider, file
     reason: `Digitally signed by ${eSignName}.`,
     location: 'n/a',
     name: eSignName,
-    contactInfo: eSigncontact,
+    contactInfo: '',
     signatureLength: 16000,
   });
   const pdfWithPlaceholderBytes = await certificatePdf.save();
@@ -368,7 +366,7 @@ async function processPdf(_resDoc, PdfBuffer, reason) {
     reason: `Digitally signed by ${eSignName} for ${reason}`,
     location: 'n/a',
     name: eSignName,
-    contactInfo: eSigncontact,
+    contactInfo: '',
     signatureLength: 16000,
   });
   const pdfWithPlaceholderBytes = await pdfDoc.save();

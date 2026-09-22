@@ -3,9 +3,9 @@ import { useTranslation } from "react-i18next";
 import * as XLSX from "xlsx";
 import Parse from "parse";
 import { emailRegex } from "../../constant/const";
-import { withSessionValidation } from "../../utils";
+import { notify, withSessionValidation } from "../../utils";
 
-const ImportContact = ({ setLoader, onImport, showAlert }) => {
+const ImportContact = ({ setLoader, onImport }) => {
   const { t } = useTranslation();
   const [currentImportPage, setCurrentImportPage] = useState(1);
   const [importedData, setImportedData] = useState([]);
@@ -59,12 +59,12 @@ const ImportContact = ({ setLoader, onImport, showAlert }) => {
           setInvalidRecords(invalidItems);
           setImportedData(validRecords);
         } else {
-          alert(t("100-records-only"));
+          notify.warning(t("100-records-only"));
           event.target.value = "";
           setImportedData([]);
         }
       } else {
-        alert(t("invalid-data"));
+        notify.warning(t("invalid-data"));
         event.target.value = "";
       }
     };
@@ -110,11 +110,11 @@ const ImportContact = ({ setLoader, onImport, showAlert }) => {
             setInvalidRecords(invalidItems);
             setImportedData(validRecords);
           } else {
-            alert(t("invalid-data"));
+            notify.warning(t("invalid-data"));
             event.target.value = "";
           }
         } else {
-          alert(t("100-records-only"));
+          notify.warning(t("100-records-only"));
           event.target.value = "";
           setImportedData([]);
         }
@@ -154,7 +154,7 @@ const ImportContact = ({ setLoader, onImport, showAlert }) => {
         }
       } else {
         event.target.value = "";
-        alert(t("csv-excel-support-only"));
+        notify.warning(t("csv-excel-support-only"));
       }
     } else {
       setImportedData([]);
@@ -195,8 +195,7 @@ const ImportContact = ({ setLoader, onImport, showAlert }) => {
       const contacts = JSON.stringify(filterdata);
       const res = await Parse.Cloud.run("createbatchcontact", { contacts });
       if (res) {
-        showAlert(
-          "info",
+        notify.info(
           t("contact-imported", {
             imported: res?.success || 0,
             failed: res?.failed || 0
@@ -208,7 +207,7 @@ const ImportContact = ({ setLoader, onImport, showAlert }) => {
       }
     } catch (err) {
       console.log("err while creating batch contact", err);
-      showAlert("danger", t("something-went-wrong-mssg"));
+      notify.error(t("something-went-wrong-mssg"));
     } finally {
       onImport && onImport();
       setImportedData([]);

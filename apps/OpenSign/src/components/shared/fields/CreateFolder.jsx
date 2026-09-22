@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import Parse from "parse";
-import Alert from "../../../primitives/Alert";
 import Loader from "../../../primitives/Loader";
 import { useTranslation } from "react-i18next";
-import { withSessionValidation } from "../../../utils";
+import { notify, withSessionValidation } from "../../../utils";
 
 const CreateFolder = ({ parentFolderId, onSuccess, folderCls, onBack }) => {
   const folderPtr = {
@@ -14,11 +13,6 @@ const CreateFolder = ({ parentFolderId, onSuccess, folderCls, onBack }) => {
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const [isLoader, setIsLoader] = useState(false);
-  const [alert, setAlert] = useState({ type: "info", message: "" });
-  const showToast = (type, msg) => {
-    setAlert({ type: type, message: msg });
-    setTimeout(() => setAlert({ type: type, message: "" }), 1000);
-  };
   const handleCreateFolder = withSessionValidation(async (event) => {
     event.preventDefault();
     handleLoader(true);
@@ -33,7 +27,7 @@ const CreateFolder = ({ parentFolderId, onSuccess, folderCls, onBack }) => {
       }
       const templExist = await exsitQuery.first();
       if (templExist) {
-        showToast("danger", t("folder-already-exist"));
+        notify.error(t("folder-already-exist"));
       } else {
         const template = new Parse.Object(folderCls);
         template.set("Name", name);
@@ -51,20 +45,19 @@ const CreateFolder = ({ parentFolderId, onSuccess, folderCls, onBack }) => {
         const res = await template.save();
         if (res) {
           handleLoader(false);
-          showToast("success", t("folder-created-successfully"));
+          notify.success(t("folder-created-successfully"));
           onSuccess && onSuccess(res?.toJSON());
         }
       }
     } else {
       handleLoader(false);
-      showToast("info", t("fill-folder-name"));
+      notify.info(t("fill-folder-name"));
     }
   });
   const handleLoader = (status) => setIsLoader(status);
 
   return (
     <div>
-      {alert.message && <Alert type={alert.type}>{alert.message}</Alert>}
       <div id="createFolder" className="relative">
         {isLoader && (
           <div className="absolute h-full w-full flex justify-center items-center">

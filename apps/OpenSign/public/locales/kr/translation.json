@@ -580,7 +580,6 @@
   "reset-to-default": "기본값으로 재설정",
   "customize-email": "이메일 사용자 지정",
   "upgrade-to-customize-email": "이메일 사용자 지정을 위해 업그레이드",
-  "sign-url": "서명 URL",
   "mails-sent": "메일 전송됨",
   "mail-not-delivered": "메일이 전달되지 않음",
   "email-not-verified-head": "이메일이 인증되지 않았습니다",
@@ -620,7 +619,6 @@
   "do-not-access": "접근 권한이 없습니다. 관리자에게 문의하세요.",
   "add-admin": "관리자 추가",
   "opensign-setup": "{{appName}} 설정",
-  "join-discord": "디스코드 서버에 참여하세요",
   "admin-already-exist": "관리자가 이미 존재합니다.",
   "password-update-alert-1": "비밀번호가 성공적으로 업데이트되었습니다.",
   "password-update-alert-2": "현재 비밀번호가 없거나 잘못되었습니다.",
@@ -694,12 +692,6 @@
   },
   "all-right": "All rights reserved",
   "version": "버전",
-  "social-media": {
-    "github": "Github",
-    "linked-in": "LinkedIn",
-    "twitter": "Twitter",
-    "discord": "Discord"
-  },
   "tour-mssg": {
     "home-layout-1": "성공적으로 로그인했습니다! 같이 둘러봐요.",
     "home-layout-2": "직접 서명하거나 다른 사람의 서명을 요청하기 위해 문서를 업로드하려면, 단순히 해당 버튼을 선택하세요.",

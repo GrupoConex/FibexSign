@@ -1,4 +1,5 @@
 export * from "./fileUtils";
+export * from "./notificationManager";
 export * from "./prefillUtils";
 export * from "./sanitizeFileName";
 export * from "./lazyWithRetry";

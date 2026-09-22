@@ -601,7 +601,6 @@
   "reset-to-default": "Reset to default",
   "customize-email": "Customize email",
   "upgrade-to-customize-email": "Upgrade to customize Email",
-  "sign-url": "Sign url",
   "mails-sent": "Mails Sent",
   "mail-not-delivered": "Mail not delivered",
   "email-not-verified-head": "Email not verified",
@@ -643,7 +642,6 @@
   "do-not-access": "You don't have access, please contact the admin.",
   "add-admin": "Add admin",
   "opensign-setup": "{{appName}} setup",
-  "join-discord": "Join our discord server",
   "admin-already-exist": "Admin already exists.",
   "password-update-alert-1": "Password updated successfully.",
   "password-update-alert-2": "Your current password is missing or incorrect.",
@@ -717,12 +715,6 @@
   },
   "all-right": "All rights reserved",
   "version": "version",
-  "social-media": {
-    "github": "Github",
-    "linked-in": "LinkedIn",
-    "twitter": "Twitter",
-    "discord": "Discord"
-  },
   "tour-mssg": {
     "home-layout-1": "You have logged in successfully! Let's take a look.",
     "home-layout-2": "To upload documents for self-signing or to request others' signatures, simply select the respective buttons.",

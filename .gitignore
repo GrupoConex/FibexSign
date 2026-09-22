@@ -30,3 +30,4 @@ apps/OpenSignServer/files/files/*
 .turbo
 .codegraph
 pnpm-debug.log*
+.codegraph/

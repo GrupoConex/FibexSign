@@ -10,7 +10,8 @@ import {
 } from "../../constant/Utils";
 import {
   getRegexForType,
-  widgetNamesArr
+  widgetNamesArr,
+  notify
 } from "../../utils";
 import { fontColorArr, fontsizeArr } from "../../constant/Utils";
 import { useTranslation } from "react-i18next";
@@ -113,7 +114,7 @@ const WidgetNameModal = (props) => {
           (widget) => widget === formdata.name
         );
         if (widgetNameExist) {
-          alert(t("duplicate-widget-name-error"));
+          notify.warning(t("duplicate-widget-name-error"));
           return;
         }
       }
@@ -123,9 +124,9 @@ const WidgetNameModal = (props) => {
           enabledSignTypes?.length === 1 &&
           enabledSignTypes[0]?.name === "default";
         if (enabledSignTypes.length === 0) {
-          alert(t("at-least-one-signature-type"));
+          notify.warning(t("at-least-one-signature-type"));
         } else if (isDefaultSignTypeOnly) {
-          alert(t("expect-default-one-signature-type"));
+          notify.warning(t("expect-default-one-signature-type"));
         } else {
           const data = { ...formdata, signatureType, rotation };
           props.handleData(data, props.defaultdata?.type);
@@ -143,7 +144,7 @@ const WidgetNameModal = (props) => {
           const readOnlyWithoutValue =
             isReadOnly && !defaultValue && status !== "optional";
           if (readOnlyWithoutValue) {
-            alert(t("readonly-error", { widgetName: props.defaultdata?.type }));
+            notify.warning(t("readonly-error", { widgetName: props.defaultdata?.type }));
             return;
           }
         }

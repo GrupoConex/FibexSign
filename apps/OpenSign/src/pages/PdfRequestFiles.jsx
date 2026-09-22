@@ -71,6 +71,7 @@ import PlaceholderCopy from "../components/pdf/PlaceholderCopy";
 import TextFontSetting from "../components/pdf/TextFontSetting";
 import WidgetsValueModal from "../components/pdf/WidgetsValueModal";
 import * as utils from "../utils";
+import { notify } from "../utils";
 import { useWindowSize } from "../hook/useWindowSize";
 import { useScroll } from "../context/ScrollPdfContext";
 
@@ -242,7 +243,7 @@ function PdfRequestFiles(
         contactId // contactId
       );
       if (tenantDetails && tenantDetails === "user does not exist!") {
-        alert(t("user-not-exist"));
+        notify.error(t("user-not-exist"));
       } else if (tenantDetails) {
         const signatureType = tenantDetails?.SignatureType || [];
         const filterSignTypes = signatureType?.filter(
@@ -258,7 +259,7 @@ function PdfRequestFiles(
         return filterSignTypes;
       }
     } catch (e) {
-      alert(t("user-not-exist"));
+      notify.error(t("user-not-exist"));
     }
   };
   //function for get document details for perticular signer with signer'object id
@@ -1493,7 +1494,7 @@ function PdfRequestFiles(
       }
     } else {
       setIsUiLoading(false);
-      alert(t("expiry-date-error"));
+      notify.warning(t("expiry-date-error"));
     }
   };
   // `handleRedirectCancel` is used to cancel redirecting to redirectUrl

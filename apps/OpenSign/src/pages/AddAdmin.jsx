@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Parse from "parse";
 import { appInfo } from "../constant/appinfo";
-import { NavLink, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import {
   getAppLogo,
   openInNewTab,
@@ -13,6 +13,7 @@ import { showTenant } from "../redux/reducers/ShowTenant";
 import Loader from "../primitives/Loader";
 import { useTranslation } from "react-i18next";
 import { emailRegex } from "../constant/const";
+import { notify } from "../utils";
 
 const AddAdmin = () => {
   const appName = "FibexSign";
@@ -32,9 +33,7 @@ const AddAdmin = () => {
   const [isAuthorize, setIsAuthorize] = useState(false);
   const [errMsg, setErrMsg] = useState("");
   const [state, setState] = useState({
-    loading: false,
-    alertType: "success",
-    alertMsg: ""
+    loading: false
   });
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
@@ -88,7 +87,7 @@ const AddAdmin = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!emailRegex.test(email)) {
-      alert(t("valid-email-alert"));
+      notify.warning(t("valid-email-alert"));
     } else {
       if (lengthValid && caseDigitValid && specialCharValid) {
         clearStorage();
@@ -128,7 +127,7 @@ const AddAdmin = () => {
                 handleNavigation(userRes.getSessionToken());
               }
             } catch (err) {
-              alert(err.message);
+              notify.error(err.message);
               setState({ loading: false });
             }
           }
@@ -139,7 +138,7 @@ const AddAdmin = () => {
             const res = await Parse.Cloud.run("getUserDetails", params);
             // console.log("Res ", res);
             if (res) {
-              alert(t("already-exists-this-username"));
+              notify.error(t("already-exists-this-username"));
               setState({ loading: false });
             } else {
               // console.log("state.email ", email);
@@ -147,7 +146,7 @@ const AddAdmin = () => {
                 await Parse.User.requestPasswordReset(email).then(
                   async function (res) {
                     if (res.data === undefined) {
-                      alert(t("verification-code-sent"));
+                      notify.success(t("verification-code-sent"));
                     }
                   }
                 );
@@ -157,7 +156,7 @@ const AddAdmin = () => {
               setState({ loading: false });
             }
           } else {
-            alert(error.message);
+            notify.error(error.message);
             setState({ loading: false });
           }
         }
@@ -208,33 +207,23 @@ const AddAdmin = () => {
               localStorage.setItem("PageLanding", menu.pageId);
               localStorage.setItem("defaultmenuid", menu.menuId);
               localStorage.setItem("pageType", menu.pageType);
-              setState({
-                loading: false,
-                alertType: "success",
-                alertMsg: t("registered-user-successfully")
-              });
+              notify.success(t("registered-user-successfully"));
+              setState({ loading: false });
               navigate(`/${menu.pageType}/${menu.pageId}`);
             } else {
-              setState({
-                loading: false,
-                alertType: "danger",
-                alertMsg: t("role-not-found")
-              });
+              notify.error(t("role-not-found"));
+              setState({ loading: false });
             }
           } else {
-            setState({
-              loading: false,
-              alertType: "danger",
-              alertMsg: t("do-not-access")
-            });
+            notify.error(t("do-not-access"));
+            setState({ loading: false });
           }
         }
       } catch (error) {
         console.log("error in fetch extuser", error);
         const msg = error.message || t("something-went-wrong-mssg");
-        setState({ loading: false, alertType: "danger", alertMsg: msg });
-      } finally {
-        setTimeout(() => setState({ loading: false, alertMsg: "" }), 2000);
+        notify.error(msg);
+        setState({ loading: false });
       }
     }
   };
@@ -269,18 +258,6 @@ const AddAdmin = () => {
                   <h2 className="text-[30px] text-center mt-3 font-medium">
                     {t("opensign-setup", { appName })}
                   </h2>
-                  <NavLink
-                    to="https://discord.com/invite/xe9TDuyAyj"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-center text-sm mt-1 text-[blue] cursor-pointer"
-                  >
-                    {t("join-discord")}
-                    <i
-                      aria-hidden="true"
-                      className="fa-brands fa-discord ml-1"
-                    ></i>
-                  </NavLink>
                   <div className="px-6 py-3 text-xs">
                     <label className="block ">
                       {t("name")}{" "}

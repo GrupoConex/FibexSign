@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import Loader from "../primitives/Loader";
 import Parse from "parse";
-import { NavLink, useNavigate } from "react-router";
-import Alert from "../primitives/Alert";
+import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { emailRegex } from "../constant/const";
+import { notify } from "../utils";
 const UpdateExistUserAdmin = () => {
   const appName = "FibexSign";
   const { t } = useTranslation();
@@ -13,7 +13,6 @@ const UpdateExistUserAdmin = () => {
   const [loader, setLoader] = useState(true);
   const [errMsg, setErrMsg] = useState("");
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
-  const [isAlert, setIsAlert] = useState({ type: "danger", msg: "" });
   useEffect(() => {
     checkIsAdminExist();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -37,7 +36,7 @@ const UpdateExistUserAdmin = () => {
     e.preventDefault();
     e.stopPropagation();
     if (!emailRegex.test(formdata.email)) {
-      alert(t("valid-email-alert"));
+      notify.warning(t("valid-email-alert"));
     } else {
       setIsSubmitLoading(true);
       try {
@@ -47,31 +46,27 @@ const UpdateExistUserAdmin = () => {
         );
         // console.log("updateUserAsAdmin ", updateUserAsAdmin);
         if (updateUserAsAdmin === "admin_created") {
-          setIsAlert({ type: "success", msg: t("admin-created") });
+          notify.success(t("admin-created"));
           navigate("/");
         }
       } catch (err) {
         console.log("err in updateuserasadmin", err.code);
         if (err.code === 404) {
-          setIsAlert((prev) => ({ ...prev, msg: t("invalid-masterkey") }));
+          notify.error(t("invalid-masterkey"));
         } else if (err.code === 101) {
-          setIsAlert((prev) => ({ ...prev, msg: t("user-not-found") }));
+          notify.error(t("user-not-found"));
         } else if (err.code === 137) {
-          setIsAlert((prev) => ({ ...prev, msg: t("admin-exists") }));
+          notify.error(t("admin-exists"));
         } else {
           setErrMsg(t("something-went-wrong-mssg"));
         }
       } finally {
         setIsSubmitLoading(false);
-        setTimeout(() => {
-          setIsAlert(() => ({ type: "danger", msg: "" }));
-        }, 2000);
       }
     }
   };
   return (
     <div className="h-screen flex justify-center">
-      {isAlert.msg && <Alert type={isAlert.type}>{isAlert.msg}</Alert>}
       {loader ? (
         <div className="text-[grey] flex justify-center items-center text-lg md:text-2xl">
           <Loader />
@@ -94,18 +89,6 @@ const UpdateExistUserAdmin = () => {
                   <h2 className="text-[30px] text-center mt-3 font-medium">
                     {t("opensign-setup", { appName })}
                   </h2>
-                  <NavLink
-                    to="https://discord.com/invite/xe9TDuyAyj"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-center text-sm mt-1 text-[blue] cursor-pointer"
-                  >
-                    {t("join-discord")}
-                    <i
-                      aria-hidden="true"
-                      className="fa-brands fa-discord ml-1"
-                    ></i>
-                  </NavLink>
                   <div className="px-6 py-3 text-xs">
                     <label>
                       {t("email")}{" "}

@@ -9,7 +9,7 @@ import ModalUi from "../primitives/ModalUi";
 import {
   emailRegex,
 } from "../constant/const";
-import Alert from "../primitives/Alert";
+import { notify } from "../utils";
 import { appInfo } from "../constant/appinfo";
 import { fetchAppInfo } from "../redux/reducers/infoReducer";
 import { showTenant } from "../redux/reducers/ShowTenant";
@@ -32,8 +32,6 @@ function Login() {
   const [state, setState] = useState({
     email: "",
     password: "",
-    alertType: "success",
-    alertMsg: "",
     passwordVisible: false,
     loading: false,
     thirdpartyLoader: false,
@@ -64,11 +62,6 @@ function Login() {
     } else {
       localStorage.setItem("profileImg", "");
     }
-  };
-
-  const showToast = (type, msg) => {
-    setState({ ...state, loading: false, alertType: type, alertMsg: msg });
-    setTimeout(() => setState({ ...state, alertMsg: "" }), 2000);
   };
 
   const checkUserExt = async () => {
@@ -123,21 +116,23 @@ function Login() {
         await continueLoginFlow();
       } catch (error) {
         console.error("Error checking 2FA status:", error);
-        showToast("danger", t("something-went-wrong-mssg"));
+        notify.error(t("something-went-wrong-mssg"));
+        setState((prev) => ({ ...prev, loading: false }));
       }
     } catch (error) {
       console.error("Error while logging in user", error);
       if (error?.code === 1001) {
-        showToast("danger", t("action-prohibited"));
+        notify.error(t("action-prohibited"));
       } else {
-        showToast("danger", t("invalid-username-password-region"));
+        notify.error(t("invalid-username-password-region"));
       }
+      setState((prev) => ({ ...prev, loading: false }));
     }
   };
   const handleLoginBtn = async (event) => {
     event.preventDefault();
     if (!emailRegex.test(state.email)) {
-      alert(t("valid-email-alert"));
+      notify.warning(t("valid-email-alert"));
       return;
     }
     await handleLogin();
@@ -196,20 +191,20 @@ function Login() {
               localStorage.setItem("pageType", menu.pageType);
                 navigate(redirectUrl);
             } else {
-              showToast("danger", t("role-not-found"));
+              notify.error(t("role-not-found"));
               logOutUser();
             }
           } else {
-            showToast("danger", t("do-not-access-contact-admin"));
+            notify.error(t("do-not-access-contact-admin"));
             logOutUser();
           }
         } else {
-          showToast("danger", t("user-not-found"));
+          notify.error(t("user-not-found"));
           logOutUser();
         }
       } catch (error) {
-        console.error("err in fetching extUser", err);
-        showToast("danger", `${err.message}`);
+        console.error("err in fetching extUser", error);
+        notify.error(`${error.message}`);
         const payload = { sessionToken: _user.sessionToken };
         handleSubmitbtn(payload);
       } finally {
@@ -260,15 +255,18 @@ function Login() {
             logOutUser();
           }
         } else {
-          showToast("danger", t("do-not-access-contact-admin"));
+          notify.error(t("do-not-access-contact-admin"));
+          setState((prev) => ({ ...prev, loading: false }));
           logOutUser();
         }
       } else {
-        showToast("danger", t("user-not-found"));
+        notify.error(t("user-not-found"));
+        setState((prev) => ({ ...prev, loading: false }));
         logOutUser();
       }
     } catch (error) {
-      showToast("danger", t("something-went-wrong-mssg"));
+      notify.error(t("something-went-wrong-mssg"));
+      setState((prev) => ({ ...prev, loading: false }));
       console.log("err", error);
     }
   };
@@ -309,16 +307,16 @@ function Login() {
           localStorage.setItem("userDetails", JSON.stringify(LocalUserDetails));
           thirdpartyLoginfn(userSignUp.sessionToken);
         } else {
-          alert(userSignUp.message);
+          notify.error(userSignUp.message);
         }
       } else if (
         payload &&
         payload.message.replace(/ /g, "_") === "Internal_server_err"
       ) {
-        alert(t("server-error"));
+        notify.error(t("server-error"));
       }
     } else {
-      showToast("warning", t("fill-required-details!"));
+      notify.warning(t("fill-required-details!"));
     }
   };
 
@@ -393,16 +391,19 @@ function Login() {
             setIsModal(true);
           }
         } else {
-          showToast("danger", t("do-not-access-contact-admin"));
+          notify.error(t("do-not-access-contact-admin"));
+          setState((prev) => ({ ...prev, loading: false }));
           logOutUser();
         }
       } else {
-          showToast("danger", t("user-not-found"));
+          notify.error(t("user-not-found"));
+          setState((prev) => ({ ...prev, loading: false }));
           logOutUser();
       }
     } catch (error) {
       console.error("Error during login flow", error);
-      showToast("danger", error.message || t("something-went-wrong-mssg"));
+      notify.error(error.message || t("something-went-wrong-mssg"));
+      setState((prev) => ({ ...prev, loading: false }));
     }
   };
 
@@ -532,9 +533,6 @@ function Login() {
               </div>
             </div>
             <SelectLanguage />
-            {state.alertMsg && (
-              <Alert type={state.alertType}>{state.alertMsg}</Alert>
-            )}
           </div>
           <ModalUi
             isOpen={isModal}

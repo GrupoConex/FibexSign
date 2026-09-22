@@ -6,7 +6,7 @@ import ModalUi from "../../primitives/ModalUi";
 import Alert from "../../primitives/Alert";
 import Tooltip from "../../primitives/Tooltip";
 import Icon from "../../primitives/Icon";
-import ShareButton from "../../primitives/ShareButton";
+
 import Tour from "../../primitives/Tour";
 import Parse from "parse";
 import {
@@ -66,7 +66,6 @@ const TemplatesReport = (props) => {
   const [shareUrls, setShareUrls] = useState([]);
   const [copied, setCopied] = useState(false);
   const [isOption, setIsOption] = useState({});
-  const [alertMsg, setAlertMsg] = useState({ type: "success", message: "" });
   const [isTour, setIsTour] = useState(false);
   const [tourStatusArr, setTourStatusArr] = useState([]);
   const [isResendMail, setIsResendMail] = useState({});
@@ -168,10 +167,6 @@ const TemplatesReport = (props) => {
 
     return pages;
   };
-  const showAlert = (type, message, time = 1500) => {
-    setAlertMsg({ type: type, message: message });
-    setTimeout(() => setAlertMsg({ type: "", message: "" }), time);
-  };
   const pageNumbers = getPaginationRange();
   //  below useEffect reset currenpage to 1 if user change route
   useEffect(() => {
@@ -232,7 +227,7 @@ const TemplatesReport = (props) => {
       try {
         const tenantDetails = await getTenantDetails(user?.objectId);
         if (tenantDetails && tenantDetails === "user does not exist!") {
-          alert(t("user-not-exist"));
+          utils.notify.error(t("user-not-exist"));
         } else if (tenantDetails) {
           const signatureType = tenantDetails?.SignatureType || [];
           const filterSignTypes = signatureType?.filter(
@@ -241,10 +236,10 @@ const TemplatesReport = (props) => {
           return filterSignTypes;
         }
       } catch (e) {
-        alert(t("user-not-exist"));
+        utils.notify.error(t("user-not-exist"));
       }
     } else {
-      alert(t("user-not-exist"));
+      utils.notify.error(t("user-not-exist"));
     }
   });
 
@@ -276,14 +271,14 @@ const TemplatesReport = (props) => {
             );
             setIsPrefillModal({ [item.objectId]: true });
           } else {
-            showAlert("danger", t("something-went-wrong-mssg"));
+            utils.notify.error(t("something-went-wrong-mssg"));
             setActLoader({});
           }
         } else {
-          showAlert("danger", t("quick-send-alert-2"));
+          utils.notify.error(t("quick-send-alert-2"));
         }
       } else {
-        showAlert("danger", t("add-role-alert"));
+        utils.notify.error(t("add-role-alert"));
       }
     }
   };
@@ -310,7 +305,7 @@ const TemplatesReport = (props) => {
       }
     } catch (e) {
       console.error("fetch template in report error", e);
-      showAlert("danger", t("something-went-wrong-mssg"));
+      utils.notify.error(t("something-went-wrong-mssg"));
       setActLoader({});
     }
   });
@@ -329,7 +324,7 @@ const TemplatesReport = (props) => {
           state: { title: "Use Template" }
         });
       } else {
-        alert(t("something-went-wrong-mssg"));
+        utils.notify.error(t("something-went-wrong-mssg"));
       }
     }
   );
@@ -414,7 +409,7 @@ const TemplatesReport = (props) => {
       });
       if (res.data && res.data.updatedAt) {
         setActLoader({});
-        showAlert("success", t("record-delete-alert"));
+        utils.notify.success(t("record-delete-alert"));
         const upldatedList = props.List.filter(
           (x) => x.objectId !== item.objectId
         );
@@ -422,7 +417,7 @@ const TemplatesReport = (props) => {
       }
     } catch (err) {
       console.error("delete template error", err);
-      showAlert("danger", t("something-went-wrong-mssg"));
+      utils.notify.error(t("something-went-wrong-mssg"));
       setActLoader({});
     }
   });
@@ -549,7 +544,7 @@ const TemplatesReport = (props) => {
         setActLoader({});
       } catch (err) {
         console.error("getsignedurl error", err);
-        alert(t("something-went-wrong-mssg"));
+        utils.notify.error(t("something-went-wrong-mssg"));
         setActLoader({});
       }
     }
@@ -714,15 +709,15 @@ const TemplatesReport = (props) => {
     try {
       const res = await axios.post(url, params, { headers: headers });
       if (res?.data?.result?.status === "success") {
-        showAlert("success", t("mail-sent-alert"));
+        utils.notify.success(t("mail-sent-alert"));
         setIsResendMail({});
       }
       else {
-        showAlert("danger", t("something-went-wrong-mssg"));
+        utils.notify.error(t("something-went-wrong-mssg"));
       }
     } catch (err) {
       console.error("sendmail error", err);
-      showAlert("danger", t("something-went-wrong-mssg"));
+      utils.notify.error(t("something-went-wrong-mssg"));
     } finally {
       setIsNextStep({});
       setUserDetails({});
@@ -757,9 +752,9 @@ const TemplatesReport = (props) => {
   const handleQuickSendClose = (status, count) => {
     setIsBulkSend({});
     if (status === "success") {
-      showAlert("success", count + " " + t("document-sent-alert"));
+      utils.notify.success(count + " " + t("document-sent-alert"));
     } else {
-      showAlert("danger", t("something-went-wrong-mssg"));
+      utils.notify.error(t("something-went-wrong-mssg"));
     }
   };
 
@@ -784,7 +779,7 @@ const TemplatesReport = (props) => {
     } catch (err) {
       console.error("fetch template in bulk modal err", err);
       setIsBulkSend({});
-      showAlert("danger", t("something-went-wrong-mssg"));
+      utils.notify.error(t("something-went-wrong-mssg"));
     }
   };
 
@@ -806,10 +801,10 @@ const TemplatesReport = (props) => {
       templateCls.set("SharedWith", teamArr);
       const res = await templateCls.save();
       if (res) {
-        showAlert("success", t("template-share-alert"));
+        utils.notify.success(t("template-share-alert"));
       }
     } catch (err) {
-      showAlert("danger", t("something-went-wrong-mssg"));
+      utils.notify.error(t("something-went-wrong-mssg"));
     } finally {
       setActLoader({});
     }
@@ -826,10 +821,10 @@ const TemplatesReport = (props) => {
       if (duplicateRes) {
         const newTemplate = JSON.parse(JSON.stringify(duplicateRes));
         props.setList((prevData) => [newTemplate, ...prevData]);
-        showAlert("success", t("duplicate-template-created"));
+        utils.notify.success(t("duplicate-template-created"));
       }
     } catch (err) {
-      showAlert("danger", t("something-went-wrong-mssg"));
+      utils.notify.error(t("something-went-wrong-mssg"));
       console.error("create duplicate template error", err);
     } finally {
       setActLoader({});
@@ -852,9 +847,9 @@ const TemplatesReport = (props) => {
       );
       props.setList(updateList);
       setActLoader({});
-      showAlert("success", "Document updated", 2000);
+      utils.notify.success("Document updated", { duration: 2000 });
     } catch (err) {
-      showAlert("danger", t("something-went-wrong-mssg"), 2000);
+      utils.notify.error(t("something-went-wrong-mssg"), { duration: 2000 });
       setActLoader({});
     }
   });
@@ -931,15 +926,14 @@ const TemplatesReport = (props) => {
         ?.map((item) => item.options.name)
         ?.join(", ");
       const timeInMiliSec = 6000;
-      showAlert(
-        "danger",
+      utils.notify.error(
         t("prefill-unfilled-widget", {
           emptyWidget: emptyWidget ? `[${emptyWidget}]` : ""
         }),
-        timeInMiliSec
+        { duration: timeInMiliSec }
       );
     } else if (res?.status === "unattach signer") {
-      showAlert("danger", t("attach-all-role-to-signer"));
+      utils.notify.error(t("attach-all-role-to-signer"));
     } else if (res?.status === "success") {
       setDocumentId(res.id);
       setActLoader({});
@@ -968,7 +962,7 @@ const TemplatesReport = (props) => {
         try {
           const tenantDetails = await getTenantDetails(user?.objectId);
           if (tenantDetails && tenantDetails === "user does not exist!") {
-            alert(t("user-not-exist"));
+            utils.notify.error(t("user-not-exist"));
           } else if (tenantDetails) {
             const extUser =
               localStorage.getItem("Extand_Class") &&
@@ -991,14 +985,14 @@ const TemplatesReport = (props) => {
             setDefaultMail({ subject: userSubject, body: userBody });
           }
         } catch (e) {
-          alert(t("user-not-exist"));
+          utils.notify.error(t("user-not-exist"));
         }
       } else {
-        alert(t("user-not-exist"));
+        utils.notify.error(t("user-not-exist"));
       }
     } else if (res?.status === "error") {
       const message = res?.message || "something-went-wrong-mssg";
-      showAlert("danger", t(message));
+      utils.notify.error(t(message));
     }
     setIsSubmit(false);
   });
@@ -1039,13 +1033,6 @@ const TemplatesReport = (props) => {
               <i className="fa-light fa-copy" />
               <span className=" hidden md:block ml-1 ">{t("copy-link")}</span>
             </button>
-            <ShareButton
-              title={t("sign-url")}
-              text={t("sign-url")}
-              url={data.url}
-            >
-              <i className="fa-light fa-share-from-square op-link op-link-secondary no-underline"></i>
-            </ShareButton>
           </div>
         </div>
       );
@@ -1074,9 +1061,7 @@ const TemplatesReport = (props) => {
         </div>
       )}
       <div className="p-2 w-full bg-base-100 text-base-content op-card">
-        {alertMsg.message && (
-          <Alert type={alertMsg.type}>{alertMsg.message}</Alert>
-        )}
+
         {props.tourData && (
           <>
             <Tour
@@ -1454,15 +1439,6 @@ const TemplatesReport = (props) => {
                                   {share.email}
                                 </span>
                                 <div className="flex items-center gap-2">
-                                  <ShareButton
-                                    title={t("sign-url")}
-                                    text={t("sign-url")}
-                                    url={share.url}
-                                    className="op-btn op-btn-primary op-btn-outline op-btn-xs md:op-btn-sm "
-                                  >
-                                    <i className="fa-light fa-share-from-square"></i>
-                                    {t("btnLabel.Share")}
-                                  </ShareButton>
                                   <button
                                     className="op-btn op-btn-primary op-btn-outline op-btn-xs md:op-btn-sm"
                                     onClick={() =>
