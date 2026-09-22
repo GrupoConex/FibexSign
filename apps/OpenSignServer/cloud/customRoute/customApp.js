@@ -7,11 +7,12 @@ import decryptpdf, { upload as decryptUpload } from './decryptpdf.js';
 import { deleteUserByAdmin, deleteUserPost } from './deleteAccount/deleteUser.js';
 import { deleteUserGet } from './deleteAccount/deleteUserGet.js';
 import { deleteUserOtp } from './deleteAccount/deleteUserOtp.js';
+import { buildCorsOptions } from '../../utils/corsOptions.js';
 
 export const app = express();
 
 dotenv.config({ quiet: true });
-app.use(cors());
+app.use(cors(buildCorsOptions()));
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 

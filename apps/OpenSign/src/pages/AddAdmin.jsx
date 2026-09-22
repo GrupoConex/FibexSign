@@ -138,7 +138,7 @@ const AddAdmin = () => {
             const params = { email: email };
             const res = await Parse.Cloud.run("getUserDetails", params);
             // console.log("Res ", res);
-            if (res) {
+            if (res?.exists) {
               notify.error(t("already-exists-this-username"));
               setState({ loading: false });
             } else {

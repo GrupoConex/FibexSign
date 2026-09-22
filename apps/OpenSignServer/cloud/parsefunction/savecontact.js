@@ -1,3 +1,5 @@
+import getUserId from './getUserId.js';
+
 export default async function savecontact(request) {
   const name = request.params.name;
   const phone = request.params.phone;
@@ -66,7 +68,7 @@ export default async function savecontact(request) {
         console.log('err ', err);
         if (err.code === 202) {
           const params = { email: email };
-          const userRes = await Parse.Cloud.run('getUserId', params);
+          const userRes = await getUserId({ params });
           contactQuery.set('CreatedBy', currentUserPtr);
           contactQuery.set('UserId', {
             __type: 'Pointer',

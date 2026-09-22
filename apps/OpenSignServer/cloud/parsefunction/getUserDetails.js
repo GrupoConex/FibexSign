@@ -23,12 +23,16 @@ async function getUserDetails(request) {
       const res = await userQuery.first({ useMasterKey: true });
       if (res) {
         if (reqEmail) {
-          return { objectId: res.id };
+          return { exists: true };
         } else {
           return res;
         }
       } else {
-        return '';
+        if (reqEmail) {
+          return { exists: false };
+        } else {
+          return '';
+        }
       }
     } catch (err) {
       console.log('Err ', err);

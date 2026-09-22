@@ -1,4 +1,8 @@
+import { randomInt } from 'node:crypto';
 import { appName, smtpenable, updateMailCount } from '../../Utils.js';
+
+const OTP_EXPIRY_MS = 10 * 60 * 1000;
+
 async function getDocument(docId) {
   try {
     const query = new Parse.Query('contracts_Document');
@@ -19,7 +23,7 @@ async function getDocument(docId) {
 }
 async function sendMailOTPv1(request) {
   try {
-    let code = Math.floor(1000 + Math.random() * 9000);
+    let code = randomInt(1000, 10000);
     let email = request.params.email;
     let TenantId = request.params.TenantId ? request.params.TenantId : undefined;
     const AppName = appName;
@@ -38,7 +42,7 @@ async function sendMailOTPv1(request) {
             code +
             '</p></div></div></div></body></html>',
         });
-        console.log('OTP sent', code);
+        console.log('OTP sent for', email);
         if (request.params?.docId) {
           const extUserId = await getDocument(request.params?.docId);
           if (extUserId) {
@@ -51,23 +55,25 @@ async function sendMailOTPv1(request) {
       const tempOtp = new Parse.Query('defaultdata_Otp');
       tempOtp.equalTo('Email', email);
       const resultOTP = await tempOtp.first({ useMasterKey: true });
-      // console.log('resultOTP', resultOTP);
+      const expiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
       if (resultOTP !== undefined) {
         const updateOtpQuery = new Parse.Query('defaultdata_Otp');
         const updateOtp = await updateOtpQuery.get(resultOTP.id, {
           useMasterKey: true,
         });
         updateOtp.set('OTP', code);
-        updateOtp.save(null, { useMasterKey: true });
-        //   console.log("update otp Res in tempSendOtp ", updateRes);
+        updateOtp.set('ExpiresAt', expiresAt);
+        updateOtp.set('FailedAttempts', 0);
+        await updateOtp.save(null, { useMasterKey: true });
       } else {
         const otpClass = Parse.Object.extend('defaultdata_Otp');
         const newOtpQuery = new otpClass();
         newOtpQuery.set('OTP', code);
         newOtpQuery.set('Email', email);
         newOtpQuery.set('TenantId', TenantId);
+        newOtpQuery.set('ExpiresAt', expiresAt);
+        newOtpQuery.set('FailedAttempts', 0);
         await newOtpQuery.save(null, { useMasterKey: true });
-        //   console.log("new otp Res in tempSendOtp ", newRes);
       }
       return 'Otp send';
     } else {
