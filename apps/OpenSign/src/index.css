@@ -713,3 +713,19 @@ html[data-theme="opensigncss"] aside .op-menu a.active:hover {
   border-color: #243046 !important;
 }
 
+/* ==========================================================================
+   FIBEX AUTH SPLIT BACKGROUND (ALTA FIDELIDAD Y MODO CLARO / OSCURO)
+   ========================================================================== */
+.fibex-auth-split-bg {
+  background-image: url('/fibex-modo-claro.webp');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #f8fafc;
+}
+
+[data-theme="opensigndark"] .fibex-auth-split-bg {
+  background-image: url('/fibex-modo-oscuro.webp');
+  background-color: #0b1120;
+}
+

@@ -26,6 +26,7 @@ import {
   ChevronRight,
   ChevronUp,
   ChevronLeft,
+  ArrowLeft,
   BookOpen,
   User,
   Lock,
@@ -103,6 +104,8 @@ const ICON_MAP = {
   "chevron-right": ChevronRight,
   "chevron-up": ChevronUp,
   "chevron-left": ChevronLeft,
+  "arrow-left": ArrowLeft,
+  "back": ArrowLeft,
   "angle-down": ChevronDown,
   "angle-right": ChevronRight,
   "book": BookOpen,
@@ -218,6 +221,7 @@ const Icon = ({
   className = "",
   strokeWidth = 2,
   color,
+  "aria-hidden": ariaHidden = true,
   ...props
 }) => {
   if (!name) return null;
@@ -236,6 +240,7 @@ const Icon = ({
         className={className}
         strokeWidth={strokeWidth}
         color={color}
+        aria-hidden={ariaHidden}
         {...props}
       />
     );

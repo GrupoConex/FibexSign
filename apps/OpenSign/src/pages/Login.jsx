@@ -3,8 +3,6 @@ import Parse from "parse";
 import { useDispatch } from "react-redux";
 import axios from "axios";
 import { NavLink, useNavigate, useLocation } from "react-router";
-import login_img from "../assets/images/login_img.svg";
-import { useWindowSize } from "../hook/useWindowSize";
 import ModalUi from "../primitives/ModalUi";
 import {
   emailRegex,
@@ -21,6 +19,8 @@ import {
 import Loader from "../primitives/Loader";
 import { useTranslation } from "react-i18next";
 import SelectLanguage from "../components/pdf/SelectLanguage";
+import AuthLayout from "../components/auth/AuthLayout";
+import Icon from "../primitives/Icon";
 
 function Login() {
   const appName = "FibexSign";
@@ -28,7 +28,6 @@ function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
-  const { width } = useWindowSize();
   const [state, setState] = useState({
     email: "",
     password: "",
@@ -415,125 +414,119 @@ function Login() {
     <>
       {state.loading && (
         <div
+          role="status"
           aria-live="assertive"
           className="fixed w-full h-full flex justify-center items-center bg-black bg-opacity-30 z-50"
         >
           <Loader />
+          <span className="sr-only">{t("loading")}</span>
         </div>
       )}
       {appInfo && appInfo.appId ? (
         <>
-          <div
-            aria-labelledby="loginHeading"
-            role="region"
-            className="pb-1 md:pb-4 pt-10 md:px-10 lg:px-16 h-full"
-          >
-            <div className="md:p-4 lg:p-10 p-4 bg-base-100 text-base-content op-card">
-              <div className="w-[250px] h-[66px] inline-block overflow-hidden">
-                {image && (
-                  <img
-                    src={image}
-                    className="object-contain h-full"
-                    alt="applogo"
-                  />
-                )}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-2">
+          <AuthLayout>
+            <div aria-labelledby="loginHeading" role="region">
+              {image && (
+                <img
+                  src={image}
+                  className="h-10 max-w-[200px] object-contain mb-8"
+                  alt="applogo"
+                />
+              )}
+              <form
+                onSubmit={handleLoginBtn}
+                aria-label="Login Form"
+                className="space-y-5"
+              >
                 <div>
-                  <form onSubmit={handleLoginBtn} aria-label="Login Form">
-                    <h1 className="text-[30px] mt-6">{t("welcome")}</h1>
-                    <fieldset>
-                      <legend className="text-[12px] text-[#878787]">
-                        {t("Login-to-your-account")}
-                      </legend>
-                      <div className="w-full px-6 py-3 my-1 op-card bg-base-100 outline outline-1 outline-slate-300/50">
-                        <label className="block text-xs" htmlFor="email">
-                          {t("email")}
-                        </label>
-                        <input
-                          id="email"
-                          type="email"
-                          className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
-                          name="email"
-                          autoComplete="username"
-                          value={state.email}
-                          onChange={handleChange}
-                          required
-                          onInvalid={(e) =>
-                            e.target.setCustomValidity(t("input-required"))
-                          }
-                          onInput={(e) => e.target.setCustomValidity("")}
-                        />
-                        <hr className="my-1 border-none" />
-                            <label className="block text-xs" htmlFor="password">
-                              {t("password")}
-                            </label>
-                            <div className="relative">
-                              <input
-                                id="password"
-                                type={
-                                  state.passwordVisible ? "text" : "password"
-                                }
-                                className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
-                                name="password"
-                                value={state.password}
-                                autoComplete="current-password"
-                                onChange={handleChange}
-                                onInvalid={(e) =>
-                                  e.target.setCustomValidity(
-                                    t("input-required")
-                                  )
-                                }
-                                onInput={(e) => e.target.setCustomValidity("")}
-                                required
-                              />
-                              <span
-                                className="absolute cursor-pointer top-[50%] right-[10px] -translate-y-[50%] text-base-content"
-                                onClick={togglePasswordVisibility}
-                              >
-                                {state.passwordVisible ? (
-                                  <i className="fa-light fa-eye-slash text-xs pb-1" /> // Close eye icon
-                                ) : (
-                                  <i className="fa-light fa-eye text-xs pb-1 " /> // Open eye icon
-                                )}
-                              </span>
-                            </div>
-                          <div className="relative mt-1">
-                            <NavLink
-                              to="/forgetpassword"
-                              className="text-[13px] op-link op-link-primary underline-offset-1 focus:outline-none ml-1"
-                            >
-                              {t("forgot-password")}?
-                            </NavLink>
-                          </div>
-                      </div>
-                    </fieldset>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-center text-xs font-bold mt-2">
+                  <h1
+                    id="loginHeading"
+                    className="text-2xl font-bold tracking-tight text-base-content"
+                  >
+                    {t("welcome")}
+                  </h1>
+                  <p className="text-sm text-base-content/80 font-medium mt-1">
+                    {t("Login-to-your-account")}
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1 text-base-content" htmlFor="email">
+                      {t("email")}
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      className="op-input op-input-bordered w-full text-sm"
+                      name="email"
+                      autoComplete="username"
+                      value={state.email}
+                      onChange={handleChange}
+                      required
+                      onInvalid={(e) =>
+                        e.target.setCustomValidity(t("input-required"))
+                      }
+                      onInput={(e) => e.target.setCustomValidity("")}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1 text-base-content" htmlFor="password">
+                      {t("password")}
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="password"
+                        type={state.passwordVisible ? "text" : "password"}
+                        className="op-input op-input-bordered w-full text-sm pr-9"
+                        name="password"
+                        value={state.password}
+                        autoComplete="current-password"
+                        onChange={handleChange}
+                        onInvalid={(e) =>
+                          e.target.setCustomValidity(t("input-required"))
+                        }
+                        onInput={(e) => e.target.setCustomValidity("")}
+                        required
+                      />
                       <button
-                        type="submit"
-                        className="op-btn op-btn-primary"
-                        disabled={state.loading}
+                        type="button"
+                        className="absolute cursor-pointer top-1/2 right-3 -translate-y-1/2 text-base-content/60 hover:text-base-content focus:outline-none p-1 rounded-md transition-colors"
+                        onClick={togglePasswordVisibility}
+                        aria-label={
+                          state.passwordVisible
+                            ? t("hide-password")
+                            : t("show-password")
+                        }
                       >
-                        {state.loading ? t("loading") : t("login")}
+                        <Icon
+                          name={state.passwordVisible ? "eye-off" : "eye"}
+                          size={16}
+                        />
                       </button>
                     </div>
-                  </form>
-                </div>
-                {width >= 768 && (
-                  <div className="place-self-center">
-                    <div className="mx-auto md:w-[300px] lg:w-[400px] xl:w-[500px]">
-                      <img
-                        src={login_img}
-                        alt="The image illustrates a person from behind, seated at a desk with a four-monitor computer setup, in an environment with a light blue and white color scheme, featuring a potted plant to the right."
-                        width="100%"
-                      />
-                    </div>
                   </div>
-                )}
+                  <div className="flex justify-end">
+                    <NavLink
+                      to="/forgetpassword"
+                      className="text-xs font-semibold op-link op-link-primary hover:underline underline-offset-2 focus:outline-none"
+                    >
+                      {t("forgot-password")}?
+                    </NavLink>
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  className="op-btn op-btn-primary w-full"
+                  disabled={state.loading}
+                >
+                  {state.loading ? t("loading") : t("login")}
+                </button>
+              </form>
+              <div className="mt-8 pt-6 border-t border-base-200/80 flex justify-center">
+                <SelectLanguage />
               </div>
             </div>
-            <SelectLanguage />
-          </div>
+          </AuthLayout>
           <ModalUi
             isOpen={isModal}
             title={t("additional-info")}
@@ -615,10 +608,12 @@ function Login() {
         </>
       ) : (
         <div
+          role="status"
           aria-live="assertive"
           className="fixed w-full h-full flex justify-center items-center z-50"
         >
           <Loader />
+          <span className="sr-only">{t("loading")}</span>
         </div>
       )}
     </>

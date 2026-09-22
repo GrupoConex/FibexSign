@@ -1,47 +1,84 @@
 import i18next from "i18next";
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import Icon from "../../primitives/Icon";
 
-function SelectLanguage(props) {
-  const { i18n } = useTranslation();
-  const languages = [
-    { value: "en", text: "English" }, //english
-    { value: "es", text: "Española" }, //spanish
-    { value: "fr", text: "Français" }, //french
-    { value: "it", text: "Italiano" }, //italian
-    { value: "de", text: "Deutsch" }, //german
-    { value: "hi", text: "हिन्दी" }, //hindi
-    { value: "kr", text: "한국어" } //korean
-  ];
-  const defaultLanguage = i18next.language || "en";
-  const [lang, setLang] = useState(defaultLanguage);
-  // This function put query that helps to change the language
+const LANGUAGES = [
+  { value: "en", text: "English" },
+  { value: "es", text: "Español" },
+  { value: "fr", text: "Français" },
+  { value: "it", text: "Italiano" },
+  { value: "de", text: "Deutsch" },
+  { value: "hi", text: "हिन्दी" },
+  { value: "kr", text: "한국어" }
+];
+
+const getNormalizedLang = (langCode) => {
+  if (!langCode) return "en";
+  const code = langCode.split("-")[0].toLowerCase();
+  const exists = LANGUAGES.some((l) => l.value === code);
+  return exists ? code : "en";
+};
+
+function SelectLanguage({ isProfile, className = "", updateExtUser }) {
+  const { i18n, t } = useTranslation();
+  const [lang, setLang] = useState(() =>
+    getNormalizedLang(i18n.language || i18next.language)
+  );
+
+  useEffect(() => {
+    if (i18n.language) {
+      setLang(getNormalizedLang(i18n.language));
+    }
+  }, [i18n.language]);
+
   const handleChangeLang = (e) => {
-    setLang(e.target.value);
-    i18n.changeLanguage(e.target.value);
-    props?.updateExtUser && props.updateExtUser({ language: e.target.value });
+    const newLang = e.target.value;
+    setLang(newLang);
+    i18n.changeLanguage(newLang);
+    updateExtUser && updateExtUser({ language: newLang });
   };
-  return (
-    <div
-      className={`${
-        !props.isProfile && " mt-[9px] pb-2 md:pb-0 "
-      } flex justify-center items-center text-base-content`}
-    >
-      <select
-        value={lang}
-        onChange={handleChangeLang}
-        className={`${
-          !props.isProfile ? " md:w-[15%] w-[50%]" : "w-[180px]"
-        } op-select op-select-bordered op-select-sm `}
-      >
-        <option disabled>select</option>
-        {languages.map((item) => {
-          return (
+
+  if (isProfile) {
+    return (
+      <div className={`flex items-center text-base-content ${className}`}>
+        <select
+          value={lang}
+          onChange={handleChangeLang}
+          aria-label={t("language")}
+          className="w-[180px] op-select op-select-bordered op-select-sm text-xs"
+        >
+          {LANGUAGES.map((item) => (
             <option key={item.value} value={item.value}>
               {item.text}
             </option>
-          );
-        })}
+          ))}
+        </select>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`inline-flex items-center gap-2 text-base-content ${className}`}
+    >
+      <Icon
+        name="globe"
+        size={15}
+        className="text-base-content/60 shrink-0"
+        aria-hidden="true"
+      />
+      <select
+        value={lang}
+        onChange={handleChangeLang}
+        aria-label={t("language")}
+        className="op-select op-select-bordered op-select-sm w-36 text-xs font-medium cursor-pointer focus:outline-none"
+      >
+        {LANGUAGES.map((item) => (
+          <option key={item.value} value={item.value}>
+            {item.text}
+          </option>
+        ))}
       </select>
     </div>
   );

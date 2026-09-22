@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import login_img from "../assets/images/login_img.svg";
 import Parse from "parse";
 import { appInfo } from "../constant/appinfo";
 import { useDispatch } from "react-redux";
@@ -10,13 +9,16 @@ import {
 } from "../constant/const";
 import { useTranslation } from "react-i18next";
 import Loader from "../primitives/Loader";
+import Icon from "../primitives/Icon";
 import { notify } from "../utils";
+import AuthLayout from "../components/auth/AuthLayout";
+import SelectLanguage from "../components/pdf/SelectLanguage";
 
 function ForgotPassword() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [state, setState] = useState({ email: "", password: "", hideNav: "" });
+  const [state, setState] = useState({ email: "", password: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [image, setImage] = useState();
 
@@ -26,13 +28,6 @@ function ForgotPassword() {
       value = value?.toLowerCase()?.replace(/\s/g, "");
     }
     setState({ ...state, [name]: value });
-  };
-
-  const resize = () => {
-    let currentHideNav = window.innerWidth <= 760;
-    if (currentHideNav !== state.hideNav) {
-      setState({ ...state, hideNav: currentHideNav });
-    }
   };
 
   const handleSubmit = async (event) => {
@@ -61,9 +56,6 @@ function ForgotPassword() {
   useEffect(() => {
     dispatch(fetchAppInfo());
     saveLogo();
-    resize();
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
     // eslint-disable-next-line
   }, []);
   const saveLogo = async () => {
@@ -75,72 +67,81 @@ function ForgotPassword() {
       setImage(appInfo?.applogo || undefined);
   };
   return (
-    <div>
+    <>
       {isLoading && (
-        <div className="fixed w-full h-full flex justify-center items-center bg-black bg-opacity-30 z-50">
+        <div
+          role="status"
+          aria-live="assertive"
+          className="fixed w-full h-full flex justify-center items-center bg-black bg-opacity-30 z-50"
+        >
           <Loader />
+          <span className="sr-only">{t("loading")}</span>
         </div>
       )}
-      <div className="md:p-10 lg:p-16">
-        <div className="md:p-4 lg:p-10 p-4 bg-base-100 text-base-content op-card">
-          <div className="w-[250px] h-[66px] inline-block overflow-hidden">
-            {image && (
-              <img
-                src={image}
-                className="object-contain h-full"
-                alt="applogo"
-              />
-            )}
+      <AuthLayout>
+        {image && (
+          <img
+            src={image}
+            className="h-10 max-w-[200px] object-contain mb-8"
+            alt="applogo"
+          />
+        )}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-base-content">
+              {t("reset-password-heading")}
+            </h1>
+            <p className="text-sm text-base-content/80 font-medium mt-1">
+              {t("reset-password-subheading", t("reset-password-alert-3"))}
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-2">
-            <div>
-              <form onSubmit={handleSubmit}>
-                <h2 className="text-[30px] mt-6">{t("welcome")}</h2>
-                <span className="text-[12px] text-[#878787]">
-                  {t("reset-password-alert-3")}
-                </span>
-                <div className="w-full my-4 op-card bg-base-100 outline outline-1 outline-slate-300/50">
-                  <div className="px-6 py-4">
-                    <label className="block text-xs">{t("email")}</label>
-                    <input
-                      type="email"
-                      name="email"
-                      className="op-input op-input-bordered op-input-sm w-full"
-                      value={state.email}
-                      onChange={handleChange}
-                      onInvalid={(e) =>
-                        e.target.setCustomValidity(t("input-required"))
-                      }
-                      onInput={(e) => e.target.setCustomValidity("")}
-                      required
-                    />
-                    <hr className="my-2 border-none" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-center text-xs font-bold">
-                  <button type="submit" className="op-btn op-btn-primary">
-                    {t("submit")}
-                  </button>
-                  <button
-                    onClick={() => navigate("/", { replace: true })}
-                    className="op-btn op-btn-secondary"
-                  >
-                    {t("login")}
-                  </button>
-                </div>
-              </form>
+          <div>
+            <label className="block text-xs font-semibold mb-1 text-base-content" htmlFor="email">
+              {t("email")}
+            </label>
+            <input
+              id="email"
+              type="email"
+              name="email"
+              className="op-input op-input-bordered w-full text-sm"
+              value={state.email}
+              onChange={handleChange}
+              onInvalid={(e) =>
+                e.target.setCustomValidity(t("input-required"))
+              }
+              onInput={(e) => e.target.setCustomValidity("")}
+              required
+            />
+          </div>
+          <div className="space-y-3 pt-1">
+            <button
+              type="submit"
+              className="op-btn op-btn-primary w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? t("loading") : t("submit")}
+            </button>
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={() => navigate("/", { replace: true })}
+                className="inline-flex items-center justify-center gap-2 text-sm font-semibold text-base-content/75 hover:text-royal-600 dark:hover:text-blue-400 transition-colors cursor-pointer group py-1"
+              >
+                <Icon
+                  name="arrow-left"
+                  size={16}
+                  className="transition-transform group-hover:-translate-x-1"
+                />
+                <span>{t("back-to-login")}</span>
+              </button>
             </div>
-            {!state.hideNav && (
-              <div className="self-center">
-                <div className="mx-auto md:w-[300px] lg:w-[500px]">
-                  <img src={login_img} alt="bisec" width="100%" />
-                </div>
-              </div>
-            )}
           </div>
+        </form>
+        <div className="mt-8 pt-6 border-t border-base-200/80 flex justify-center">
+          <SelectLanguage />
         </div>
-      </div>
-    </div>
+      </AuthLayout>
+    </>
   );
 }
 
