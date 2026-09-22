@@ -1,4 +1,17 @@
 {
+  "document-details": "Detalles del documento",
+  "drag-and-drop-here": "Arrastra y suelta tu archivo aquí",
+  "or-browse-from-computer": "o haz clic para buscar en tu equipo",
+  "enter-document-title": "Ingrese el título del documento",
+  "enter-description": "Ingrese una descripción",
+  "replace-file": "Cambiar archivo",
+  "ready": "Listo",
+  "max-file-size": "Tamaño máx.",
+  "sign-yourself": "Firma tu mismo",
+  "request-signatures": "Solicitar firmas",
+  "new-template": "Nueva plantilla",
+  "template-tips-title": "Plantillas reutilizables",
+  "template-tips-desc": "Crea una plantilla para estandarizar documentos frecuentes. Podrás reutilizar este diseño y sus campos tantas veces como lo necesites.",
   "header-news": "Nueva característica: los usuarios del plan Teams ahora pueden integrar sus propios depósitos de AWS S3 para el almacenamiento de archivos",
   "header-news-btn": "Configurar ahora",
   "sandbox-news": "Este es un entorno sandbox. Por favor, no lo utilice con fines de producción.",
@@ -80,6 +93,16 @@
   "register": "Registrarse",
   "sidebar": {
     "Dashboard": "Panel",
+    "Firma": "Firma",
+    "Firma-Children": {
+      "Sign yourself": "Firma tu mismo",
+      "Request signatures": "Solicitar firmas"
+    },
+    "Sign": "Firma",
+    "Sign-Children": {
+      "Sign yourself": "Firma tu mismo",
+      "Request signatures": "Solicitar firmas"
+    },
     "Sign yourself": "Firma tu mismo",
     "Request signatures": "Solicitar firmas",
     "Templates": "Plantillas",

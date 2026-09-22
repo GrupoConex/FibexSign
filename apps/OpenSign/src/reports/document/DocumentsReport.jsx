@@ -7,6 +7,7 @@ import ModalUi from "../../primitives/ModalUi";
 import Alert from "../../primitives/Alert";
 import Tooltip from "../../primitives/Tooltip";
 import Icon from "../../primitives/Icon";
+
 import DatePicker from "../../components/DatePicker";
 import Parse from "parse";
 import {
@@ -1088,6 +1089,7 @@ const DocumentsReport = (props) => {
         </div>
       )}
       <div className="p-2 w-full bg-base-100 text-base-content op-card">
+
         <div
           ref={titleRef}
           className="flex flex-row items-center justify-between my-2 mx-3 text-[20px] md:text-[23px]"

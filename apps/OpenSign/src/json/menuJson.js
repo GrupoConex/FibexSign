@@ -31,19 +31,29 @@ const sidebarList = [
   },
   {
     icon: "pen-tool",
-    title: "Sign yourself",
+    title: "Firma",
     target: "_self",
-    pageType: "form",
-    description: "",
-    objectId: "sHAnZphf69"
-  },
-  {
-    icon: "send",
-    title: "Request signatures",
-    target: "_self",
-    pageType: "form",
-    description: "",
-    objectId: "8mZzFxbG1z"
+    pageType: null,
+    description: null,
+    objectId: null,
+    children: [
+      {
+        icon: "pen-tool",
+        title: "Sign yourself",
+        target: "_self",
+        pageType: "form",
+        description: "",
+        objectId: "sHAnZphf69"
+      },
+      {
+        icon: "send",
+        title: "Request signatures",
+        target: "_self",
+        pageType: "form",
+        description: "",
+        objectId: "8mZzFxbG1z"
+      }
+    ]
   },
   {
     icon: "file-text",

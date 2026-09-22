@@ -6,6 +6,7 @@ import ModalUi from "../../primitives/ModalUi";
 import Alert from "../../primitives/Alert";
 import Tooltip from "../../primitives/Tooltip";
 import Icon from "../../primitives/Icon";
+
 import Tour from "../../primitives/Tour";
 import Parse from "parse";
 import {
@@ -1060,6 +1061,7 @@ const TemplatesReport = (props) => {
         </div>
       )}
       <div className="p-2 w-full bg-base-100 text-base-content op-card">
+
         {props.tourData && (
           <>
             <Tour

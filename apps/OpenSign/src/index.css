@@ -273,6 +273,23 @@ table tr,
   border-color: #243046 !important;
 }
 
+/* Quitar bordes blancos en inputs, textareas y selects en modo oscuro */
+html[data-theme="opensigndark"] .op-input,
+html[data-theme="opensigndark"] .op-textarea,
+html[data-theme="opensigndark"] .op-select,
+html[data-theme="opensigndark"] .op-input-bordered,
+html[data-theme="opensigndark"] .op-textarea-bordered,
+html[data-theme="opensigndark"] .input-bordered,
+html[data-theme="opensigndark"] .textarea-bordered {
+  border-color: #243046 !important;
+}
+
+html[data-theme="opensigndark"] .op-input:focus,
+html[data-theme="opensigndark"] .op-textarea:focus,
+html[data-theme="opensigndark"] .op-select:focus {
+  border-color: #3b82f6 !important;
+}
+
 html[data-theme="opensigncss"] .op-table tr,
 html[data-theme="opensigncss"] .op-table thead tr,
 html[data-theme="opensigncss"] .op-table tbody tr,
@@ -664,4 +681,35 @@ html[data-theme="opensigncss"] aside .op-menu a.active:hover {
   color: #0f172a !important;
 }
 
+/* ==========================================================================
+   MODO OSCURO: Inputs y Textareas oscuros y bordes sutiles
+   ========================================================================== */
+[data-theme="opensigndark"] .op-input,
+[data-theme="opensigndark"] .op-textarea,
+[data-theme="opensigndark"] .op-select,
+[data-theme="opensigndark"] input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]),
+[data-theme="opensigndark"] textarea {
+  background-color: #101828 !important;
+  color: #e6e8eb !important;
+  border-color: #243046 !important;
+}
+
+[data-theme="opensigndark"] .op-input::placeholder,
+[data-theme="opensigndark"] .op-textarea::placeholder,
+[data-theme="opensigndark"] input::placeholder,
+[data-theme="opensigndark"] textarea::placeholder {
+  color: #64748b !important;
+}
+
+[data-theme="opensigndark"] .op-input:focus,
+[data-theme="opensigndark"] .op-textarea:focus,
+[data-theme="opensigndark"] input:focus,
+[data-theme="opensigndark"] textarea:focus {
+  border-color: #3b82f6 !important;
+}
+
+[data-theme="opensigndark"] .border-slate-200,
+[data-theme="opensigndark"] .border-slate-300 {
+  border-color: #243046 !important;
+}
 

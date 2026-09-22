@@ -183,13 +183,13 @@ const SignersInput = (props) => {
             unstyled
             classNames={{
               control: () =>
-                "op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full h-full text-[11px]",
+                "op-input op-input-sm focus:outline-none border border-slate-300 dark:border-[#243046] hover:border-blue-500/60 w-full h-full text-[11px] bg-slate-50/50 dark:bg-[#0f172a]/60 text-base-content",
               valueContainer: () =>
                 "flex flex-row gap-x-[2px] gap-y-[2px] md:gap-y-0 w-full my-[2px]",
               multiValue: () => "op-badge op-badge-primary h-full text-[11px]",
               multiValueLabel: () => "mb-[2px]",
               menu: () =>
-                "mt-1 shadow-md rounded-lg bg-base-200 text-base-content",
+                "mt-1 shadow-md rounded-lg bg-base-200 text-base-content border border-slate-300 dark:border-[#243046]",
               menuList: () => "shadow-md rounded-lg overflow-hidden",
               option: () =>
                 "bg-base-200 text-base-content rounded-lg m-1 hover:bg-base-300 p-2",
@@ -197,15 +197,17 @@ const SignersInput = (props) => {
             }}
           />
         </div>
-        <div
+        <button
+          type="button"
           onClick={() => {
             setIsModel(true);
             openModal();
           }}
-          className="cursor-pointer op-input op-input-bordered focus:outline-none hover:border-base-content max-h-[38px] min-w-[48px] flex justify-center items-center"
+          className="cursor-pointer op-btn op-btn-sm bg-slate-100 dark:bg-slate-800/40 hover:bg-blue-600 hover:text-white border border-slate-300 dark:border-[#243046] hover:border-blue-600 min-w-[42px] h-[36px] flex justify-center items-center rounded-lg transition-all flex-shrink-0 text-slate-600 dark:text-slate-300"
+          title={t("add-contact")}
         >
-          <i className="fa-light fa-plus"></i>
-        </div>
+          <i className="fa-light fa-plus text-sm"></i>
+        </button>
         <AddSignerModal isOpen={modalIsOpen}>
           <h3 className="text-base-content font-bold text-lg pt-[15px] px-[20px]">
             {t("add-contact")}

@@ -168,46 +168,41 @@ const SelectFolder = ({ required, onSuccess, folderCls, isReset }) => {
   return (
     <div className="text-xs mt-2 ">
       <div>
-        <label className="block">
+        <label className="block text-xs font-semibold text-base-content mb-1">
           {t("select-folder")}
-          {required && <span className="text-red-500 text-[13px]">*</span>}
+          {required && <span className="text-red-500 text-xs ml-0.5">*</span>}
         </label>
       </div>
-      <div className="relative max-w-sm">
+      <div className="relative w-full">
         <div
           onClick={() => SetIsOpen(true)}
-          className="cursor-pointer rounded px-[20px] py-[20px] bg-base-100 border-[1px] border-base-200 shadow flex max-w-sm gap-8 items-center"
+          className="cursor-pointer rounded-xl p-2.5 bg-slate-50 hover:bg-blue-50/40 dark:bg-slate-900/30 dark:hover:bg-slate-900/50 border border-slate-200 dark:border-[#243046] hover:border-blue-500/50 transition-all flex items-center justify-between gap-3 group"
         >
-          <div>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 512 512"
-              className="w-[40px] h-[40px] fill-current"
-            >
-              <path d="M64 480H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H288c-10.1 0-19.6-4.7-25.6-12.8L243.2 57.6C231.1 41.5 212.1 32 192 32H64C28.7 32 0 60.7 0 96V416c0 35.3 28.7 64 64 64z" />
-            </svg>
-          </div>
-          <div className="font-semibold ">
-            <div className="flex items-center gap-2">
-              <p>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+              <i className="fa-light fa-folder text-sm"></i>
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-xs text-slate-800 dark:text-base-content truncate">
                 {selectFolder && selectFolder.Name
                   ? selectFolder.Name
                   : t("OpenSign-drive", { appName: drivename })}
               </p>
-              <div className="text-sm">
-                <i
-                  className="fa-light fa-pencil cursor-pointer"
-                  title={t("select-folder")}
-                  aria-hidden="true"
-                ></i>
-              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                {selectFolder && selectFolder.Name
+                  ? folderPath || t("select-folder")
+                  : t("select-folder")}
+              </p>
             </div>
-            <p className="text-[10px] text-gray-400">
-              {selectFolder && selectFolder.Name ? `(${folderPath})` : ""}
-            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-md flex items-center gap-1 group-hover:bg-blue-100 dark:group-hover:bg-blue-500/20 transition-colors">
+              <i className="fa-light fa-pen text-[9px]"></i>
+              <span>{t("edit") || "Cambiar"}</span>
+            </span>
           </div>
         </div>
-        <div className="absolute top-2 right-1 cursor-pointer">
+        <div className="absolute top-2 right-2 cursor-pointer opacity-80 hover:opacity-100">
           <Tooltip message={t("select-folder-help", { appName: drivename })} />
         </div>
       </div>
