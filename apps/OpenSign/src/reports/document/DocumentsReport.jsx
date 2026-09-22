@@ -27,7 +27,7 @@ import {
 } from "../../constant/Utils";
 import BulkSendUi from "../../components/bulksend/BulkSendUi";
 import Loader from "../../primitives/Loader";
-import { serverUrl_fn } from "../../constant/appinfo";
+import { serverUrl_fn, appInfo } from "../../constant/appinfo";
 import { Trans, useTranslation } from "react-i18next";
 import DownloadPdfZip from "../../primitives/DownloadPdfZip";
 import { useElSize } from "../../hook/useElSize";
@@ -43,7 +43,7 @@ const DocumentsReport = (props) => {
   const copyUrlRef = useRef(null);
   const titleRef = useRef(null);
   const titleElement = useElSize(titleRef);
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();

@@ -17,7 +17,7 @@ import AuthLayout from "../components/auth/AuthLayout";
 import Icon from "../primitives/Icon";
 
 const AddAdmin = () => {
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();

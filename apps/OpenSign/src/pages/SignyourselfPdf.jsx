@@ -78,6 +78,7 @@ import {
 } from "../utils";
 
 import { useScroll } from "../context/ScrollPdfContext";
+import { appInfo } from "../constant/appinfo";
 //For signYourself inProgress section signer can add sign and complete doc sign.
 function SignYourSelf() {
   const { t } = useTranslation();
@@ -86,7 +87,7 @@ function SignYourSelf() {
   const windowSize = useWindowSize();
   const { scrollRef } = useScroll();
   const isShowModal = useSelector((state) => state.widget.isShowModal);
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const divRef = useRef(null);
   const nodeRef = useRef(null);
   const pdfRef = useRef();

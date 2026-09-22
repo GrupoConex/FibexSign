@@ -434,7 +434,7 @@
   "verify-email-1": "Verificar correo",
   "resend": "Reenviar",
   "contact-details": "Detalles del contacto",
-  "verify-email": "Por favor verifique su correo electrónico para continuar. Este es un paso único para confirmar el correo electrónico asociado a su cuenta de FibexSign.",
+  "verify-email": "Por favor verifique su correo electrónico para continuar. Este es un paso único para confirmar el correo electrónico asociado a su cuenta de Firma.",
   "send-otp": " Enviar OTP",
   "otp-placeholder": "Ingresa el código de verificación enviado por correo",
   "loading-doc": "Cargando documento...",
@@ -1106,7 +1106,7 @@
   "verification": "Verificación",
   "passkey-verification-failed": "La verificación con passkey ha fallado",
   "security-auth-help": {
-    "p1": "Administre la configuración de seguridad de su cuenta para mantener sus datos seguros. FibexSign admite métodos de autenticación avanzados para mejorar la protección de la cuenta.",
+    "p1": "Administre la configuración de seguridad de su cuenta para mantener sus datos seguros. Firma admite métodos de autenticación avanzados para mejorar la protección de la cuenta.",
     "2fa-auth-help": "Agregue una capa adicional de seguridad activando 2FA. Esto requiere ingresar un código de verificación desde una aplicación autenticadora después de su contraseña.",
     "passkey-auth-help": "Use claves de acceso para iniciar sesión sin contraseña con verificación biométrica o basada en el dispositivo, proporcionando una seguridad sólida y comodidad."
   },

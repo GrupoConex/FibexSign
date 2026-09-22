@@ -376,12 +376,12 @@ html[data-theme="opensigncss"] .header-brand-container.border-r-active {
   border-color: rgba(255, 255, 255, 0.4) !important;
 }
 
-/* Color del texto Sign de FibexSign */
-html[data-theme="opensigncss"] .fibex-sign-text {
+/* Color del texto de marca Firma */
+html[data-theme="opensigncss"] .firma-text {
   color: #001244 !important; /* Azul más oscuro en modo claro */
 }
 
-[data-theme="opensigndark"] .fibex-sign-text {
+[data-theme="opensigndark"] .firma-text {
   color: #60a5fa !important; /* Azul claro legible en modo oscuro */
 }
 

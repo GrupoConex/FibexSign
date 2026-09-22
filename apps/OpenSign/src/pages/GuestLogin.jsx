@@ -82,7 +82,7 @@ function GuestLogin() {
 
     localStorage.clear(); // Clears everything
     localStorage.setItem("favicon", favicon);
-    localStorage.setItem("appname", "FibexSign");
+    localStorage.setItem("appname", appInfo.appName);
     //save isGuestSigner true in local to handle login flow header in mobile view
     localStorage.setItem("isGuestSigner", true);
     saveLanguageInLocal(i18n);

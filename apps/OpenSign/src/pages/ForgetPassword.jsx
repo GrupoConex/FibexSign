@@ -13,6 +13,9 @@ import Icon from "../primitives/Icon";
 import { notify } from "../utils";
 import AuthLayout from "../components/auth/AuthLayout";
 import SelectLanguage from "../components/pdf/SelectLanguage";
+import { useIsDarkTheme } from "../hook/useIsDarkTheme";
+import logoPositivo from "../assets/images/Fibex-logo-positivo.svg";
+import logoNegativo from "../assets/images/Fibex-logo-negativo.svg";
 
 function ForgotPassword() {
   const { t } = useTranslation();
@@ -21,6 +24,10 @@ function ForgotPassword() {
   const [state, setState] = useState({ email: "", password: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [image, setImage] = useState();
+  const isDarkTheme = useIsDarkTheme();
+  const defaultLogo = isDarkTheme ? logoNegativo : logoPositivo;
+  const currentLogo =
+    image && image !== appInfo.applogo ? image : defaultLogo;
 
   const handleChange = (event) => {
     let { name, value } = event.target;
@@ -81,7 +88,7 @@ function ForgotPassword() {
       <AuthLayout>
         {image && (
           <img
-            src={image}
+            src={currentLogo}
             className="h-10 max-w-[200px] object-contain mb-8"
             alt="applogo"
           />

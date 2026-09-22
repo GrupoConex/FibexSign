@@ -8,6 +8,7 @@ import logoNegativo from "../assets/images/Fibex-logo-negativo.svg";
 import { useNavigate } from "react-router";
 import Parse from "parse";
 import { useWindowSize } from "../hook/useWindowSize";
+import { useIsDarkTheme } from "../hook/useIsDarkTheme";
 import { getAppLogo, saveLanguageInLocal } from "../constant/Utils";
 import { useTranslation } from "react-i18next";
 import { appInfo } from "../constant/appinfo";
@@ -31,14 +32,7 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
   const [applogo, setAppLogo] = useState(
     () => localStorage.getItem("appLogo") || appInfo.applogo || logoPositivo
   );
-  const [isDarkTheme, setIsDarkTheme] = useState(() => {
-    if (typeof document !== "undefined") {
-      return (
-        document.documentElement.getAttribute("data-theme") === "opensigndark"
-      );
-    }
-    return false;
-  });
+  const isDarkTheme = useIsDarkTheme();
 
   const toggleDropdown = (e) => {
     if (e) {
@@ -128,26 +122,6 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
   };
 
 
-  useEffect(() => {
-    const updateThemeStatus = () => {
-      const isDarkTheme =
-        document.documentElement.getAttribute("data-theme") === "opensigndark";
-      setIsDarkTheme(isDarkTheme);
-    };
-    updateThemeStatus();
-
-    const observer = new MutationObserver(() => {
-      updateThemeStatus();
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"]
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
   const defaultLogo = isDarkTheme ? logoNegativo : logoPositivo;
   const currentLogo =
     applogo && applogo !== appInfo.applogo && applogo !== logoPositivo
@@ -171,10 +145,10 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
                 e.currentTarget.onerror = null;
                 e.currentTarget.src = defaultLogo;
               }}
-              alt="Fibex logo"
+              alt="Firma logo"
             />
             <span className="font-bold text-2xl tracking-tight text-base-content whitespace-nowrap">
-              Fibex<span className="fibex-sign-text">Sign</span>
+              <span className="firma-text">Firma</span>
             </span>
           </div>
 

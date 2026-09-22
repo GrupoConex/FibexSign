@@ -2,9 +2,10 @@ import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { NavLink } from "react-router";
 import Icon from "../../primitives/Icon";
+import { appInfo } from "../../constant/appinfo";
 
 const Submenu = ({ item, closeSidebar, toggleSubmenu, submenuOpen }) => {
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const drivename = appName;
   const { t } = useTranslation();
   const { title, icon, children } = item;

@@ -23,7 +23,7 @@ import {
 } from "../../constant/Utils";
 import BulkSendUi from "../../components/bulksend/BulkSendUi";
 import Loader from "../../primitives/Loader";
-import { serverUrl_fn } from "../../constant/appinfo";
+import { serverUrl_fn, appInfo } from "../../constant/appinfo";
 import { Trans, useTranslation } from "react-i18next";
 import { useElSize } from "../../hook/useElSize";
 import LottieWithLoader from "../../primitives/DotLottieReact";
@@ -53,7 +53,7 @@ const TemplatesReport = (props) => {
   const dispatch = useDispatch();
   const titleElement = useElSize(titleRef);
   const { prefillImg, isBulkLoader } = useSelector((state) => state.widget);
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();

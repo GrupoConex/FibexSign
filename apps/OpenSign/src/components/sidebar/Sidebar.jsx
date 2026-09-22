@@ -8,6 +8,7 @@ import sidebarList, { subSetting } from "../../json/menuJson";
 import { useLocation, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { useWindowSize } from "../../hook/useWindowSize";
+import { useIsDarkTheme } from "../../hook/useIsDarkTheme";
 import { appInfo } from "../../constant/appinfo";
 import { getAppLogo } from "../../constant/Utils";
 import Icon from "../../primitives/Icon";
@@ -34,35 +35,11 @@ const Sidebar = () => {
     ? JSON.parse(localStorage.getItem("Extand_Class"))?.[0]?.Company
     : "";
 
-  const [isDarkTheme, setIsDarkTheme] = useState(() => {
-    if (typeof document !== "undefined") {
-      return (
-        document.documentElement.getAttribute("data-theme") === "opensigndark"
-      );
-    }
-    return false;
-  });
+  const isDarkTheme = useIsDarkTheme();
 
   const [applogo, setAppLogo] = useState(
     () => localStorage.getItem("appLogo") || appInfo.applogo || logoPositivo
   );
-
-  useEffect(() => {
-    const updateThemeStatus = () => {
-      const isDark =
-        document.documentElement.getAttribute("data-theme") === "opensigndark";
-      setIsDarkTheme(isDark);
-    };
-    updateThemeStatus();
-
-    const observer = new MutationObserver(updateThemeStatus);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"]
-    });
-
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     async function loadLogo() {
@@ -192,10 +169,10 @@ const Sidebar = () => {
               <img
                 className="object-contain h-9 w-9"
                 src={currentLogo}
-                alt="Fibex logo"
+                alt="Firma logo"
               />
               <span className="font-bold text-xl tracking-tight text-base-content">
-                Fibex<span className="fibex-sign-text">Sign</span>
+                <span className="firma-text">Firma</span>
               </span>
             </div>
             <button
@@ -211,12 +188,12 @@ const Sidebar = () => {
         {/* NAVEGACIÓN Y ACCESOS */}
         <nav
           className="op-menu op-menu-sm px-3 flex-1 overflow-y-auto hide-scrollbar py-3"
-          aria-label="FibexSign Sidebar Navigation"
+          aria-label="Firma Sidebar Navigation"
         >
           <ul
             className="text-sm flex flex-col gap-1.5"
             role="menubar"
-            aria-label="FibexSign Sidebar Navigation"
+            aria-label="Firma Sidebar Navigation"
           >
             {menuList.map((item) =>
               !item.children ? (

@@ -432,7 +432,7 @@
   "verify-email-1": "Verify email",
   "resend": "Resend",
   "contact-details": "Contact details",
-  "verify-email": "Please verify your email to continue. This is a one-time step to confirm the email associated with your FibexSign account.",
+  "verify-email": "Please verify your email to continue. This is a one-time step to confirm the email associated with your Firma account.",
   "send-otp": " Send OTP",
   "otp-placeholder": "Enter verification code received over email",
   "loading-doc": "Loading document..",
@@ -1106,7 +1106,7 @@
   "verify-identity": "Verify identity",
   "passkey-verification-failed": "Passkey verification failed. Please try again or use OTP.",
   "security-auth-help": {
-    "p1": "Manage your account's security settings to keep your data safe. FibexSign supports advanced authentication methods to enhance account protection.",
+    "p1": "Manage your account's security settings to keep your data safe. Firma supports advanced authentication methods to enhance account protection.",
     "2fa-auth-help": " Add an extra layer of security by enabling 2FA. This requires you to enter a verification code from an authenticator app after your password.",
     "passkey-auth-help": "Use passkeys for passwordless sign-in with biometric or device-based verification, providing both strong security and convenience."
   },

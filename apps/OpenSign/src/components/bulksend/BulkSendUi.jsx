@@ -6,6 +6,7 @@ import {
 import axios from "axios";
 import Loader from "../../primitives/Loader";
 import { useTranslation } from "react-i18next";
+import { appInfo } from "../../constant/appinfo";
 import {
   emailRegex,
 } from "../../constant/const";
@@ -49,7 +50,7 @@ const ALL_EXCLUDED_TYPES = new Set([
 
 const BulkSendUi = (props) => {
   const { t } = useTranslation();
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const dispatch = useDispatch();
   const { isBulkLoader } = useSelector((state) => state.widget);
   const [forms, setForms] = useState([]);

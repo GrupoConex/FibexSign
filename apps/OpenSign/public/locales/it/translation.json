@@ -405,7 +405,7 @@
   "verify-email-1": "Verifica email",
   "resend": "Reinvia",
   "contact-details": "Dettagli contatto",
-  "verify-email": "Si prega di verificare l'e-mail per continuare. Questo è un passaggio unico per confermare l'e-mail associata al tuo account FibexSign.",
+  "verify-email": "Si prega di verificare l'e-mail per continuare. Questo è un passaggio unico per confermare l'e-mail associata al tuo account Firma.",
   "send-otp": "Invia OTP",
   "otp-placeholder": "Inserisci il codice di verifica ricevuto via email",
   "loading-doc": "Caricamento del documento...",
@@ -1077,7 +1077,7 @@
   "verification": "Verifica",
   "passkey-verification-failed": "Verifica con passkey fallita",
   "security-auth-help": {
-    "p1": "Gestisci le impostazioni di sicurezza del tuo account per proteggere i tuoi dati. FibexSign supporta metodi di autenticazione avanzati per migliorare la protezione dell’account.",
+    "p1": "Gestisci le impostazioni di sicurezza del tuo account per proteggere i tuoi dati. Firma supporta metodi di autenticazione avanzati per migliorare la protezione dell’account.",
     "2fa-auth-help": "Aggiungi un ulteriore livello di sicurezza abilitando 2FA. Ti verrà richiesto di inserire un codice di verifica da un'app di autenticazione dopo la password.",
     "passkey-auth-help": "Usa le passkey per accedere senza password con verifica biometrica o basata sul dispositivo, garantendo sicurezza elevata e praticità."
   },

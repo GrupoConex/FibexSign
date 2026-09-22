@@ -1,8 +1,9 @@
 import { TEditorConfiguration } from "../../documents/editor/core";
+import { appInfo } from "../../../../constant/appinfo";
 
 const getCompletionEmail = (
 ): TEditorConfiguration => {
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
 
   const logoBlock: TEditorConfiguration = {
     "block-1709571212684": {

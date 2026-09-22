@@ -2,9 +2,10 @@ import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { NavLink } from "react-router";
 import Icon from "../../primitives/Icon";
+import { appInfo } from "../../constant/appinfo";
 
 const Menu = ({ item, isOpen, closeSidebar }) => {
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const drivename = appName;
   const { t } = useTranslation();
   const { selectedMenu } = useSelector((state) => state.sidebar);

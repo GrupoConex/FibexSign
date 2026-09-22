@@ -405,7 +405,7 @@
   "verify-email-1": "E-Mail verifizieren",
   "resend": "Erneut senden",
   "contact-details": "Kontaktdetails",
-  "verify-email": "Bitte bestätigen Sie Ihre E-Mail, um fortzufahren. Dies ist ein einmaliger Schritt, um die mit Ihrem FibexSign-Konto verknüpfte E-Mail zu bestätigen.",
+  "verify-email": "Bitte bestätigen Sie Ihre E-Mail, um fortzufahren. Dies ist ein einmaliger Schritt, um die mit Ihrem Firma-Konto verknüpfte E-Mail zu bestätigen.",
   "send-otp": "OTP senden",
   "otp-placeholder": "Verifizierungscode aus der E-Mail eingeben",
   "loading-doc": "Dokument wird geladen...",
@@ -1077,7 +1077,7 @@
   "verification": "Verifizierung",
   "passkey-verification-failed": "Passkey-Verifizierung fehlgeschlagen",
   "security-auth-help": {
-    "p1": "Administre la configuración de seguridad de su cuenta para mantener sus datos seguros. FibexSign admite métodos de autenticación avanzados para mejorar la protección de la cuenta.",
+    "p1": "Administre la configuración de seguridad de su cuenta para mantener sus datos seguros. Firma admite métodos de autenticación avanzados para mejorar la protección de la cuenta.",
     "2fa-auth-help": "Agregue una capa adicional de seguridad activando 2FA. Esto requiere ingresar un código de verificación desde una aplicación autenticadora después de su contraseña.",
     "passkey-auth-help": "Use claves de acceso para iniciar sesión sin contraseña con verificación biométrica o basada en el dispositivo, proporcionando una seguridad sólida y comodidad."
   },

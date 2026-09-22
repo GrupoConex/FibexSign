@@ -8,6 +8,7 @@ import {
   generatePdfName,
   getFileName
 } from "../../constant/Utils";
+import { appInfo } from "../../constant/appinfo";
 import {
   maxDescriptionLength,
   maxNoteLength,
@@ -31,7 +32,7 @@ const EditTemplate = ({
   setPdfBase64Url,
   isAddYourSelfCheckbox,
 }) => {
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const { t } = useTranslation();
   const inputFileRef = useRef(null);
   const [formData, setFormData] = useState({

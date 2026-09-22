@@ -3,8 +3,9 @@ import Package from "../../package.json";
 import axios from "axios";
 import { openInNewTab } from "../constant/Utils";
 import { useTranslation } from "react-i18next";
+import { appInfo } from "../constant/appinfo";
 const Footer = () => {
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const { t } = useTranslation();
   const [showButton, setShowButton] = useState(false);
 

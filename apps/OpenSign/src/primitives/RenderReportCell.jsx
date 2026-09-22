@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { formatDateToDdMmmYyyy } from "../constant/Utils";
 import SignerCell from "./SignerCell";
+import { appInfo } from "../constant/appinfo";
 
 function isValidDateString(str) {
   const date = new Date(str);
@@ -36,7 +37,7 @@ export const RenderReportCell = ({
   handleItemClick
 }) => {
   const { t } = useTranslation();
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const drivename = appName;
   switch (col) {
     case "Sr.No":
@@ -84,7 +85,7 @@ export const RenderReportCell = ({
       return (
         <td key={col} className="p-2 text-center">
           {rowData?.Folder?.Name ||
-            t("sidebar.FibexSign Drive", { appName: drivename })}
+            t("sidebar.OpenSign™ Drive", { appName: drivename })}
         </td>
       );
     case "File":

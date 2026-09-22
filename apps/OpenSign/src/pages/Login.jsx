@@ -21,9 +21,12 @@ import { useTranslation } from "react-i18next";
 import SelectLanguage from "../components/pdf/SelectLanguage";
 import AuthLayout from "../components/auth/AuthLayout";
 import Icon from "../primitives/Icon";
+import { useIsDarkTheme } from "../hook/useIsDarkTheme";
+import logoPositivo from "../assets/images/Fibex-logo-positivo.svg";
+import logoNegativo from "../assets/images/Fibex-logo-negativo.svg";
 
 function Login() {
-  const appName = "FibexSign";
+  const appName = appInfo.appName;
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -42,6 +45,10 @@ function Login() {
   const [isModal, setIsModal] = useState(false);
   const [image, setImage] = useState();
   const [errMsg, setErrMsg] = useState();
+  const isDarkTheme = useIsDarkTheme();
+  const defaultLogo = isDarkTheme ? logoNegativo : logoPositivo;
+  const currentLogo =
+    image && image !== appInfo.applogo ? image : defaultLogo;
   useEffect(() => {
     handleUserExist();
     // eslint-disable-next-line
@@ -428,7 +435,7 @@ function Login() {
             <div aria-labelledby="loginHeading" role="region">
               {image && (
                 <img
-                  src={image}
+                  src={currentLogo}
                   className="h-10 max-w-[200px] object-contain mb-8"
                   alt="applogo"
                 />
