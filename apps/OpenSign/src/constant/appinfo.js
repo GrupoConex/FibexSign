@@ -15,8 +15,7 @@ export const appInfo = {
   appId: process.env.REACT_APP_APPID ? process.env.REACT_APP_APPID : "opensign",
   baseUrl: serverUrl_fn(),
   defaultRole: "contracts_User",
-  fev_Icon:
-    "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='8' fill='%230f2a5f'/><text x='32' y='42' text-anchor='middle' font-family='system-ui,sans-serif' font-size='30' font-weight='700' fill='%23f5f7fa'>F</text></svg>",
+  fev_Icon: "/fibex-icon.webp",
   googleClientId: process.env.REACT_APP_GOOGLECLIENTID
     ? `${process.env.REACT_APP_GOOGLECLIENTID}`
     : "",

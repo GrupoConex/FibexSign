@@ -4,7 +4,6 @@ import { appInfo } from "../constant/appinfo";
 import { useNavigate } from "react-router";
 import {
   getAppLogo,
-  openInNewTab,
   saveLanguageInLocal,
   usertimezone
 } from "../constant/Utils";
@@ -14,6 +13,8 @@ import Loader from "../primitives/Loader";
 import { useTranslation } from "react-i18next";
 import { emailRegex } from "../constant/const";
 import { notify } from "../utils";
+import AuthLayout from "../components/auth/AuthLayout";
+import Icon from "../primitives/Icon";
 
 const AddAdmin = () => {
   const appName = "FibexSign";
@@ -240,32 +241,38 @@ const AddAdmin = () => {
     setSpecialCharValid(/[!@#$%^&*()\-_=+{};:,<.>]/.test(newPassword));
   };
   return (
-    <div className="h-screen flex justify-center">
+    <div className="min-h-screen flex justify-center">
       {state.loading ? (
-        <div className="text-[grey] flex justify-center items-center text-lg md:text-2xl">
+        <div
+          role="status"
+          aria-live="assertive"
+          className="flex justify-center items-center text-base-content/60 text-lg md:text-2xl"
+        >
           <Loader />
+          <span className="sr-only">{t("loading")}</span>
         </div>
       ) : (
         <>
           {errMsg ? (
-            <div className="text-[grey] flex justify-center items-center text-lg md:text-2xl">
+            <div className="flex justify-center items-center text-base-content/60 text-lg md:text-2xl">
               {errMsg}
             </div>
           ) : (
-            <div className="w-[95%] md:w-[500px]">
-              <form onSubmit={handleSubmit}>
-                <div className="w-full my-4 op-card bg-base-100 outline outline-1 outline-slate-300/50">
-                  <h2 className="text-[30px] text-center mt-3 font-medium">
-                    {t("opensign-setup", { appName })}
-                  </h2>
-                  <div className="px-6 py-3 text-xs">
-                    <label className="block ">
+            <AuthLayout>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <h1 className="text-2xl font-semibold text-base-content text-center">
+                  {t("opensign-setup", { appName })}
+                </h1>
+                <div className="space-y-4 text-sm">
+                  <div>
+                    <label className="block text-xs mb-1 text-base-content" htmlFor="name">
                       {t("name")}{" "}
-                      <span className="text-[red] text-[13px]">*</span>
+                      <span className="text-error text-xs">*</span>
                     </label>
                     <input
+                      id="name"
                       type="text"
-                      className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
+                      className="op-input op-input-bordered w-full text-sm"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       onInvalid={(e) =>
@@ -274,15 +281,16 @@ const AddAdmin = () => {
                       onInput={(e) => e.target.setCustomValidity("")}
                       required
                     />
-                    <hr className="my-2 border-none" />
-                    <label>
-                      {"email"}{" "}
-                      <span className="text-[red] text-[13px]">*</span>
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1 text-base-content" htmlFor="email">
+                      {t("email")}{" "}
+                      <span className="text-error text-xs">*</span>
                     </label>
                     <input
                       id="email"
                       type="email"
-                      className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
+                      className="op-input op-input-bordered w-full text-sm"
                       value={email}
                       onChange={(e) =>
                         setEmail(
@@ -295,14 +303,16 @@ const AddAdmin = () => {
                       onInput={(e) => e.target.setCustomValidity("")}
                       required
                     />
-                    <hr className="my-2 border-none" />
-                    <label>
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1 text-base-content" htmlFor="phone">
                       {t("phone")}{" "}
-                      <span className="text-[red] text-[13px]">*</span>
+                      <span className="text-error text-xs">*</span>
                     </label>
                     <input
+                      id="phone"
                       type="tel"
-                      className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
+                      className="op-input op-input-bordered w-full text-sm"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       onInvalid={(e) =>
@@ -311,14 +321,16 @@ const AddAdmin = () => {
                       onInput={(e) => e.target.setCustomValidity("")}
                       required
                     />
-                    <hr className="my-2 border-none" />
-                    <label>
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1 text-base-content" htmlFor="company">
                       {t("company")}{" "}
-                      <span className="text-[red] text-[13px]">*</span>
+                      <span className="text-error text-xs">*</span>
                     </label>
                     <input
+                      id="company"
                       type="text"
-                      className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
+                      className="op-input op-input-bordered w-full text-sm"
                       value={company}
                       onChange={(e) => setCompany(e.target.value)}
                       onInvalid={(e) =>
@@ -327,14 +339,16 @@ const AddAdmin = () => {
                       onInput={(e) => e.target.setCustomValidity("")}
                       required
                     />
-                    <hr className="my-2 border-none" />
-                    <label>
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1 text-base-content" htmlFor="jobTitle">
                       {t("job-title")}{" "}
-                      <span className="text-[red] text-[13px]">*</span>
+                      <span className="text-error text-xs">*</span>
                     </label>
                     <input
+                      id="jobTitle"
                       type="text"
-                      className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
+                      className="op-input op-input-bordered w-full text-sm"
                       value={jobTitle}
                       onChange={(e) => setJobTitle(e.target.value)}
                       onInvalid={(e) =>
@@ -343,15 +357,20 @@ const AddAdmin = () => {
                       onInput={(e) => e.target.setCustomValidity("")}
                       required
                     />
-                    <hr className="my-2 border-none" />
-                    <label>
-                      {t("password")}
-                      <span className="text-[red] text-[13px]">*</span>
+                  </div>
+                  <div>
+                    <label
+                      className="block text-xs mb-1 text-base-content"
+                      htmlFor="admin-password"
+                    >
+                      {t("password")}{" "}
+                      <span className="text-error text-xs">*</span>
                     </label>
                     <div className="relative">
                       <input
+                        id="admin-password"
                         type={showPassword ? "text" : "password"}
-                        className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
+                        className="op-input op-input-bordered w-full text-sm pr-9"
                         name="password"
                         value={password}
                         onChange={(e) => handlePasswordChange(e)}
@@ -361,87 +380,94 @@ const AddAdmin = () => {
                         onInput={(e) => e.target.setCustomValidity("")}
                         required
                       />
-                      <span
-                        className={`absolute top-[50%] right-[10px] -translate-y-[50%] cursor-pointer text-base-content`}
+                      <button
+                        type="button"
+                        className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-base-content/60 hover:text-base-content"
                         onClick={togglePasswordVisibility}
+                        aria-label={
+                          showPassword
+                            ? t("hide-password")
+                            : t("show-password")
+                        }
                       >
-                        {showPassword ? (
-                          <i className="fa fa-eye-slash" /> // Close eye icon
-                        ) : (
-                          <i className="fa fa-eye" /> // Open eye icon
-                        )}
-                      </span>
+                        <Icon
+                          name={showPassword ? "eye-off" : "eye"}
+                          size={16}
+                        />
+                      </button>
                     </div>
                     {password.length > 0 && (
-                      <div className="mt-1 text-[11px]">
+                      <div className="mt-1.5 text-xs space-y-0.5">
                         <p
-                          className={`${
-                            lengthValid ? "text-green-600" : "text-red-600"
-                          }`}
+                          className={
+                            lengthValid
+                              ? "text-success-scale-700 opensigndark:text-success"
+                              : "text-error-scale-700 opensigndark:text-error"
+                          }
                         >
                           {lengthValid ? "✓" : "✗"} {t("password-length")}
                         </p>
                         <p
-                          className={`${
-                            caseDigitValid ? "text-green-600" : "text-red-600"
-                          }`}
+                          className={
+                            caseDigitValid
+                              ? "text-success-scale-700 opensigndark:text-success"
+                              : "text-error-scale-700 opensigndark:text-error"
+                          }
                         >
                           {caseDigitValid ? "✓" : "✗"} {t("password-case")}
                         </p>
                         <p
-                          className={`${
-                            specialCharValid ? "text-green-600" : "text-red-600"
-                          }`}
+                          className={
+                            specialCharValid
+                              ? "text-success-scale-700 opensigndark:text-success"
+                              : "text-error-scale-700 opensigndark:text-error"
+                          }
                         >
                           {specialCharValid ? "✓" : "✗"}{" "}
                           {t("password-special-char")}
                         </p>
                       </div>
                     )}
-                    <div className="mt-2.5 ml-1 flex flex-row items-center">
-                      <input
-                        type="checkbox"
-                        className="op-checkbox op-checkbox-sm"
-                        id="termsandcondition"
-                        checked={isAuthorize}
-                        onChange={(e) => setIsAuthorize(e.target.checked)}
-                        onInvalid={(e) =>
-                          e.target.setCustomValidity(t("input-required"))
-                        }
-                        onInput={(e) => e.target.setCustomValidity("")}
-                        required
-                      />
-                      <label
-                        className="text-xs cursor-pointer ml-1 mb-0"
-                        htmlFor="termsandcondition"
-                      >
-                        {t("agree")}
-                      </label>
-                      <span
-                        className="underline cursor-pointer ml-1"
-                        onClick={() =>
-                          openInNewTab(
-                            "https://fibexsign.com/terms-and-conditions"
-                          )
-                        }
-                      >
-                        {t("term")}
-                      </span>
-                      <span>.</span>
-                    </div>
                   </div>
-                  <div className="mx-4 text-center text-xs font-bold mb-3">
-                    <button
-                      type="submit"
-                      className="op-btn op-btn-primary w-full"
-                      disabled={state.loading}
+                  <div className="flex flex-row items-center">
+                    <input
+                      type="checkbox"
+                      className="op-checkbox op-checkbox-sm"
+                      id="termsandcondition"
+                      checked={isAuthorize}
+                      onChange={(e) => setIsAuthorize(e.target.checked)}
+                      onInvalid={(e) =>
+                        e.target.setCustomValidity(t("input-required"))
+                      }
+                      onInput={(e) => e.target.setCustomValidity("")}
+                      required
+                    />
+                    <label
+                      className="text-xs cursor-pointer ml-2 mb-0"
+                      htmlFor="termsandcondition"
                     >
-                      {state.loading ? t("loading") : t("next")}
-                    </button>
+                      {t("agree")}
+                    </label>
+                    <a
+                      href="https://fibexsign.com/terms-and-conditions"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline ml-1 text-xs"
+                    >
+                      {t("term")}
+                    </a>
+                    <span className="text-xs">.</span>
                   </div>
                 </div>
+                <button
+                  type="submit"
+                  className="op-btn op-btn-primary w-full"
+                  disabled={state.loading}
+                >
+                  {state.loading ? t("loading") : t("next")}
+                </button>
               </form>
-            </div>
+            </AuthLayout>
           )}
         </>
       )}

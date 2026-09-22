@@ -24,6 +24,10 @@ if (localStorage.getItem("showUpgradeProgress")) {
 const savedTheme = localStorage.getItem("theme");
 if (savedTheme === "dark") {
   document.documentElement.setAttribute("data-theme", "opensigndark");
+  document.documentElement.classList.add("dark");
+} else {
+  document.documentElement.setAttribute("data-theme", "opensigncss");
+  document.documentElement.classList.remove("dark");
 }
 
 

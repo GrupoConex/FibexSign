@@ -3,8 +3,8 @@
   "name": "FibexSign",
   "icons": [
     {
-      "src": "favicon.svg",
-      "type": "image/svg+xml",
+      "src": "fibex-icon.webp",
+      "type": "image/webp",
       "sizes": "any"
     }
   ],
