@@ -46,23 +46,6 @@
   width: 440px;
 }
 
-.mysignatureCanvas {
-  width: 370px;
-  height: 146px;
-}
-
-.mystampCanvas {
-  width: 370px;
-  height: 146px;
-}
-
-.intialSignature {
-  border: 2px solid #888;
-  background-color: rgb(255, 255, 255);
-  width: 150px;
-  height: 150px;
-}
-
 [data-theme="opensigndark"] .tabWidth {
   border: 1px solid #1f2937 !important;
   background-color: #1f2937 !important;
@@ -85,12 +68,6 @@
   /* blue-500 */
 }
 
-/* Dark mode support for initials box in /managesign */
-[data-theme="opensigndark"] .intialSignature {
-  background-color: #1f2937 !important;
-  border-color: #4b5563 !important;
-}
-
 [data-theme="opensigndark"] .intialSignatureCanvas {
   background-color: #1f2937 !important;
   border-color: #4b5563 !important;
@@ -102,12 +79,6 @@
   border-color: #4b5563 !important;
 }
 
-/* Dark mode support for initials box in /managesign */
-[data-theme="opensigndark"] .intialSignature {
-  background-color: #1f2937 !important;
-  border-color: #4b5563 !important;
-}
-
 [data-theme="opensigndark"] .intialSignatureCanvas {
   background-color: #1f2937 !important;
   border-color: #4b5563 !important;
@@ -115,12 +86,6 @@
 
 /* Also support signature canvas for consistency */
 [data-theme="opensigndark"] .signatureCanvas {
-  background-color: #1f2937 !important;
-  border-color: #4b5563 !important;
-}
-
-/* Also support signature canvas for consistency */
-[data-theme="opensigndark"] .mysignatureCanvas {
   background-color: #1f2937 !important;
   border-color: #4b5563 !important;
 }
@@ -466,16 +431,6 @@ option {
     height: 120px;
   }
 
-  .mysignatureCanvas {
-    width: 300px;
-    height: 118px;
-  }
-
-  .mystampCanvas {
-    width: 300px;
-    height: 118px;
-  }
-
   .tabWidth {
     width: 300px;
   }
@@ -500,15 +455,6 @@ option {
     height: 112px;
   }
 
-  .mysignatureCanvas {
-    width: 280px;
-    height: 111px;
-  }
-  .mystampCanvas {
-    width: 280px;
-    height: 111px;
-  }
-
   .tabWidth {
     width: 280px;
   }
@@ -527,15 +473,6 @@ option {
   .signatureCanvas {
     width: 230px;
     height: 92px;
-  }
-
-  .mysignatureCanvas {
-    width: 230px;
-    height: 91px;
-  }
-  .mystampCanvas {
-    width: 230px;
-    height: 91px;
   }
 
   .tabWidth {
