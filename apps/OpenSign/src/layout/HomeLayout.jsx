@@ -161,7 +161,7 @@ const HomeLayout = () => {
   return isValidSession && localStorage.getItem("accesstoken") ? (
     <div className="flex flex-col h-screen overflow-hidden bg-base-100">
       {/* HEADER: Persistente a lo ancho de la pantalla con Logo y Flecha fija */}
-      <header className="z-[400] flex-shrink-0">
+      <header className="z-[1001] flex-shrink-0">
         {!isLoader && <Header setIsLoggingOut={setIsLoggingOut} />}
       </header>
 

@@ -51,7 +51,8 @@ import {
   HelpCircle,
   Info,
   AlertTriangle,
-  Copy
+  Copy,
+  X
 } from "lucide-react";
 
 // Registro explícito de íconos para garantizar tree-shaking y resolución semántica
@@ -140,8 +141,15 @@ const ICON_MAP = {
   "info": Info,
   "alert": AlertTriangle,
   "copy": Copy,
+  "x": X,
+  "close": X,
+  "times": X,
+  "x-mark": X,
 
   // Aliases retrocompatibles con FontAwesome strings
+  "fa-times": X,
+  "fa-xmark": X,
+  "fa-close": X,
   "fa-tachometer-alt": LayoutDashboard,
   "fa-pen-nib": PenTool,
   "fa-paper-plane": Send,
