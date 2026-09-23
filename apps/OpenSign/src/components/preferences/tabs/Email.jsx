@@ -1,20 +1,11 @@
-import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import MailTemplateEditor from "../MailTemplateEditor";
 
 const EmailTab = () => {
-  const { t } = useTranslation();
-  const {
-    tenantInfo
-  } = useSelector((state) => state.user);
+  const { tenantInfo } = useSelector((state) => state.user);
   return (
-    <div className="flex flex-col mb-4">
-        <MailTemplateEditor
-          info={
-                tenantInfo
-          }
-          tenantId={tenantInfo?.objectId}
-        />
+    <div className="op-card bg-base-100 p-4 md:p-5">
+      <MailTemplateEditor info={tenantInfo} tenantId={tenantInfo?.objectId} />
     </div>
   );
 };

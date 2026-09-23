@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Parse from "parse";
 import {
   dateFormat,
   formatDate,
@@ -7,11 +8,7 @@ import {
 } from "../../../utils";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  setAlertInfo,
-  setLoader,
-  setUserInfo
-} from "../../../redux/reducers/userReducer";
+import { setLoader, setUserInfo } from "../../../redux/reducers/userReducer";
 import DatePicker from "../../DatePicker";
 import DateFormat from "../../DateFormat";
 import {
@@ -19,13 +16,15 @@ import {
   selectFormat
 } from "../../../constant/Utils";
 import moment from "moment";
-import { Tooltip as ReactTooltip } from "react-tooltip";
+import { Calendar, Check } from "lucide-react";
+import HelpHint from "../HelpHint";
+import CardSection from "../CardSection";
 
 
 const WidgetsTab = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
-  const { userInfo } = useSelector((state) => state.user);
+  const { userInfo, isLoader } = useSelector((state) => state.user);
   const [selectDate, setSelectDate] = useState({
     date: "",
     format: "MM/dd/yyyy"
@@ -78,13 +77,6 @@ const WidgetsTab = () => {
     setDateWidget({ ...dateWidget, isReadOnly: e.target.checked });
   };
 
-  const showAlert = (type, msg) => {
-    dispatch(setAlertInfo({ type, msg }));
-    setTimeout(() => {
-      dispatch(setAlertInfo({ type: "success", msg: "" }));
-    }, 2000);
-  };
-  // `handleSave` is used save updated value signature type
   const handleSave = withSessionValidation(async () => {
     dispatch(setLoader(true));
     try {
@@ -111,11 +103,11 @@ const WidgetsTab = () => {
         const userdata = { ...userInfo };
         userdata.WidgetPreferences = updatedWidgetPreferences;
         dispatch(setUserInfo(userdata));
-        showAlert("success", t("saved-successfully"));
+        notify.success(t("saved-successfully"));
       }
     } catch (error) {
       console.error("Widgets preferences error: ", error);
-      showAlert("danger", error.message);
+      notify.error(error.message);
     } finally {
       dispatch(setLoader(false));
     }
@@ -160,19 +152,14 @@ const WidgetsTab = () => {
     setDateWidget((prev) => ({ ...prev, date: "" }));
   };
   return (
-    <div id="panel-widgets">
-      <div className="grid grid-cols-1 md:grid-cols-12 md:gap-x-8 gap-y-6">
-        {/* Left Column - Signature Settings */}
-        <div className="md:col-span-6 flex flex-col">
-          <div>
-            <label className="inline-flex text-[14px] mb-0 font-medium">
+    <div id="panel-widgets" className="flex flex-col gap-4 md:gap-5">
+      <div className="lg:max-w-2xl">
+        <CardSection
+          icon={Calendar}
+          title={
+            <span className="inline-flex items-center">
               {t("date-widget")}
-              <a data-tooltip-id="date-widget-tooltip" className="ml-1">
-                <sup>
-                  <i className="fa-light fa-question rounded-full border-[#33bbff] text-[#33bbff] text-[13px] border-[1px] py-[1.5px] px-[4px]"></i>
-                </sup>
-              </a>
-              <ReactTooltip id="date-widget-tooltip" className="z-[999]">
+              <HelpHint id="date-widget-tooltip">
                 <div className="max-w-[200px] md:max-w-[450px]">
                   <p className="font-bold"> {t("date-widget")}</p>
                   <p>{t("date-pref-help-sub-title")}</p>
@@ -205,21 +192,26 @@ const WidgetsTab = () => {
                     </ol>
                   </div>
                 </div>
-              </ReactTooltip>
-            </label>
-            <DateFormat
-              selectDate={selectDate}
-              dateFormatList={dateFormatList}
-              handleChangeFormat={handleChangeFormat}
-            />
-            <div className="flex flex-col md:flex-row md:items-center gap-1 md:w-[300px]">
-            <DatePicker
-              selectDate={selectDate}
-              onChange={handleDateChange}
-              handleClear={handleClear}
-            />
+              </HelpHint>
+            </span>
+          }
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="flex flex-col gap-3">
+              <DateFormat
+                selectDate={selectDate}
+                dateFormatList={dateFormatList}
+                handleChangeFormat={handleChangeFormat}
+              />
+              <div className="flex flex-col md:flex-row md:items-center gap-1">
+                <DatePicker
+                  selectDate={selectDate}
+                  onChange={handleDateChange}
+                  handleClear={handleClear}
+                />
+              </div>
             </div>
-            <div className="mt-3 flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
               <div className="flex flex-row gap-2 items-center">
                 <input
                   className="op-checkbox op-checkbox-xs"
@@ -256,17 +248,19 @@ const WidgetsTab = () => {
               </div>
             </div>
           </div>
-        </div>
+        </CardSection>
+      </div>
 
-        {/* Save Button - Full Width */}
-        <div className="md:col-span-12 flex justify-start mt-3">
-          <button
-            className="op-btn op-btn-primary w-[110px]"
-            onClick={handleSave}
-          >
-            {t("save")}
-          </button>
-        </div>
+      <div className="flex justify-start">
+        <button
+          data-testid="widgets-save-button"
+          className="op-btn op-btn-primary gap-2"
+          onClick={handleSave}
+          disabled={isLoader}
+        >
+          <Check size={16} aria-hidden="true" />
+          {t("save")}
+        </button>
       </div>
     </div>
   );
