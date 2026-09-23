@@ -1,3 +1,5 @@
+import { declineMailer } from '../cloud/parsefunction/declinedocument.js';
+
 async function signupUser(email, password) {
   const user = new Parse.User();
   user.set('username', email);
@@ -238,5 +240,55 @@ describe('declinedocument IDOR is closed', () => {
     const query = new Parse.Query('contracts_Document');
     const saved = await query.get(docId, { useMasterKey: true });
     expect(saved.get('IsDeclined')).not.toBe(true);
+  });
+});
+
+describe('declinedocument is idempotent against repeated calls on an already-declined document', () => {
+  Parse.User.enableUnsafeCurrentUser();
+
+  it('does not re-mutate the document or re-send the decline notification email on a second decline call by the same signer', async () => {
+    const emailCreator = `decline-idem-owner-${Date.now()}@example.com`;
+    const emailSigner = `decline-idem-signer-${Date.now()}@example.com`;
+    const creator = await signupUser(emailCreator, 'Str0ngPassw0rd!Owner');
+    const signer = await signupUser(emailSigner, 'Str0ngPassw0rd!Signer');
+
+    const doc = new Parse.Object('contracts_Document');
+    doc.set('Name', `Decline Idempotency Target ${Date.now()}`);
+    doc.set('IsCompleted', false);
+    doc.set('IsArchive', false);
+    doc.set('IsEnableOTP', false);
+    doc.set('CreatedBy', { __type: 'Pointer', className: '_User', objectId: creator.objectId });
+    doc.set('Signers', [
+      { UserId: { __type: 'Pointer', className: '_User', objectId: signer.objectId } },
+    ]);
+    doc.set('Placeholders', []);
+    const savedDoc = await doc.save(null, { useMasterKey: true });
+    const docId = savedDoc.id;
+
+    const sessionTokenSigner = await loginAndGetSessionToken(emailSigner, 'Str0ngPassw0rd!Signer');
+
+    spyOn(declineMailer, 'send');
+
+    const firstResult = await Parse.Cloud.run(
+      'declinedoc',
+      { docId, reason: 'first decline' },
+      { sessionToken: sessionTokenSigner }
+    );
+
+    expect(firstResult).toBe('document declined');
+    expect(declineMailer.send).toHaveBeenCalledTimes(1);
+
+    const secondResult = await Parse.Cloud.run(
+      'declinedoc',
+      { docId, reason: 'second decline attempt' },
+      { sessionToken: sessionTokenSigner }
+    );
+
+    expect(secondResult).not.toBe('document declined');
+    expect(declineMailer.send).toHaveBeenCalledTimes(1);
+
+    const query = new Parse.Query('contracts_Document');
+    const saved = await query.get(docId, { useMasterKey: true });
+    expect(saved.get('DeclineReason')).toBe('first decline');
   });
 });
