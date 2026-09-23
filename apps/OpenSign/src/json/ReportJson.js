@@ -547,7 +547,7 @@ export const usersActions = [
     btnId: "4741",
     hoverLabel: "Delete",
     btnColor: "op-btn-secondary",
-    btnIcon: "fa-light fa-trash",
+    iconName: "trash",
     redirectUrl: "",
     action: "delete",
     restrictAdmin: true
@@ -555,7 +555,7 @@ export const usersActions = [
   {
     btnId: "1910",
     hoverLabel: "Reset password",
-    btnIcon: "fa-light fa-key",
+    iconName: "key",
     redirectUrl: "",
     action: "resetpassword",
     restrictAdmin: true

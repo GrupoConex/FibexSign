@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Check, Copy } from "lucide-react";
 import ModalUi from "./ModalUi";
 import { useTranslation } from "react-i18next";
 import { notify } from "../utils";
@@ -101,7 +102,7 @@ export default function PasswordResetModal({
       await navigator.clipboard.writeText(password);
       notify.success(t("copied"), { duration: 1200 });
       setCopied(true);
-      setTimeout(() => setCopied(false, 1200));
+      setTimeout(() => setCopied(false), 1200);
     } catch (e) {
       console.error("Clipboard error", e);
     }
@@ -122,17 +123,26 @@ export default function PasswordResetModal({
     }
   };
 
+  const handleModalClose = () => {
+    setPassword("");
+    onClose?.();
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      handleModalClose();
+    }
+  };
+
   return (
     <>
-      <ModalUi
-        isOpen={isOpen}
-        title={t("reset-password")}
-        handleClose={() => {
-          setPassword("");
-          onClose?.();
-        }}
-      >
-        <form onSubmit={handleSubmit} className="space-y-3 pt-[15px] p-[20px]">
+      <ModalUi isOpen={isOpen} title={t("reset-password")} handleClose={handleModalClose}>
+        <form
+          onSubmit={handleSubmit}
+          onKeyDown={handleKeyDown}
+          className="space-y-3 pt-[15px] p-[20px]"
+        >
           <p className="text-sm text-base-content/60">
             {t("enter-strong-password")}
           </p>
@@ -153,13 +163,15 @@ export default function PasswordResetModal({
                 type="button"
                 className="op-btn op-btn-square op-btn-sm"
                 onClick={handleCopy}
-                title={copied ? "Copied" : "Copy"}
-                aria-label="Copy password"
+                title={copied ? t("copied") : t("copy")}
+                aria-label={t("copy")}
                 disabled={!password}
               >
-                <i
-                  className={`fa-regular fa-copy ${copied ? "opacity-70" : ""}`}
-                ></i>
+                {copied ? (
+                  <Check size={16} aria-hidden="true" className="text-success" />
+                ) : (
+                  <Copy size={16} aria-hidden="true" />
+                )}
               </button>
             </div>
           </label>
@@ -190,10 +202,7 @@ export default function PasswordResetModal({
             <button
               type="button"
               className="op-btn op-btn-ghost"
-              onClick={() => {
-                setPassword("");
-                onClose?.();
-              }}
+              onClick={handleModalClose}
             >
               {t("cancel")}
             </button>
