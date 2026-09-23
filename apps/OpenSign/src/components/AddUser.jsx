@@ -1,16 +1,10 @@
 import { useEffect, useState } from "react";
 import Parse from "parse";
+import { Check, Copy } from "lucide-react";
 import Loader from "../primitives/Loader";
-import {
-  copytoData,
-  usertimezone
-} from "../constant/Utils";
-import {
-  emailRegex,
-} from "../constant/const";
-import {
-  useTranslation
-} from "react-i18next";
+import { copytoData, usertimezone } from "../constant/Utils";
+import { emailRegex } from "../constant/const";
+import { useTranslation } from "react-i18next";
 import { notify, withSessionValidation } from "../utils";
 
 function generatePassword(length) {
@@ -37,6 +31,7 @@ const AddUser = (props) => {
   });
   const [isFormLoader, setIsFormLoader] = useState(false);
   const [teamList, setTeamList] = useState([]);
+  const [copied, setCopied] = useState(false);
   const role = ["OrgAdmin", "Editor", "User"];
   useEffect(() => {
     getTeamList();
@@ -49,9 +44,9 @@ const AddUser = (props) => {
     if (teamRes.length > 0) {
       const _teamRes = JSON.parse(JSON.stringify(teamRes));
       setTeamList(_teamRes);
-        const allUserId =
-          _teamRes.find((x) => x.Name === "All Users")?.objectId || "";
-        setFormdata((prev) => ({ ...prev, team: allUserId }));
+      const allUserId =
+        _teamRes.find((x) => x.Name === "All Users")?.objectId || "";
+      setFormdata((prev) => ({ ...prev, team: allUserId }));
     }
   };
   const checkUserExist = async () => {
@@ -97,7 +92,7 @@ const AddUser = (props) => {
               organization: {
                 objectId: localUser?.OrganizationId?.objectId,
                 company: localUser?.Company
-              },
+              }
             };
             const res = await Parse.Cloud.run("adduser", params);
             const parseData = JSON.parse(JSON.stringify(res));
@@ -152,135 +147,151 @@ const AddUser = (props) => {
   const copytoclipboard = (text) => {
     copytoData(text);
     notify.success(t("copied"));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
   };
   return (
-    <div className="shadow-md rounded-box my-[1px] p-3 bg-base-100 relative">
+    <div className="rounded-box my-[1px] p-3 bg-base-100 relative">
       {isFormLoader && (
         <div className="absolute w-full h-full inset-0 flex justify-center items-center bg-base-content/30 z-50">
           <Loader />
         </div>
       )}
-              <div className="w-full mx-auto">
-                    <form onSubmit={handleSubmit}>
-                      <div className="mb-3">
-                        <label
-                          htmlFor="name"
-                          className="block text-xs font-semibold"
-                        >
-                          {t("name")}
-                          <span className="text-[red] text-[13px]"> *</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="name"
-                          value={formdata.name}
-                          onChange={(e) => handleChange(e)}
-                          onInvalid={(e) =>
-                            e.target.setCustomValidity(t("input-required"))
-                          }
-                          onInput={(e) => e.target.setCustomValidity("")}
-                          required
-                          className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
-                          placeholder={t("enter-name")}
-                        />
-                      </div>
-                      <div className="mb-3">
-                        <label
-                          htmlFor="email"
-                          className="block text-xs font-semibold"
-                        >
-                          {t("email")}
-                          <span className="text-[red] text-[13px]"> *</span>
-                        </label>
-                        <input
-                          type="email"
-                          name="email"
-                          value={formdata.email}
-                          onChange={(e) => handleChange(e)}
-                          required
-                          onInvalid={(e) =>
-                            e.target.setCustomValidity(t("input-required"))
-                          }
-                          onInput={(e) => e.target.setCustomValidity("")}
-                          className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
-                          placeholder={t("enter-email")}
-                        />
-                      </div>
-                      <div className="mb-3">
-                        <label className="block text-xs font-semibold">
-                          {t("password")}
-                        </label>
-                        <div className="flex justify-between items-center op-input op-input-bordered op-input-sm text-base-content w-full h-full text-[13px]">
-                          <div className="break-all">{formdata?.password}</div>
-                          <i
-                            onClick={() => copytoclipboard(formdata?.password)}
-                            className="fa-light fa-copy rounded-full hover:bg-base-300 p-[8px] cursor-pointer "
-                          ></i>
-                        </div>
-                        <div className="text-[12px] ml-2 mb-0 text-[red] select-none">
-                          {t("password-generated")}
-                        </div>
-                      </div>
-                      <div className="mb-3">
-                        <label
-                          htmlFor="phone"
-                          className="block text-xs font-semibold"
-                        >
-                          {t("phone")}
-                        </label>
-                        <input
-                          type="text"
-                          name="phone"
-                          placeholder={t("phone-optional")}
-                          value={formdata.phone}
-                          onChange={(e) => handleChange(e)}
-                          className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
-                        />
-                      </div>
-                      <div className="mb-3">
-                        <label
-                          htmlFor="phone"
-                          className="block text-xs font-semibold"
-                        >
-                          {t("Role")}
-                          <span className="text-[red] text-[13px]"> *</span>
-                        </label>
-                        <select
-                          value={formdata.role}
-                          onChange={(e) => handleChange(e)}
-                          name="role"
-                          className="op-select op-select-bordered op-select-sm focus:outline-none hover:border-base-content w-full text-xs"
-                          onInvalid={(e) =>
-                            e.target.setCustomValidity(t("input-required"))
-                          }
-                          onInput={(e) => e.target.setCustomValidity("")}
-                          required
-                        >
-                          <option defaultValue={""} value={""}>
-                            {t("Select")}
-                          </option>
-                          {role.length > 0 &&
-                            role.map((x) => (
-                              <option key={x} value={x}>
-                                {x}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-                      <div className="flex items-center mt-3 gap-2 text-white">
-                        <button type="submit" className="op-btn op-btn-primary">
-                          {t("submit")}
-                        </button>
-                        <div
-                          type="button"
-                          onClick={() => handleReset()}
-                          className="op-btn op-btn-secondary"
-                        >
-                          {t("cancel")}
-                        </div>
-                      </div>
-                    </form>
-              </div>
+      <div className="w-full">
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <label htmlFor="name" className="block text-xs font-semibold">
+              {t("name")}
+              <span className="text-error text-[13px]"> *</span>
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formdata.name}
+              onChange={(e) => handleChange(e)}
+              onInvalid={(e) => e.target.setCustomValidity(t("input-required"))}
+              onInput={(e) => e.target.setCustomValidity("")}
+              required
+              className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
+              placeholder={t("enter-name")}
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="email" className="block text-xs font-semibold">
+              {t("email")}
+              <span className="text-error text-[13px]"> *</span>
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formdata.email}
+              onChange={(e) => handleChange(e)}
+              required
+              onInvalid={(e) => e.target.setCustomValidity(t("input-required"))}
+              onInput={(e) => e.target.setCustomValidity("")}
+              className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
+              placeholder={t("enter-email")}
+            />
+          </div>
+          <div className="mb-3">
+            <label className="block text-xs font-semibold">
+              {t("password")}
+            </label>
+            <div className="flex justify-between items-center op-input op-input-bordered op-input-sm text-base-content w-full h-full text-[13px]">
+              <div className="break-all">{formdata?.password}</div>
+              <button
+                type="button"
+                onClick={() => copytoclipboard(formdata?.password)}
+                className="op-btn op-btn-ghost op-btn-square op-btn-xs rounded-full hover:bg-base-300 cursor-pointer"
+                title={copied ? t("copied") : t("copy")}
+                aria-label={t("copy")}
+              >
+                {copied ? (
+                  <Check size={14} aria-hidden="true" className="text-success" />
+                ) : (
+                  <Copy size={14} aria-hidden="true" />
+                )}
+              </button>
+            </div>
+            <div className="text-[12px] ml-2 mb-0 text-base-content/60 select-none">
+              {t("password-generated")}
+            </div>
+          </div>
+          <div className="mb-3">
+            <label htmlFor="phone" className="block text-xs font-semibold">
+              {t("phone")}
+            </label>
+            <input
+              type="text"
+              name="phone"
+              placeholder={t("phone-optional")}
+              value={formdata.phone}
+              onChange={(e) => handleChange(e)}
+              className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="role" className="block text-xs font-semibold">
+              {t("Role")}
+              <span className="text-error text-[13px]"> *</span>
+            </label>
+            <select
+              id="role"
+              value={formdata.role}
+              onChange={(e) => handleChange(e)}
+              name="role"
+              className="op-select op-select-bordered op-select-sm focus:outline-none hover:border-base-content w-full text-xs"
+              onInvalid={(e) => e.target.setCustomValidity(t("input-required"))}
+              onInput={(e) => e.target.setCustomValidity("")}
+              required
+            >
+              <option defaultValue={""} value={""}>
+                {t("Select")}
+              </option>
+              {role.length > 0 &&
+                role.map((x) => (
+                  <option key={x} value={x}>
+                    {x}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div className="mb-3">
+            <label htmlFor="team" className="block text-xs font-semibold">
+              {t("team")}
+            </label>
+            <select
+              id="team"
+              value={formdata.team}
+              onChange={(e) => handleChange(e)}
+              name="team"
+              className="op-select op-select-bordered op-select-sm focus:outline-none hover:border-base-content w-full text-xs"
+            >
+              <option defaultValue={""} value={""}>
+                {t("Select")}
+              </option>
+              {teamList.length > 0 &&
+                teamList.map((x) => (
+                  <option key={x.objectId} value={x.objectId}>
+                    {x.Name}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div className="flex items-center mt-3 gap-2 text-white">
+            <button type="submit" className="op-btn op-btn-primary">
+              {t("submit")}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleReset()}
+              className="op-btn op-btn-secondary"
+            >
+              {t("cancel")}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

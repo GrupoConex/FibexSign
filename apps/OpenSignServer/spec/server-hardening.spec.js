@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { config, trustProxyHops } from '../index.js';
 import {
   isAuthRateLimitedPath,
+  isStrictAuthPath,
   resetAuthRateLimiterStoreForTesting,
 } from '../utils/authRateLimiter.js';
 
@@ -63,6 +64,14 @@ describe('server hardening: rate-limited path coverage', () => {
 
   it('rate-limits the declinedoc cloud function suffix', () => {
     expect(isAuthRateLimitedPath('/parse/functions/declinedoc')).toBe(true);
+  });
+
+  it('distinguishes strict auth paths from operational paths', () => {
+    expect(isStrictAuthPath('/parse/functions/loginuser')).toBe(true);
+    expect(isStrictAuthPath('/parse/functions/SendOTPMailV1')).toBe(true);
+    expect(isStrictAuthPath('/parse/login')).toBe(true);
+    expect(isStrictAuthPath('/parse/functions/getUserDetails')).toBe(false);
+    expect(isStrictAuthPath('/parse/functions/declinedoc')).toBe(false);
   });
 });
 
