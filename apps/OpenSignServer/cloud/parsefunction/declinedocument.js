@@ -42,6 +42,9 @@ async function sendDeclineMail(doc, publicUrl, userId, reason) {
     console.log('err in sendnotifymail', err);
   }
 }
+
+export const declineMailer = { send: sendDeclineMail };
+
 export default async function declinedocument(request) {
   const docId = request.params.docId;
   const reason = request.params?.reason || '';
@@ -71,24 +74,30 @@ export default async function declinedocument(request) {
         );
       }
       if (!isEnableOTP) {
+        if (updateDoc.get('IsDeclined') === true) {
+          return 'document already declined';
+        }
         updateDoc.set('IsDeclined', true);
         updateDoc.set('DeclineReason', reason);
         updateDoc.set('DeclineBy', declineBy);
         await updateDoc.save(null, { useMasterKey: true });
         if (!isCreator) {
-          sendDeclineMail(_doc, publicUrl, effectiveUserId, reason);
+          declineMailer.send(_doc, publicUrl, effectiveUserId, reason);
         }
         return 'document declined';
       } else {
         if (!request?.user) {
           throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'User is not authenticated.');
         }
+        if (updateDoc.get('IsDeclined') === true) {
+          return 'document already declined';
+        }
         updateDoc.set('IsDeclined', true);
         updateDoc.set('DeclineReason', reason);
         updateDoc.set('DeclineBy', declineBy);
         await updateDoc.save(null, { useMasterKey: true });
         if (!isCreator) {
-          sendDeclineMail(_doc, publicUrl, effectiveUserId, reason);
+          declineMailer.send(_doc, publicUrl, effectiveUserId, reason);
         }
         return 'document declined';
       }
