@@ -601,6 +601,7 @@
   "get-otp-alert": "Riceverai un codice di verifica tramite Email",
   "user-already-exist": "L'utente esiste già.",
   "server-error": "Errore interno del server!",
+  "too-many-login-attempts": "Troppi tentativi di accesso. Attendi qualche minuto e riprova.",
   "fill-required-details!": "Compila i dettagli richiesti!",
   "sign-up-form": "Modulo di registrazione",
   "sign-up": "Registrati",

@@ -601,6 +601,7 @@
   "get-otp-alert": "Sie erhalten einen Verifizierungscode per E-Mail",
   "user-already-exist": "Benutzer existiert bereits.",
   "server-error": "Interner Serverfehler!",
+  "too-many-login-attempts": "Zu viele Anmeldeversuche. Bitte warten Sie einige Minuten und versuchen Sie es erneut.",
   "fill-required-details!": "Bitte füllen Sie die erforderlichen Felder aus!",
   "sign-up-form": "Registrierungsformular",
   "sign-up": "Registrieren",

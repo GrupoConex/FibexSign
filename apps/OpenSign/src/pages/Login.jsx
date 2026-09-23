@@ -129,8 +129,17 @@ function Login() {
       console.error("Error while logging in user", error);
       if (error?.code === 1001) {
         notify.error(t("action-prohibited"));
-      } else {
+      } else if (error?.code === Parse.Error.OBJECT_NOT_FOUND) {
         notify.error(t("invalid-username-password-region"));
+      } else if (error?.status === 429 || error?.code === 429) {
+        notify.error(t("too-many-login-attempts"));
+      } else if (
+        error?.code === Parse.Error.CONNECTION_FAILED ||
+        error?.code === Parse.Error.INTERNAL_SERVER_ERROR
+      ) {
+        notify.error(t("server-error"));
+      } else {
+        notify.error(t("something-went-wrong-mssg"));
       }
       setState((prev) => ({ ...prev, loading: false }));
     }
