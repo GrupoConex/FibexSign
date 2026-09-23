@@ -29,7 +29,7 @@ const DeleteUserModal = ({
   // Adjust matching rule as needed (strict vs case-insensitive)
   const isMatch = useMemo(() => {
     const a = confirmEmail.trim().toLowerCase();
-    const b = userEmail.trim().toLowerCase();
+    const b = (userEmail || "").trim().toLowerCase();
     return a.length > 0 && a === b;
   }, [confirmEmail, userEmail]);
 

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import ModalUi from "../../primitives/ModalUi";
-import "../../styles/AddUser.css";
 import RegexParser from "regex-parser";
 import {
   signatureTypes,

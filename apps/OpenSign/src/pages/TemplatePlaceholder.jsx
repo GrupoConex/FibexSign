@@ -45,7 +45,6 @@ import {
 } from "../constant/Utils";
 import { PDFDocument } from "pdf-lib";
 import RenderPdf from "../components/pdf/RenderPdf";
-import "../styles/AddUser.css";
 import EditTemplate from "../components/pdf/EditTemplate";
 import AddRoleModal from "../components/pdf/AddRoleModal";
 import PlaceholderCopy from "../components/pdf/PlaceholderCopy";
