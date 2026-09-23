@@ -628,6 +628,7 @@
   "get-otp-alert": "you will get a verification code via Email",
   "user-already-exist": "User already exists.",
   "server-error": "Internal server error !",
+  "too-many-login-attempts": "Too many login attempts. Please wait a few minutes and try again.",
   "fill-required-details!": "Please fill required details!",
   "sign-up-form": "Sign up form",
   "sign-up": "Sign up",

@@ -630,6 +630,7 @@
   "get-otp-alert": "recibirás un código de verificación por correo",
   "user-already-exist": "El usuario ya existe.",
   "server-error": "¡Error interno del servidor!",
+  "too-many-login-attempts": "Demasiados intentos de inicio de sesión. Espera unos minutos e inténtalo de nuevo.",
   "fill-required-details!": "¡Por favor, rellena los detalles requeridos!",
   "sign-up-form": "Formulario de registro",
   "sign-up": "Registrarse",

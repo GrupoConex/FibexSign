@@ -599,6 +599,7 @@
   "get-otp-alert": "vous recevrez un code de vérification par e-mail",
   "user-already-exist": "L'utilisateur existe déjà.",
   "server-error": "Erreur interne du serveur !",
+  "too-many-login-attempts": "Trop de tentatives de connexion. Veuillez patienter quelques minutes et réessayer.",
   "fill-required-details!": "Veuillez remplir les informations requises !",
   "sign-up-form": "Formulaire d'inscription",
   "sign-up": "S'inscrire",

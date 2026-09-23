@@ -601,6 +601,7 @@
   "get-otp-alert": "이메일을 통해 인증 코드를 받게 됩니다",
   "user-already-exist": "사용자가 이미 존재합니다.",
   "server-error": "서버 내부 에러 !",
+  "too-many-login-attempts": "로그인 시도가 너무 많습니다. 몇 분 후 다시 시도해 주세요.",
   "fill-required-details!": "필수 정보를 입력해주세요!",
   "sign-up-form": "회원가입 양식",
   "sign-up": "회원가입",
