@@ -1539,5 +1539,14 @@
   "access-code-upgrade-msg": "Les codes d'accès sont disponibles uniquement dans les forfaits payants. Améliorez votre forfait pour ajouter des codes d'accès aux destinataires.",
   "show-access-code": "Afficher le code d’accès",
   "hide-access-code": "Masquer le code d’accès",
-  "already-copied-to-clipboard": "Déjà copié dans le presse-papiers"
+  "already-copied-to-clipboard": "Déjà copié dans le presse-papiers",
+  "profile-subtitle": "Gérez vos informations personnelles, votre sécurité et vos préférences",
+  "personal-information-title": "Informations personnelles",
+  "professional-information-title": "Informations professionnelles et organisation",
+  "security-account-title": "Sécurité et compte",
+  "danger-zone-title": "Zone de danger",
+  "change-photo-help": "Cliquez sur l'icône de l'appareil photo pour changer votre photo de profil",
+  "name-required": "Le nom est requis",
+  "invalid-phone-format": "Saisissez un numéro de téléphone valide",
+  "role": "Rôle"
 }

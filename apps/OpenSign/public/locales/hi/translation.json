@@ -1538,5 +1538,14 @@
   "access-code-upgrade-msg": "एक्सेस कोड केवल भुगतान योजनाओं पर उपलब्ध हैं। प्राप्तकर्ताओं के लिए एक्सेस कोड जोड़ने के लिए अपनी योजना को अपग्रेड करें।",
   "show-access-code": "एक्सेस कोड दिखाएं",
   "hide-access-code": "एक्सेस कोड छिपाएं",
-  "already-copied-to-clipboard": "पहले से क्लिपबोर्ड में कॉपी किया गया है"
+  "already-copied-to-clipboard": "पहले से क्लिपबोर्ड में कॉपी किया गया है",
+  "profile-subtitle": "अपनी व्यक्तिगत जानकारी, सुरक्षा और वरीयताएँ प्रबंधित करें",
+  "personal-information-title": "व्यक्तिगत जानकारी",
+  "professional-information-title": "व्यावसायिक जानकारी और संगठन",
+  "security-account-title": "सुरक्षा और खाता",
+  "danger-zone-title": "खतरे का क्षेत्र",
+  "change-photo-help": "अपनी प्रोफ़ाइल फ़ोटो बदलने के लिए कैमरा आइकन पर क्लिक करें",
+  "name-required": "नाम आवश्यक है",
+  "invalid-phone-format": "एक वैध फ़ोन नंबर दर्ज करें",
+  "role": "भूमिका"
 }

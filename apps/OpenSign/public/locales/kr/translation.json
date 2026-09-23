@@ -1538,5 +1538,14 @@
   "access-code-upgrade-msg": "접속 코드는 유료 요금제에서만 사용할 수 있습니다. 수신자에게 접속 코드를 추가하려면 요금제를 업그레이드하세요.",
   "show-access-code": "액세스 코드 표시",
   "hide-access-code": "액세스 코드 숨기기",
-  "already-copied-to-clipboard": "이미 클립보드에 복사됨"
+  "already-copied-to-clipboard": "이미 클립보드에 복사됨",
+  "profile-subtitle": "개인 정보, 보안 및 환경설정을 관리하세요",
+  "personal-information-title": "개인 정보",
+  "professional-information-title": "직무 및 조직 정보",
+  "security-account-title": "보안 및 계정",
+  "danger-zone-title": "위험 구역",
+  "change-photo-help": "프로필 사진을 변경하려면 카메라 아이콘을 클릭하세요",
+  "name-required": "이름은 필수입니다",
+  "invalid-phone-format": "유효한 전화번호를 입력하세요",
+  "role": "역할"
 }

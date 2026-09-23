@@ -1538,5 +1538,14 @@
   "access-code-upgrade-msg": "I codici di accesso sono disponibili solo nei piani a pagamento. Aggiorna il tuo piano per aggiungere codici di accesso per i destinatari.",
   "show-access-code": "Mostra codice di accesso",
   "hide-access-code": "Nascondi codice di accesso",
-  "already-copied-to-clipboard": "Già copiato negli appunti"
+  "already-copied-to-clipboard": "Già copiato negli appunti",
+  "profile-subtitle": "Gestisci i tuoi dati personali, la sicurezza e le preferenze",
+  "personal-information-title": "Informazioni personali",
+  "professional-information-title": "Informazioni professionali e organizzazione",
+  "security-account-title": "Sicurezza e account",
+  "danger-zone-title": "Zona pericolosa",
+  "change-photo-help": "Fai clic sull'icona della fotocamera per cambiare la tua foto profilo",
+  "name-required": "Il nome è obbligatorio",
+  "invalid-phone-format": "Inserisci un numero di telefono valido",
+  "role": "Ruolo"
 }

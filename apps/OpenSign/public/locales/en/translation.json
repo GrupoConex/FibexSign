@@ -1567,5 +1567,14 @@
   "access-code-upgrade-msg": "Access codes are available on paid plans only. Upgrade your plan to add access codes for recipients.",
   "show-access-code": "Show access code",
   "hide-access-code": "Hide access code",
-  "already-copied-to-clipboard": "Already copied to clipboard"
+  "already-copied-to-clipboard": "Already copied to clipboard",
+  "profile-subtitle": "Manage your personal details, security and preferences",
+  "personal-information-title": "Personal Information",
+  "professional-information-title": "Professional & Organization",
+  "security-account-title": "Security & Account",
+  "danger-zone-title": "Danger zone",
+  "change-photo-help": "Click the camera icon to change your profile photo",
+  "name-required": "Name is required",
+  "invalid-phone-format": "Enter a valid phone number",
+  "role": "Role"
 }
