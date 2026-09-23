@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import Parse from "parse";
 import { buildDownloadFilename } from "../../utils";
 import { useTranslation } from "react-i18next";
-import { Tooltip as ReactTooltip } from "react-tooltip";
+import HelpHint from "./HelpHint";
 
 /**
  * Enum-like list of supported filename format IDs and their labels
@@ -56,22 +56,19 @@ const FilenameFormatSelector = ({ fileNameFormat, setFileNameFormat }) => {
   }
   return (
     <div className="max-w-[400px] pr-[20px]">
-      <label className="text-[14px] mb-[0.7rem] font-medium">
+      <label
+        htmlFor="filename-format-select"
+        className="text-[14px] mb-[0.7rem] font-medium inline-flex items-center"
+      >
         {t("document-download-filename-format")}
-        <span className="text-sm">
-          <a data-tooltip-id="filename-tooltip" className="ml-1" href="/">
-            <sup>
-              <i className="fa-light fa-question rounded-full border-[#33bbff] text-[#33bbff] text-[13px] border-[1px] py-[1.5px] px-[4px]"></i>
-            </sup>
-          </a>
-          <ReactTooltip id="filename-tooltip" className="z-50">
-            <div className="max-w-[200px] md:max-w-[450px]">
-              <p>{t("download-filename-format-help")}</p>
-            </div>
-          </ReactTooltip>
-        </span>
+        <HelpHint id="filename-tooltip">
+          <div className="max-w-[200px] md:max-w-[450px]">
+            <p>{t("download-filename-format-help")}</p>
+          </div>
+        </HelpHint>
       </label>
       <select
+        id="filename-format-select"
         className="op-select op-select-bordered op-select-sm focus:outline-none hover:border-base-content w-full h-full text-[11px]"
         value={value}
         onChange={async (e) => {

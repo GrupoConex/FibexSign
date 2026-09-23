@@ -1,8 +1,6 @@
-import React, { useEffect, useState } from "react";
-import Alert from "../primitives/Alert";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Loader from "../primitives/Loader";
-import Tooltip from "../primitives/Tooltip";
 import {
   getTenantDetails,
   handleSignatureType,
@@ -10,39 +8,45 @@ import {
   usertimezone
 } from "../constant/Utils";
 import Parse from "parse";
-import { Tooltip as ReactTooltip } from "react-tooltip";
+import { Settings, SlidersHorizontal, Mail, FileSignature, Globe, Bell, Check } from "lucide-react";
 import TimezoneSelector from "../components/preferences/TimezoneSelector";
 import DateFormatSelector from "../components/preferences/DateFormatSelector";
 import FilenameFormatSelector from "../components/preferences/FilenameFormatSelector";
+import HelpHint from "../components/preferences/HelpHint";
+import CardSection from "../components/preferences/CardSection";
+import ToggleField from "../components/preferences/ToggleField";
 import axios from "axios";
-import { withSessionValidation } from "../utils";
+import { notify, withSessionValidation } from "../utils";
 import { WidgetsTab, EmailTab } from "../components/preferences/tabs";
 import {
   setUserInfo,
   setTenantInfo,
   setLoader,
-  setTopLoader,
-  setAlertInfo
+  setTopLoader
 } from "../redux/reducers/userReducer";
 import { useDispatch, useSelector } from "react-redux";
 import { appInfo } from "../constant/appinfo";
+
+const TAB_ICONS = {
+  general: Settings,
+  widgets: SlidersHorizontal,
+  email: Mail
+};
 
 const Preferences = () => {
   const appName = appInfo.appName;
   const { t } = useTranslation();
   const dispatch = useDispatch();
-  const { isLoader, isTopLoader, alertInfo } = useSelector(
-    (state) => state.user
-  );
+  const { isLoader, isTopLoader } = useSelector((state) => state.user);
   const [signatureType, setSignatureType] = useState([]);
   const [errMsg, setErrMsg] = useState("");
   const [isNotifyOnSignatures, setIsNotifyOnSignatures] = useState();
   const [timezone, setTimezone] = useState(usertimezone);
   const [activeTab, setactiveTab] = useState(0);
+  const tabRefs = useRef([]);
   const generaltab = {
     name: "general",
-    title: t("general"),
-    icon: "fa-light fa-gears"
+    title: t("general")
   };
   const [tab, setTab] = useState([generaltab]);
   const [sendinOrder, setSendinOrder] = useState(true);
@@ -58,23 +62,14 @@ const Preferences = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const showAlert = (type, msg) => {
-    dispatch(setAlertInfo({ type, msg }));
-    setTimeout(() => {
-      dispatch(setAlertInfo({ type: "success", msg: "" }));
-    }, 2000);
-  };
-
   const fetchSignType = withSessionValidation(async () => {
     dispatch(setTopLoader(true));
-    const EmailTab = [
-      { name: "email", title: t("email"), icon: "fa-light fa-envelope" }
-    ];
+    const EmailTab = [{ name: "email", title: t("email") }];
 
     const arr = [
       generaltab,
-      { name: "widgets", title: t("widgets"), icon: "fa-light fa-list" },
-      ...EmailTab,
+      { name: "widgets", title: t("widgets") },
+      ...EmailTab
     ];
     setTab(arr);
     try {
@@ -148,15 +143,7 @@ const Preferences = () => {
     }
   });
 
-  // `handleCheckboxChange` is trigger when user enable/disable checkbox of respective type
   const handleCheckboxChange = (index) => {
-    // // Create a copy of the signatureType array
-    // const updatedSignatureType = [...signatureType];
-    // // Toggle the enabled value for the clicked item
-    // updatedSignatureType[index].enabled = !updatedSignatureType[index].enabled;
-    // // Update the state with the modified array
-    // setSignatureType(updatedSignatureType);
-
     setSignatureType((prev) =>
       prev.map((item, i) =>
         i === index ? { ...item, enabled: !item.enabled } : item
@@ -164,37 +151,34 @@ const Preferences = () => {
     );
   };
 
-  // `handleSave` is used save updated value signature type
   const handleSave = withSessionValidation(async () => {
     dispatch(setLoader(true));
-    const Timezone = timezone || usertimezone;
-    if (
-      signatureType.length > 0 ||
-      isNotifyOnSignatures !== undefined ||
-      Timezone
-    ) {
-      let params = { Timezone: Timezone };
-      if (signatureType.length > 0) {
-        const enabledSignTypes = signatureType?.filter((x) => x.enabled);
-        const isDefaultSignTypeOnly =
-          enabledSignTypes?.length === 1 &&
-          enabledSignTypes[0]?.name === "default";
-        if (enabledSignTypes.length === 0) {
-          showAlert("danger", t("at-least-one-signature-type"));
-          dispatch(setLoader(false));
-          return;
-        } else if (isDefaultSignTypeOnly) {
-          showAlert("danger", t("expect-default-one-signature-type"));
-          dispatch(setLoader(false));
-          return;
-        } else {
-          params = { ...params, SignatureType: signatureType };
+    try {
+      const Timezone = timezone || usertimezone;
+      if (
+        signatureType.length > 0 ||
+        isNotifyOnSignatures !== undefined ||
+        Timezone
+      ) {
+        let params = { Timezone: Timezone };
+        if (signatureType.length > 0) {
+          const enabledSignTypes = signatureType?.filter((x) => x.enabled);
+          const isDefaultSignTypeOnly =
+            enabledSignTypes?.length === 1 &&
+            enabledSignTypes[0]?.name === "default";
+          if (enabledSignTypes.length === 0) {
+            notify.error(t("at-least-one-signature-type"));
+            return;
+          } else if (isDefaultSignTypeOnly) {
+            notify.error(t("expect-default-one-signature-type"));
+            return;
+          } else {
+            params = { ...params, SignatureType: signatureType };
+          }
         }
-      }
-      if (isNotifyOnSignatures !== undefined) {
-        params = { ...params, NotifyOnSignatures: isNotifyOnSignatures };
-      }
-      try {
+        if (isNotifyOnSignatures !== undefined) {
+          params = { ...params, NotifyOnSignatures: isNotifyOnSignatures };
+        }
         params = {
           ...params,
           SendinOrder: sendinOrder,
@@ -203,11 +187,11 @@ const Preferences = () => {
           Is12HourTime: is12HourTime,
           IsLTVEnabled: isLTVEnabled,
           DownloadFilenameFormat: fileNameFormat,
-          UseNameAsSender: useNameAsSender,
+          UseNameAsSender: useNameAsSender
         };
         const updateRes = await Parse.Cloud.run("updatepreferences", params);
         if (updateRes) {
-          showAlert("success", t("saved-successfully"));
+          notify.success(t("saved-successfully"));
           let extUser =
             localStorage.getItem("Extand_Class") &&
             JSON.parse(localStorage.getItem("Extand_Class"))?.[0];
@@ -223,27 +207,42 @@ const Preferences = () => {
             localStorage.setItem("Extand_Class", JSON.stringify([_extUser]));
           }
         }
-      } catch (err) {
-        console.error("Error updating signature type: ", err);
-        showAlert("danger", err.message);
       }
+    } catch (err) {
+      console.error("Error updating signature type: ", err);
+      notify.error(err.message);
+    } finally {
       dispatch(setLoader(false));
     }
   });
 
-  // `handleNotifySignChange` is trigger when user change radio of notify on signatures
-  const handleNotifySignChange = (value) => {
-    setIsNotifyOnSignatures(value);
-  };
-
-
-  const handleTourInput = () => setIsTourEnabled(!isTourEnabled);
-  const handleSendinOrderInput = () => setSendinOrder(!sendinOrder);
+  const handleNotifySignChange = () =>
+    setIsNotifyOnSignatures((prev) => !prev);
+  const handleTourInput = () => setIsTourEnabled((prev) => !prev);
+  const handleSendinOrderInput = () => setSendinOrder((prev) => !prev);
   const tabName = (ind) => tab.find((t, i) => i === ind)?.name;
+
+  const handleTabKeyDown = (event, ind) => {
+    const count = tab.length;
+    let nextIndex = null;
+    if (event.key === "ArrowRight") {
+      nextIndex = (ind + 1) % count;
+    } else if (event.key === "ArrowLeft") {
+      nextIndex = (ind - 1 + count) % count;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = count - 1;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    setactiveTab(nextIndex);
+    tabRefs.current[nextIndex]?.focus();
+  };
 
   return (
     <React.Fragment>
-      {alertInfo.msg && <Alert type={alertInfo.type}>{alertInfo.msg}</Alert>}
       {isTopLoader ? (
         <div className="flex justify-center items-center h-screen">
           <Loader />
@@ -261,206 +260,146 @@ const Preferences = () => {
                   <Loader />
                 </div>
               )}
-              <h1 className="ml-4 mt-3 text-lg mb-2 font-semibold text-base-content">
-                {appName} {t("Preferences")}
-              </h1>
-              <div className="flex justify-center items-center mt-2">
+              <div className="flex items-center gap-3 ml-4 mt-4 mb-1">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Settings size={20} aria-hidden="true" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-semibold text-base-content leading-tight">
+                    {appName} {t("Preferences")}
+                  </h1>
+                  <p className="text-xs text-base-content/60">
+                    {t("preferences-subtitle")}
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-center items-center mt-3">
                 <div
                   role="tablist"
-                  className="op-tabs op-tabs-bordered op-tabs-sm md:op-tabs-md"
+                  className="op-tabs op-tabs-boxed bg-base-200 op-tabs-sm md:op-tabs-md"
                 >
-                  {tab.map((tabData, ind) => (
-                    <div
-                      onClick={() => setactiveTab(ind)}
-                      key={ind}
-                      role="tab"
-                      className={` op-tab text-xs md:text-base pb-2 md:pb-0 transition-all`}
-                      aria-selected={activeTab === ind}
-                      aria-controls={`panel-${tabData.title}`}
-                    >
-                      <i className={tabData.icon}></i>
-                      <span
-                        className={`${activeTab === ind ? "block" : "hidden"} md:block ml-1`}
-                        title={tabData?.title}
+                  {tab.map((tabData, ind) => {
+                    const TabIcon = TAB_ICONS[tabData.name] || Settings;
+                    const isActive = activeTab === ind;
+                    return (
+                      <div
+                        ref={(el) => (tabRefs.current[ind] = el)}
+                        onClick={() => setactiveTab(ind)}
+                        onKeyDown={(e) => handleTabKeyDown(e, ind)}
+                        key={ind}
+                        id={`tab-${tabData.name}`}
+                        role="tab"
+                        tabIndex={isActive ? 0 : -1}
+                        className={`op-tab gap-1 text-xs md:text-sm transition-all ${isActive ? "op-tab-active" : ""}`}
+                        aria-selected={isActive}
+                        aria-controls={`tabpanel-${tabData.name}`}
+                        aria-label={tabData.title}
                       >
-                        {tabData.title}
-                      </span>
-                    </div>
-                  ))}
+                        <TabIcon size={14} aria-hidden="true" />
+                        <span
+                          className={`${isActive ? "inline" : "hidden"} md:inline`}
+                          title={tabData?.title}
+                        >
+                          {tabData.title}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
               <div
-                id={`panel-${activeTab}`}
-                className="px-6 pt-4 pb-6"
-                aria-labelledby={`tab-${activeTab}`}
+                id={`tabpanel-${tabName(activeTab)}`}
+                className="px-4 md:px-6 pt-4 pb-6"
+                aria-labelledby={`tab-${tabName(activeTab)}`}
                 role="tabpanel"
+                tabIndex={0}
               >
                 {tabName(activeTab) === "general" && (
-                  <div className="grid grid-cols-1 md:grid-cols-12 md:gap-x-8">
-                    {/* Left Column - Signature Settings */}
-                    <div className="md:col-span-5 flex flex-col">
-                      {/* Signature Types Section */}
-                      <div className="mb-6">
-                        <label
-                          className="text-[14px] mb-[0.7rem] font-medium"
-                          htmlFor="signaturetype"
-                        >
-                          {t("allowed-signature-types")}
-                          <a
-                            data-tooltip-id="signtypes-tooltip"
-                            className="ml-1"
+                  <div className="flex flex-col gap-4 md:gap-5">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5">
+                      <CardSection icon={FileSignature} title={t("preferences-signature-flow-title")}>
+                        <fieldset className="min-w-0 p-0 m-0 border-0">
+                          <legend
+                            className="text-[14px] font-medium inline-flex items-center p-0"
                           >
-                            <sup>
-                              <i className="fa-light fa-question rounded-full border-[#33bbff] text-[#33bbff] text-[13px] border-[1px] py-[1.5px] px-[4px]"></i>
-                            </sup>
-                          </a>
-                          <ReactTooltip
-                            id="signtypes-tooltip"
-                            className="z-[999]"
-                          >
-                            <div className="max-w-[200px] md:max-w-[450px]">
-                              <p className="font-bold">
-                                {t("allowed-signature-types")}
-                              </p>
-                              <p>{t("allowed-signature-types-help.p1")}</p>
-                              <div className="p-[5px] ml-2">
-                                <ol className="list-disc">
-                                  <li>
-                                    <span className="font-bold">
-                                      {t("draw")}:{" "}
-                                    </span>
-                                    <span>
-                                      {t("allowed-signature-types-help.l1")}
-                                    </span>
-                                  </li>
-                                  <li>
-                                    <span className="font-bold">Type: </span>
-                                    <span>
-                                      {t("allowed-signature-types-help.l2")}
-                                    </span>
-                                  </li>
-                                  <li>
-                                    <span className="font-bold">
-                                      {t("upload")}:{" "}
-                                    </span>
-                                    <span>
-                                      {t("allowed-signature-types-help.l3")}
-                                    </span>
-                                  </li>
-                                  <li>
-                                    <span className="font-bold">Default: </span>
-                                    <span>
-                                      {t("allowed-signature-types-help.l4")}
-                                    </span>
-                                  </li>
-                                </ol>
+                            {t("allowed-signature-types")}
+                            <HelpHint id="signtypes-tooltip">
+                              <div className="max-w-[200px] md:max-w-[450px]">
+                                <p className="font-bold">
+                                  {t("allowed-signature-types")}
+                                </p>
+                                <p>{t("allowed-signature-types-help.p1")}</p>
+                                <div className="p-[5px] ml-2">
+                                  <ol className="list-disc">
+                                    <li>
+                                      <span className="font-bold">
+                                        {t("draw")}:{" "}
+                                      </span>
+                                      <span>
+                                        {t("allowed-signature-types-help.l1")}
+                                      </span>
+                                    </li>
+                                    <li>
+                                      <span className="font-bold">Type: </span>
+                                      <span>
+                                        {t("allowed-signature-types-help.l2")}
+                                      </span>
+                                    </li>
+                                    <li>
+                                      <span className="font-bold">
+                                        {t("upload")}:{" "}
+                                      </span>
+                                      <span>
+                                        {t("allowed-signature-types-help.l3")}
+                                      </span>
+                                    </li>
+                                    <li>
+                                      <span className="font-bold">
+                                        Default:{" "}
+                                      </span>
+                                      <span>
+                                        {t("allowed-signature-types-help.l4")}
+                                      </span>
+                                    </li>
+                                  </ol>
+                                </div>
                               </div>
-                            </div>
-                          </ReactTooltip>
-                        </label>
-                        <div className="flex flex-col md:flex-row gap-3 mb-2">
-                          {signatureType.map((type, i) => (
-                            <div
-                              key={i}
-                              className="flex flex-row gap-2 items-center"
-                            >
-                              <input
-                                className="op-checkbox op-checkbox-xs"
-                                type="checkbox"
-                                id={`signature-type-${type.name}`}
-                                name="signaturetype"
-                                onChange={() => handleCheckboxChange(i)}
-                                checked={type.enabled}
-                              />
-                              <label
-                                htmlFor={`signature-type-${type.name}`}
-                                className="text-sm font-medium text-base-content hover:underline underline-offset-2 cursor-pointer capitalize mb-0"
-                                title={`Enabling this allows signers to ${type.name} signature`}
+                            </HelpHint>
+                          </legend>
+                          <div className="flex flex-col md:flex-row flex-wrap gap-3 mt-2">
+                            {signatureType.map((type, i) => (
+                              <div
+                                key={i}
+                                className="flex flex-row gap-2 items-center"
                               >
-                                {type?.name === "typed" ? "type" : type?.name}
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Notify on Signatures Section */}
-                      <div className="mb-6">
-                        <label className="text-[14px] mb-[0.7rem] font-medium">
-                          {t("notify-on-signatures")}
-                          <a data-tooltip-id="nos-tooltip" className="ml-1">
-                            <sup>
-                              <i className="fa-light fa-question rounded-full border-[#33bbff] text-[#33bbff] text-[13px] border-[1px] py-[1.5px] px-[4px]"></i>
-                            </sup>
-                          </a>
-                          <ReactTooltip id="nos-tooltip" className="z-[999]">
-                            <div className="max-w-[200px] md:max-w-[450px]">
-                              <p className="font-bold">
-                                {t("notify-on-signatures")}
-                              </p>
-                              <p>{t("notify-on-signatures-help.p1")}</p>
-                              <p>{t("notify-on-signatures-help.note")}</p>
-                            </div>
-                          </ReactTooltip>
-                        </label>
-                        <div className="flex flex-row gap-6">
-                          <div
-                            className={
-                              "flex items-center gap-2"
-                            }
-                          >
-                            <input
-                              id="notify-yes"
-                              className="op-radio op-radio-xs"
-                              type="radio"
-                              onChange={() => handleNotifySignChange(true)}
-                              checked={isNotifyOnSignatures === true}
-                            />
-                            <label
-                              htmlFor="notify-yes"
-                              className="text-sm text-base-content cursor-pointer mb-0"
-                            >
-                              {t("yes")}
-                            </label>
+                                <input
+                                  className="op-checkbox op-checkbox-xs"
+                                  type="checkbox"
+                                  id={`signature-type-${type.name}`}
+                                  name="signaturetype"
+                                  onChange={() => handleCheckboxChange(i)}
+                                  checked={type.enabled}
+                                />
+                                <label
+                                  htmlFor={`signature-type-${type.name}`}
+                                  className="text-sm font-medium text-base-content hover:underline underline-offset-2 cursor-pointer capitalize mb-0"
+                                  title={`Enabling this allows signers to ${type.name} signature`}
+                                >
+                                  {type?.name === "typed" ? "type" : type?.name}
+                                </label>
+                              </div>
+                            ))}
                           </div>
-                          <div
-                            className={
-                              "flex items-center gap-2"
-                            }
-                          >
-                            <input
-                              id="notify-no"
-                              className="op-radio op-radio-xs"
-                              type="radio"
-                              onChange={() => handleNotifySignChange(false)}
-                              checked={isNotifyOnSignatures === false}
-                            />
-                            <label
-                              htmlFor="notify-no"
-                              className="text-sm text-base-content cursor-pointer mb-0"
-                            >
-                              {t("no")}
-                            </label>
-                          </div>
-                        </div>
-                      </div>
+                        </fieldset>
 
-                      {/* Send in Order Section */}
-                      <div className="mb-6">
-                        <label className="text-[14px] mb-[0.7rem] font-medium">
-                          {t("send-in-order")}
-                          <a
-                            data-tooltip-id="sendInOrder-tooltip"
-                            className="ml-1"
-                          >
-                            <sup>
-                              <i className="fa-light fa-question rounded-full border-[#33bbff] text-[#33bbff] text-[13px] border-[1px] py-[1.5px] px-[4px]"></i>
-                            </sup>
-                          </a>
-                          <ReactTooltip
-                            id="sendInOrder-tooltip"
-                            className="z-[999]"
-                          >
+                        <ToggleField
+                          id="send-in-order"
+                          label={t("send-in-order")}
+                          helpId="sendInOrder-tooltip"
+                          checked={sendinOrder}
+                          onChange={handleSendinOrderInput}
+                          caption={t("send-in-order-help.p1")}
+                          helpContent={
                             <div className="max-w-[200px] md:max-w-[450px]">
                               <p className="font-bold">{t("send-in-order")}</p>
                               <p>{t("send-in-order-help.p1")}</p>
@@ -482,103 +421,73 @@ const Preferences = () => {
                               </div>
                               <p>{t("send-in-order-help.p4")}</p>
                             </div>
-                          </ReactTooltip>
-                        </label>
-                        <div className="flex flex-row gap-6">
-                          <div className="flex items-center gap-2">
-                            <input
-                              id="order-yes"
-                              type="radio"
-                              value={true}
-                              className="op-radio op-radio-xs"
-                              name="SendinOrder"
-                              checked={sendinOrder}
-                              onChange={handleSendinOrderInput}
-                            />
-                            <label
-                              htmlFor="order-yes"
-                              className="text-sm text-base-content cursor-pointer mb-0"
-                            >
-                              {t("yes")}
-                            </label>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              id="order-no"
-                              type="radio"
-                              value={false}
-                              name="SendinOrder"
-                              className="op-radio op-radio-xs"
-                              checked={!sendinOrder}
-                              onChange={handleSendinOrderInput}
-                            />
-                            <label
-                              htmlFor="order-no"
-                              className="text-sm text-base-content cursor-pointer mb-0"
-                            >
-                              {t("no")}
-                            </label>
-                          </div>
-                        </div>
-                      </div>
+                          }
+                        />
 
+                        <ToggleField
+                          id="use-name-as-sender"
+                          label={t("use-name-as-sender")}
+                          helpId="sender-name-toggle-tooltip"
+                          checked={useNameAsSender}
+                          onChange={() =>
+                            setUseNameAsSender((prevValue) => !prevValue)
+                          }
+                          caption={t("use-name-as-sender-help", { appName })}
+                          helpContent={
+                            <div className="max-w-[200px] md:max-w-[450px] text-[13px] font-medium">
+                              <p>
+                                {t("use-name-as-sender-help", { appName })}
+                              </p>
+                            </div>
+                          }
+                        />
+                      </CardSection>
 
-                      <div className="mb-6">
-                        <label
-                          htmlFor="sender-name-toggle"
-                          className="text-[14px] mb-[0.7rem] font-medium"
-                        >
-                          {t("use-name-as-sender")}
-                        </label>
-                        <a
-                          data-tooltip-id="sender-name-toggle-tooltip"
-                          className="ml-1"
-                        >
-                          <sup>
-                            <i className="fa-light fa-question rounded-full border-[#33bbff] text-[#33bbff] text-[13px] border-[1px] py-[1.5px] px-[4px]"></i>
-                          </sup>
-                        </a>
-                        <ReactTooltip
-                          id="sender-name-toggle-tooltip"
-                          className="z-[999]"
-                        >
-                          <div className="max-w-[200px] md:max-w-[450px] text-[13px] font-medium">
-                            <p>
-                              {t("use-name-as-sender-help", {
-                                appName: appName
-                              })}
-                            </p>
-                          </div>
-                        </ReactTooltip>
-                        <div className="cursor-pointer relative block items-center mb-0 ml-1">
-                          <input
-                            id="sender-name-toggle"
-                            type="checkbox"
-                            className="op-toggle checked:[--tglbg:#3368ff] transition-all checked:text-white"
-                            checked={useNameAsSender}
-                            onChange={() =>
-                              setUseNameAsSender((prevValue) => !prevValue)
-                            }
-                          />
-                        </div>
-                      </div>
+                      <CardSection icon={Globe} title={t("preferences-localization-title")}>
+                        <TimezoneSelector
+                          timezone={timezone}
+                          setTimezone={setTimezone}
+                        />
+                        <DateFormatSelector
+                          timezone={timezone}
+                          dateFormat={dateFormat}
+                          is12HourTime={is12HourTime}
+                          setIs12HourTime={setIs12HourTime}
+                          setDateFormat={setDateFormat}
+                        />
+                        <FilenameFormatSelector
+                          fileNameFormat={fileNameFormat}
+                          setFileNameFormat={setFileNameFormat}
+                        />
+                      </CardSection>
 
-                      {/* Enable Tour Section */}
-                      <div className="mb-6">
-                        <label className="text-[14px] mb-[0.7rem] font-medium">
-                          {t("enable-tour")}
-                          <a
-                            data-tooltip-id="istourenabled-tooltip"
-                            className="ml-1"
-                          >
-                            <sup>
-                              <i className="fa-light fa-question rounded-full border-[#33bbff] text-[#33bbff] text-[13px] border-[1px] py-[1.5px] px-[4px]"></i>
-                            </sup>
-                          </a>
-                          <ReactTooltip
-                            id="istourenabled-tooltip"
-                            className="z-[999]"
-                          >
+                      <CardSection icon={Bell} title={t("preferences-notifications-title")}>
+                        <ToggleField
+                          id="notify-on-signatures"
+                          label={t("notify-on-signatures")}
+                          helpId="nos-tooltip"
+                          checked={isNotifyOnSignatures === true}
+                          onChange={handleNotifySignChange}
+                          caption={t("notify-on-signatures-help.p1")}
+                          helpContent={
+                            <div className="max-w-[200px] md:max-w-[450px]">
+                              <p className="font-bold">
+                                {t("notify-on-signatures")}
+                              </p>
+                              <p>{t("notify-on-signatures-help.p1")}</p>
+                              <p>{t("notify-on-signatures-help.note")}</p>
+                            </div>
+                          }
+                        />
+
+                        <ToggleField
+                          id="tour-enabled"
+                          label={t("enable-tour")}
+                          helpId="istourenabled-tooltip"
+                          checked={isTourEnabled}
+                          onChange={handleTourInput}
+                          caption={t("istourenabled-help.p1")}
+                          helpContent={
                             <div className="max-w-[200px] md:max-w-[450px]">
                               <p className="font-bold">{t("enable-tour")}</p>
                               <div className="p-[5px]">
@@ -598,82 +507,22 @@ const Preferences = () => {
                                 </ol>
                               </div>
                               <p>
-                                {t("istourenabled-help.p3", {
-                                  appName: appName
-                                })}
+                                {t("istourenabled-help.p3", { appName })}
                               </p>
                             </div>
-                          </ReactTooltip>
-                        </label>
-                        <div className="flex flex-row gap-6">
-                          <div className="flex items-center gap-2">
-                            <input
-                              id="tour-yes"
-                              type="radio"
-                              value={true}
-                              className="op-radio op-radio-xs"
-                              name="IsTourEnabled"
-                              checked={isTourEnabled}
-                              onChange={handleTourInput}
-                            />
-                            <label
-                              htmlFor="tour-yes"
-                              className="text-sm text-base-content cursor-pointer mb-0"
-                            >
-                              {t("yes")}
-                            </label>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              id="tour-no"
-                              type="radio"
-                              value={false}
-                              name="IsTourEnabled"
-                              className="op-radio op-radio-xs"
-                              checked={!isTourEnabled}
-                              onChange={handleTourInput}
-                            />
-                            <label
-                              htmlFor="tour-no"
-                              className="text-sm text-base-content cursor-pointer mb-0"
-                            >
-                              {t("no")}
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Right Column - Timezone & Date Settings */}
-                    <div className="md:col-span-7 flex flex-col">
-                      <div className="mb-6">
-                        <TimezoneSelector
-                          timezone={timezone}
-                          setTimezone={setTimezone}
+                          }
                         />
-                      </div>
+                      </CardSection>
+                    </div>
 
-                      <div className="mb-6">
-                        <DateFormatSelector
-                          timezone={timezone}
-                          dateFormat={dateFormat}
-                          is12HourTime={is12HourTime}
-                          setIs12HourTime={setIs12HourTime}
-                          setDateFormat={setDateFormat}
-                        />
-                      </div>
-                      <div className="mb-6">
-                        <FilenameFormatSelector
-                          fileNameFormat={fileNameFormat}
-                          setFileNameFormat={setFileNameFormat}
-                        />
-                      </div>
-                    </div>
-                    {/* Save Button - Full Width */}
-                    <div className="md:col-span-12 flex justify-start mt-2">
+                    <div className="flex justify-start">
                       <button
-                        className="op-btn op-btn-primary w-[110px]"
+                        data-testid="general-save-button"
+                        className="op-btn op-btn-primary gap-2"
                         onClick={handleSave}
+                        disabled={isLoader}
                       >
+                        <Check size={16} aria-hidden="true" />
                         {t("save")}
                       </button>
                     </div>
