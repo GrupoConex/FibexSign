@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
-import { NavLink } from "react-router";
+import { NavLink, useNavigate } from "react-router";
 import Icon from "../../primitives/Icon";
 import { appInfo } from "../../constant/appinfo";
 
@@ -10,8 +10,18 @@ const Submenu = ({ item, closeSidebar, toggleSubmenu, submenuOpen }) => {
   const { t } = useTranslation();
   const { title, icon, children } = item;
   const { selectedMenu } = useSelector((state) => state.sidebar);
+  const navigate = useNavigate();
 
   const isExpanded = Boolean(submenuOpen && submenuOpen[item.title]);
+
+  const handleChildClick = (e, childItem) => {
+    e.preventDefault();
+    const targetPath = childItem.pageType
+      ? `/${childItem.pageType}/${childItem.objectId}`
+      : `/${childItem.objectId}`;
+    navigate(targetPath);
+    closeSidebar(childItem.title);
+  };
 
   return (
     <li role="none">
@@ -58,7 +68,7 @@ const Submenu = ({ item, closeSidebar, toggleSubmenu, submenuOpen }) => {
                 className={({ isActive }) =>
                   `${isActive && selectedMenu ? "bg-base-300 active font-medium" : ""} pl-3 flex items-center gap-x-3.5 py-2 text-sm cursor-pointer rounded-lg text-base-content hover:text-base-content hover:no-underline focus:outline-none transition-colors`
                 }
-                onClick={() => closeSidebar(childItem.title)}
+                onClick={(e) => handleChildClick(e, childItem)}
                 role="menuitem"
                 tabIndex={isExpanded ? 0 : -1}
               >

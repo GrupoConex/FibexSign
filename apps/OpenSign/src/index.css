@@ -336,6 +336,16 @@ html[data-theme="opensigncss"] header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
+/* En mobile: sombra de elevación para el drawer sobre el contenido */
+@media (max-width: 1023px) {
+  html[data-theme="opensigncss"] .liquid-glass-sidebar {
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12) !important;
+  }
+  [data-theme="opensigndark"] .liquid-glass-sidebar {
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45) !important;
+  }
+}
+
 /* Alineación milimétrica de la raya divisoria del Header con el Sidebar */
 html[data-theme="opensigncss"] .header-brand-container.border-r-active {
   border-right: 1px solid #e2e8f0 !important;

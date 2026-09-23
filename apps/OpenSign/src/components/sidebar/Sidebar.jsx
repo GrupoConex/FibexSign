@@ -127,8 +127,8 @@ const Sidebar = () => {
   };
 
   const handleProfile = () => {
-    closeSidebar();
     navigate("/profile");
+    closeSidebar();
   };
 
   const defaultLogo = isDarkTheme ? logoNegativo : logoPositivo;
@@ -141,46 +141,40 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* TELÓN / BACKDROP EN PANTALLAS MÓVILES */}
+      {/* TELÓN / BACKDROP EN PANTALLAS MÓVILES (SIN BLUR, DEBAJO DEL HEADER) */}
       {isMobile && isOpen && (
         <div
           onClick={() => dispatch(toggleSidebar(false))}
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[990] transition-opacity duration-300"
+          className="fixed top-16 inset-x-0 bottom-0 bg-black/30 z-[990] transition-opacity duration-300"
           aria-hidden="true"
         />
       )}
 
       {/* ASIDE LIQUID GLASS */}
       <aside
-        className={`liquid-glass-sidebar z-[350] flex flex-col hide-scrollbar ${
+        className={`liquid-glass-sidebar flex flex-col hide-scrollbar ${
           isMobile
-            ? `fixed inset-y-0 left-0 w-[85%] max-w-[280px] h-full shadow-2xl z-[1000] transition-transform duration-300 ease-out ${
+            ? `fixed top-16 bottom-0 left-0 w-64 max-w-[85vw] h-[calc(100vh-4rem)] shadow-2xl z-[1000] transition-transform duration-300 ease-out ${
                 isOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
               }`
-            : `relative h-full flex-shrink-0 transition-all duration-300 ease-in-out ${
+            : `relative z-[350] h-full flex-shrink-0 transition-all duration-300 ease-in-out ${
                 isOpen ? "w-64" : "w-0 overflow-hidden border-0 p-0 shadow-none opacity-0 pointer-events-none"
               }`
         }`}
       >
-        {/* EN MOBILE: CABECERA CON BOTÓN CERRAR */}
+        {/* EN MOBILE: CABECERA COMPACTA CON BOTÓN CERRAR */}
         {isMobile && (
-          <div className="h-16 min-h-[4rem] px-4 flex items-center justify-between flex-shrink-0 border-b border-base-200/80 dark:border-slate-800/80">
-            <div className="flex items-center gap-3">
-              <img
-                className="object-contain h-9 w-9"
-                src={currentLogo}
-                alt="Firma logo"
-              />
-              <span className="font-bold text-xl tracking-tight text-base-content">
-                <span className="firma-text">Firma</span>
-              </span>
-            </div>
+          <div className="px-4 py-2.5 flex items-center justify-between flex-shrink-0 border-b border-base-200/80 dark:border-slate-800/80">
+            <span className="text-xs font-semibold uppercase tracking-wider text-base-content/60">
+              Navegación
+            </span>
             <button
               onClick={() => dispatch(toggleSidebar(false))}
-              className="p-1.5 rounded-xl hover:bg-base-200 text-base-content"
+              className="p-1.5 rounded-lg hover:bg-base-200 dark:hover:bg-slate-800 text-base-content/80 transition-colors"
               aria-label="Cerrar menú"
+              title="Cerrar menú"
             >
-              <Icon name="x" size={18} />
+              <Icon name="x" size={16} />
             </button>
           </div>
         )}
