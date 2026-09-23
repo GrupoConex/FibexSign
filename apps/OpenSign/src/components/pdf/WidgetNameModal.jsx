@@ -14,6 +14,7 @@ import {
 } from "../../utils";
 import { fontColorArr, fontsizeArr } from "../../constant/Utils";
 import { useTranslation } from "react-i18next";
+import "../../styles/WidgetNameModal.css";
 
 const WidgetNameModal = (props) => {
   const { t } = useTranslation();

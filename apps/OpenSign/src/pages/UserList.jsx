@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Parse from "parse";
 import {
   ChevronLeft,
@@ -28,75 +28,17 @@ import axios from "axios";
 import PasswordResetModal from "../primitives/PasswordResetModal";
 import { usersActions } from "../json/ReportJson";
 import { notify, withSessionValidation } from "../utils";
+import RoleBadge from "../components/users/RoleBadge";
+import ToggleStatusModal from "../components/users/ToggleStatusModal";
+import { useUserListFilters } from "../hook/useUserListFilters";
 
 const heading = ["Sr.No", "Name", "Email", "Phone", "Role", "Team", "Active"];
-
-const ROLE_BADGE_CLASS = {
-  Admin: "op-badge op-badge-primary",
-  OrgAdmin: "op-badge op-badge-neutral",
-  Editor: "op-badge op-badge-secondary",
-  User: "op-badge op-badge-ghost"
-};
 
 const ROLE_OPTIONS = ["Admin", "OrgAdmin", "Editor", "User"];
 
 const ACTION_ICONS = {
   trash: Trash2,
   key: KeyRound
-};
-
-const RoleBadge = ({ role }) => {
-  const badgeClass = ROLE_BADGE_CLASS[role] || "op-badge op-badge-ghost";
-  return (
-    <span className={`${badgeClass} font-medium whitespace-nowrap`}>
-      {role || "-"}
-    </span>
-  );
-};
-
-const ToggleStatusModal = ({ item, onConfirm, onClose, t }) => {
-  const cancelBtnRef = useRef(null);
-
-  useEffect(() => {
-    cancelBtnRef.current?.focus();
-  }, []);
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Escape") {
-      e.stopPropagation();
-      onClose();
-    }
-  };
-
-  return (
-    <ModalUi isOpen title={t("user-status")} handleClose={onClose}>
-      <div className="m-[20px]" onKeyDown={handleKeyDown}>
-        <div className="text-lg font-normal text-base-content">
-          {t("are-you-sure")}{" "}
-          {item?.IsDisabled ? t("activate") : t("deactivate")}{" "}
-          {t("this-user")}?
-        </div>
-        <hr className="border-t border-base-200 mt-4" />
-        <div className="flex items-center mt-3 gap-2 text-white">
-          <button
-            type="button"
-            onClick={() => onConfirm(item)}
-            className="op-btn op-btn-primary"
-          >
-            {t("yes")}
-          </button>
-          <button
-            type="button"
-            ref={cancelBtnRef}
-            onClick={onClose}
-            className="op-btn op-btn-secondary"
-          >
-            {t("no")}
-          </button>
-        </div>
-      </div>
-    </ModalUi>
-  );
 };
 
 const UserList = () => {
@@ -111,7 +53,6 @@ const UserList = () => {
   const location = useLocation();
   const isDashboard =
     location?.pathname === "/dashboard/35KBoSgoAK" ? true : false;
-  const [currentPage, setCurrentPage] = useState(1);
   const [isActiveModal, setIsActiveModal] = useState({});
   const [isActLoader, setIsActLoader] = useState({});
   const [isAdmin, setIsAdmin] = useState(false);
@@ -119,172 +60,37 @@ const UserList = () => {
   const [deleteUserRes, setDeleteUserRes] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [isActModal, setIsActModal] = useState({});
-  const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [teamFilter, setTeamFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("default");
-  const [recordPerPage, setRecordPerPage] = useState(10);
   const Extand_Class = localStorage.getItem("Extand_Class");
   const extClass = Extand_Class && JSON.parse(Extand_Class);
 
-  const availableTeams = useMemo(() => {
-    const teamsMap = new Map();
-    userList.forEach((u) => {
-      const raw = u?.TeamIds;
-      if (Array.isArray(raw)) {
-        raw.forEach((t) => {
-          const id = t?.objectId || t?.id;
-          const name = t?.Name || t?.name;
-          if (id && name) {
-            teamsMap.set(id, name);
-          }
-        });
-      } else if (raw && typeof raw === "object") {
-        const id = raw?.objectId || raw?.id;
-        const name = raw?.Name || raw?.name;
-        if (id && name) {
-          teamsMap.set(id, name);
-        }
-      }
-    });
-    return Array.from(teamsMap.entries())
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [userList]);
-
-  const filteredUserList = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    const result = userList.filter((item) => {
-      const matchesQuery =
-        !query ||
-        item?.Name?.toLowerCase()?.includes(query) ||
-        item?.Email?.toLowerCase()?.includes(query);
-      const role = item?.UserRole?.split("_").pop();
-      const matchesRole = roleFilter === "all" || role === roleFilter;
-      const isActive = item?.IsDisabled !== true;
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && isActive) ||
-        (statusFilter === "inactive" && !isActive);
-
-      let matchesTeam = true;
-      if (teamFilter === "none") {
-        const raw = item?.TeamIds;
-        matchesTeam =
-          !raw ||
-          (Array.isArray(raw) && raw.length === 0) ||
-          (typeof raw === "object" && !raw?.objectId && !raw?.Name);
-      } else if (teamFilter !== "all") {
-        const raw = item?.TeamIds;
-        if (Array.isArray(raw)) {
-          matchesTeam = raw.some(
-            (t) =>
-              (t?.objectId || t?.id) === teamFilter ||
-              (t?.Name || t?.name) === teamFilter
-          );
-        } else if (raw && typeof raw === "object") {
-          matchesTeam =
-            (raw?.objectId || raw?.id) === teamFilter ||
-            (raw?.Name || raw?.name) === teamFilter;
-        } else {
-          matchesTeam = false;
-        }
-      }
-
-      return matchesQuery && matchesRole && matchesStatus && matchesTeam;
-    });
-
-    if (sortBy === "name-asc") {
-      result.sort((a, b) => (a?.Name || "").localeCompare(b?.Name || ""));
-    } else if (sortBy === "name-desc") {
-      result.sort((a, b) => (b?.Name || "").localeCompare(a?.Name || ""));
-    } else if (sortBy === "role") {
-      result.sort((a, b) => {
-        const roleA = a?.UserRole?.split("_").pop() || "";
-        const roleB = b?.UserRole?.split("_").pop() || "";
-        return roleA.localeCompare(roleB);
-      });
-    }
-
-    return result;
-  }, [userList, searchQuery, roleFilter, statusFilter, teamFilter, sortBy]);
-
-  const hasActiveFilters =
-    searchQuery.trim().length > 0 ||
-    roleFilter !== "all" ||
-    statusFilter !== "all" ||
-    teamFilter !== "all" ||
-    sortBy !== "default";
-
-  const totalFilteredPages = Math.max(
-    1,
-    Math.ceil(filteredUserList.length / recordPerPage)
-  );
-  const safePage = Math.min(currentPage, totalFilteredPages);
-  const startIndex = (safePage - 1) * recordPerPage; // user per page
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, roleFilter, statusFilter, teamFilter, sortBy, recordPerPage]);
-
-  const getPaginationRange = () => {
-    const totalPageNumbers = 7; // Adjust this value to show more/less page numbers
-    const pages = [];
-    const totalPages = Math.ceil(filteredUserList.length / recordPerPage);
-    if (totalPages <= totalPageNumbers) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      const leftSiblingIndex = Math.max(safePage - 1, 1);
-      const rightSiblingIndex = Math.min(safePage + 1, totalPages);
-
-      const showLeftDots = leftSiblingIndex > 2;
-      const showRightDots = rightSiblingIndex < totalPages - 2;
-
-      const firstPageIndex = 1;
-      const lastPageIndex = totalPages;
-
-      if (!showLeftDots && showRightDots) {
-        let leftItemCount = 3;
-        let leftRange = Array.from({ length: leftItemCount }, (_, i) => i + 1);
-
-        pages.push(...leftRange);
-        pages.push("...");
-        pages.push(totalPages);
-      } else if (showLeftDots && !showRightDots) {
-        let rightItemCount = 3;
-        let rightRange = Array.from(
-          { length: rightItemCount },
-          (_, i) => totalPages - rightItemCount + i + 1
-        );
-
-        pages.push(firstPageIndex);
-        pages.push("...");
-        pages.push(...rightRange);
-      } else if (showLeftDots && showRightDots) {
-        let middleRange = Array.from(
-          { length: 3 },
-          (_, i) => leftSiblingIndex + i
-        );
-
-        pages.push(firstPageIndex);
-        pages.push("...");
-        pages.push(...middleRange);
-        pages.push("...");
-        pages.push(lastPageIndex);
-      }
-    }
-    return pages;
-  };
-  const pageNumbers = getPaginationRange();
-  // to slice out objects from array for current page
-  const indexOfLastDoc = safePage * recordPerPage;
-  const indexOfFirstDoc = indexOfLastDoc - recordPerPage;
-  const currentList = filteredUserList?.slice(indexOfFirstDoc, indexOfLastDoc);
-  const rangeFrom = filteredUserList.length === 0 ? 0 : indexOfFirstDoc + 1;
-  const rangeTo = Math.min(indexOfLastDoc, filteredUserList.length);
+  const {
+    searchQuery,
+    setSearchQuery,
+    roleFilter,
+    setRoleFilter,
+    statusFilter,
+    setStatusFilter,
+    teamFilter,
+    setTeamFilter,
+    sortBy,
+    setSortBy,
+    recordPerPage,
+    setRecordPerPage,
+    availableTeams,
+    filteredUserList,
+    hasActiveFilters,
+    totalFilteredPages,
+    safePage,
+    setCurrentPage,
+    startIndex,
+    pageNumbers,
+    currentList,
+    rangeFrom,
+    rangeTo,
+    handleClearFilters,
+    paginateFront,
+    paginateBack
+  } = useUserListFilters(userList);
 
   const activeDeleteUser = useMemo(
     () => userList.find((u) => Boolean(isActModal["delete_" + u.objectId])),
@@ -333,28 +139,6 @@ const UserList = () => {
   }
   const handleModal = (modalName) => {
     setIsModal((obj) => ({ ...obj, [modalName]: !obj[modalName] }));
-  };
-
-  const handleClearFilters = () => {
-    setSearchQuery("");
-    setRoleFilter("all");
-    setStatusFilter("all");
-    setTeamFilter("all");
-    setSortBy("default");
-  };
-
-  // Change page
-  const paginateFront = () => {
-    const lastValue = pageNumbers?.[pageNumbers?.length - 1];
-    if (safePage < lastValue) {
-      setCurrentPage(safePage + 1);
-    }
-  };
-
-  const paginateBack = () => {
-    if (safePage > 1) {
-      setCurrentPage(safePage - 1);
-    }
   };
 
   const handleUserData = (userData) => {
