@@ -15,7 +15,7 @@
     "prettier": "prettier --write '{cloud,spec}/{**/*,*}.js' 'index.js'",
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "mongodb-runner start && TESTING=true jasmine",
+    "test": "jasmine",
     "watch": "nodemon index.js"
   },
   "dependencies": {
