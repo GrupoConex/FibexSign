@@ -103,34 +103,21 @@ const AddAdmin = () => {
         localStorage.setItem("userDetails", JSON.stringify(userDetails));
         try {
           event.preventDefault();
-          const user = new Parse.User();
-          user.set("name", name);
-          user.set("email", email?.toLowerCase()?.replace(/\s/g, ""));
-          user.set("password", password);
-          user.set("phone", phone);
-          user.set("username", email?.toLowerCase()?.replace(/\s/g, ""));
-          const userRes = await user.save();
-          if (userRes) {
-            const params = {
-              userDetails: {
-                jobTitle: jobTitle,
-                company: company,
-                name: name,
-                email: email?.toLowerCase()?.replace(/\s/g, ""),
-                phone: phone,
-                role: "contracts_Admin",
-                timezone: usertimezone
-              }
-            };
-            try {
-              const usersignup = await Parse.Cloud.run("addadmin", params);
-              if (usersignup) {
-                handleNavigation(userRes.getSessionToken());
-              }
-            } catch (err) {
-              notify.error(err.message);
-              setState({ loading: false });
+          const params = {
+            userDetails: {
+              jobTitle: jobTitle,
+              company: company,
+              name: name,
+              email: email?.toLowerCase()?.replace(/\s/g, ""),
+              phone: phone,
+              password: password,
+              role: "contracts_Admin",
+              timezone: usertimezone
             }
+          };
+          const usersignup = await Parse.Cloud.run("addadmin", params);
+          if (usersignup?.sessionToken) {
+            handleNavigation(usersignup.sessionToken);
           }
         } catch (error) {
           console.log("err ", error);

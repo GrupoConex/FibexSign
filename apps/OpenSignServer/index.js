@@ -112,6 +112,22 @@ const accountLockoutDurationMinutes = Number(process.env.ACCOUNT_LOCKOUT_DURATIO
 const accountLockoutThreshold = Number(process.env.ACCOUNT_LOCKOUT_THRESHOLD) || 5;
 const sessionLengthSeconds = Number(process.env.SESSION_LENGTH_SECONDS) || 60 * 60 * 24 * 30;
 export const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS) || 0;
+const emailAdapterTemplates = {
+  // The template used by Parse Server to send an email for password
+  // reset; this is a reserved template name.
+  passwordResetEmail: {
+    subjectPath: './files/password_reset_email_subject.txt',
+    textPath: './files/password_reset_email.txt',
+    htmlPath: './files/password_reset_email.html',
+  },
+  // The template used by Parse Server to send an email for email
+  // address verification; this is a reserved template name.
+  verificationEmail: {
+    subjectPath: './files/verification_email_subject.txt',
+    textPath: './files/verification_email.txt',
+    htmlPath: './files/verification_email.html',
+  },
+};
 export const config = {
   databaseURI:
     process.env.DATABASE_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/dev',
@@ -146,23 +162,7 @@ export const config = {
           options: {
             // The email address from which emails are sent.
             sender: appName + ' <' + mailsender + '>',
-            // The email templates.
-            templates: {
-              // The template used by Parse Server to send an email for password
-              // reset; this is a reserved template name.
-              passwordResetEmail: {
-                subjectPath: './files/password_reset_email_subject.txt',
-                textPath: './files/password_reset_email.txt',
-                htmlPath: './files/password_reset_email.html',
-              },
-              // The template used by Parse Server to send an email for email
-              // address verification; this is a reserved template name.
-              verificationEmail: {
-                subjectPath: './files/verification_email_subject.txt',
-                textPath: './files/verification_email.txt',
-                htmlPath: './files/verification_email.html',
-              },
-            },
+            templates: emailAdapterTemplates,
             apiCallback: async ({ payload, locale }) => {
               if (mailgunClient) {
                 const mailgunPayload = ApiPayloadConverter.mailgun(payload);
@@ -172,7 +172,21 @@ export const config = {
           },
         },
       }
-    : {}),
+    : {
+        emailAdapter: {
+          module: 'parse-server-api-mail-adapter',
+          options: {
+            sender: appName + ' <dev@localhost>',
+            templates: emailAdapterTemplates,
+            apiCallback: async ({ payload }) => {
+              console.log(
+                '[dev email adapter] Email not sent (no SMTP/Mailgun configured):',
+                payload
+              );
+            },
+          },
+        },
+      }),
   filesAdapter: fsAdapter,
   auth: { google: { clientId: process.env.GOOGLE_CLIENT_ID }, sso: SSOAuth },
   // for fix Adapter prototype don't match expected prototype
