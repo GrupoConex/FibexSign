@@ -1,7 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-} from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Navigate, useNavigate } from "react-router";
 import Parse from "parse";
 import { SaveFileSize } from "../constant/saveFileSize";
@@ -13,39 +10,88 @@ import {
   withSessionValidation
 } from "../utils";
 import axios from "axios";
-import Tooltip from "../primitives/Tooltip";
-import {
-  getSecureUrl,
-  handleSendOTP
-} from "../constant/Utils";
+import { getSecureUrl, handleSendOTP } from "../constant/Utils";
 import ModalUi from "../primitives/ModalUi";
 import Loader from "../primitives/Loader";
 import { useTranslation } from "react-i18next";
-import SelectLanguage from "../components/pdf/SelectLanguage";
+import { ShieldCheck, Camera } from "lucide-react";
+import PersonalInfoCard from "../components/profile/PersonalInfoCard";
+import ProfessionalInfoCard from "../components/profile/ProfessionalInfoCard";
+import PreferencesCard from "../components/profile/PreferencesCard";
+import SecurityCard from "../components/profile/SecurityCard";
+
+const INITIALS_BADGE_CLASSES = [
+  "bg-primary text-primary-content",
+  "bg-secondary text-secondary-content",
+  "bg-accent text-accent-content",
+  "bg-info text-info-content",
+  "bg-success text-success-content",
+  "bg-warning text-warning-content"
+];
+
+const ROLE_BADGE_CLASSES = {
+  Admin: "op-badge-primary",
+  OrgAdmin: "op-badge-accent",
+  Editor: "op-badge-secondary",
+  User: "op-badge-ghost",
+  Guest: "op-badge-ghost"
+};
+
+const PHONE_FORMAT_REGEX = /^[+]?[\d\s().-]{7,20}$/;
+
+function readLocalStorageJson(key) {
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    console.error(`Unable to parse localStorage key "${key}"`, error);
+    return null;
+  }
+}
+
+function getInitialsFromName(fullName) {
+  if (!fullName) return "";
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "";
+  const first = parts[0][0] || "";
+  const last = parts.length > 1 ? parts[parts.length - 1][0] || "" : "";
+  return `${first}${last}`.toUpperCase();
+}
+
+function getInitialsBadgeClass(fullName) {
+  if (!fullName) return INITIALS_BADGE_CLASSES[0];
+  const code = fullName.charCodeAt(0) || 0;
+  return INITIALS_BADGE_CLASSES[code % INITIALS_BADGE_CLASSES.length];
+}
+
+function getRoleBadgeClass(role) {
+  return ROLE_BADGE_CLASSES[role] || "op-badge-ghost";
+}
+
+function isValidPhoneFormat(phone) {
+  if (!phone) return true;
+  return PHONE_FORMAT_REGEX.test(phone);
+}
 
 function UserProfile() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  let UserProfile =
-    localStorage.getItem("UserInformation") &&
-    JSON.parse(localStorage.getItem("UserInformation"));
-  let extendUser =
-    localStorage.getItem("Extand_Class") &&
-    JSON.parse(localStorage.getItem("Extand_Class"));
+  const storedUserInfo = readLocalStorageJson("UserInformation");
+  const extendUser = readLocalStorageJson("Extand_Class");
   const [parseBaseUrl] = useState(localStorage.getItem("baseUrl"));
   const [parseAppId] = useState(localStorage.getItem("parseAppId"));
   const [editmode, setEditMode] = useState(false);
   const [name, SetName] = useState(localStorage.getItem("username"));
-  const [Phone, SetPhone] = useState(UserProfile && UserProfile.phone);
+  const [Phone, SetPhone] = useState(storedUserInfo?.phone);
   const [Image, setImage] = useState(localStorage.getItem("profileImg"));
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [isLoader, setIsLoader] = useState(false);
   const [percentage, setpercentage] = useState(0);
-  const [company, setCompany] = useState(
-    extendUser && extendUser?.[0]?.Company
-  );
-  const [jobTitle, setJobTitle] = useState(
-    extendUser && extendUser?.[0]?.JobTitle
-  );
+  const [company, setCompany] = useState(extendUser?.[0]?.Company);
+  const [jobTitle, setJobTitle] = useState(extendUser?.[0]?.JobTitle);
+  const [nameError, setNameError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [isVerifyModal, setIsVerifyModal] = useState(false);
   const [otp, setOtp] = useState("");
   const [otpLoader, setOtpLoader] = useState(false);
@@ -53,16 +99,57 @@ function UserProfile() {
   const [isdeleteModal, setIsdeleteModal] = useState(false);
   const [deleteUserRes, setDeleteUserRes] = useState("");
   const [isDelLoader, setIsDelLoader] = useState(false);
+  const avatarInputRef = useRef(null);
+  const otpInputRef = useRef(null);
+  const deleteCancelBtnRef = useRef(null);
+  const uploadGenerationRef = useRef(0);
+
   useEffect(() => {
     getUserDetail();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (isVerifyModal && !otpLoader) {
+      otpInputRef.current?.focus();
+    }
+  }, [isVerifyModal, otpLoader]);
+
+  useEffect(() => {
+    if (!isVerifyModal) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsVerifyModal(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isVerifyModal]);
+
+  useEffect(() => {
+    if (isdeleteModal && !isDelLoader && !deleteUserRes) {
+      deleteCancelBtnRef.current?.focus();
+    }
+  }, [isdeleteModal, isDelLoader, deleteUserRes]);
+
+  useEffect(() => {
+    if (!isdeleteModal) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsdeleteModal(false);
+        setDeleteUserRes("");
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isdeleteModal]);
+
   const getUserDetail = async () => {
     setIsLoader(true);
     const currentUser = JSON.parse(JSON.stringify(Parse.User.current()));
-    let isEmailVerified = currentUser?.emailVerified || false;
-    if (isEmailVerified) {
-      setIsEmailVerified(isEmailVerified);
+    let userEmailVerified = currentUser?.emailVerified || false;
+    if (userEmailVerified) {
+      setIsEmailVerified(userEmailVerified);
       setIsLoader(false);
     } else {
       try {
@@ -71,74 +158,80 @@ function UserProfile() {
           sessionToken: localStorage.getItem("accesstoken")
         });
         if (user) {
-          isEmailVerified = user?.get("emailVerified");
-          setIsEmailVerified(isEmailVerified);
-          setIsLoader(false);
+          userEmailVerified = user?.get("emailVerified");
+          setIsEmailVerified(userEmailVerified);
         }
       } catch (e) {
         notify.error(t("something-went-wrong-mssg"));
+      } finally {
+        setIsLoader(false);
       }
     }
+  };
+
+  const validateEditableFields = () => {
+    const trimmedName = name?.trim();
+    let isValid = true;
+    if (!trimmedName) {
+      setNameError(t("name-required"));
+      isValid = false;
+    } else {
+      setNameError("");
+    }
+    if (!isValidPhoneFormat(Phone)) {
+      setPhoneError(t("invalid-phone-format"));
+      isValid = false;
+    } else {
+      setPhoneError("");
+    }
+    return isValid;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    let phn = Phone,
-      res = "";
-    if (!res) {
-      setIsLoader(true);
-      try {
-        const userQuery = Parse.Object.extend("_User");
-        const query = new Parse.Query(userQuery);
-        await query.get(UserProfile.objectId).then((object) => {
-          object.set("name", name);
-          object.set("ProfilePic", Image);
-          object.set("phone", phn || "");
-          object.save().then(
-            async (response) => {
-              if (response) {
-                let res = response.toJSON();
-                let rr = JSON.stringify(res);
-                localStorage.setItem("UserInformation", rr);
-                SetName(res.name);
-                SetPhone(res?.phone || "");
-                setImage(res.ProfilePic);
-                localStorage.setItem("username", res.name);
-                localStorage.setItem("profileImg", res.ProfilePic);
-                await updateExtUser({
-                  Name: res.name,
-                  Phone: res?.phone || ""
-                });
-                notify.success(t("profile-update-alert"));
-                setEditMode(false);
-                setIsLoader(false);
-                //navigate("/dashboard/35KBoSgoAK");
-              }
-            },
-            (error) => {
-              notify.error(t("something-went-wrong-mssg"));
-              console.error("Error while updating tour", error);
-              setIsLoader(false);
-            }
-          );
+    if (!validateEditableFields()) return;
+    setIsLoader(true);
+    try {
+      const userExtendClass = Parse.Object.extend("_User");
+      const query = new Parse.Query(userExtendClass);
+      const object = await query.get(storedUserInfo?.objectId);
+      object.set("name", name);
+      object.set("ProfilePic", Image);
+      object.set("phone", Phone || "");
+      const response = await object.save();
+      if (response) {
+        const res = response.toJSON();
+        localStorage.setItem("UserInformation", JSON.stringify(res));
+        SetName(res.name);
+        SetPhone(res?.phone || "");
+        setImage(res.ProfilePic);
+        localStorage.setItem("username", res.name);
+        localStorage.setItem("profileImg", res.ProfilePic);
+        await updateExtUser({
+          Name: res.name,
+          Phone: res?.phone || ""
         });
-      } catch (error) {
-        console.log("err", error);
+        notify.success(t("profile-update-alert"));
+        setEditMode(false);
       }
+    } catch (error) {
+      notify.error(t("something-went-wrong-mssg"));
+      console.error("Error while updating profile", error);
+    } finally {
+      setIsLoader(false);
     }
   };
 
-  //  `updateExtUser` is used to update user details in extended class
   const updateExtUser = withSessionValidation(async (obj) => {
     try {
-      const extData = JSON.parse(localStorage.getItem("Extand_Class"));
+      const extData = readLocalStorageJson("Extand_Class");
       const ExtUserId = extData?.[0]?.objectId;
       const body = {
         Phone: obj?.Phone || "",
         Name: obj.Name,
         JobTitle: jobTitle,
         Company: company,
-        Language: obj?.language || "",
+        Language: obj?.language || ""
       };
 
       await axios.put(
@@ -158,19 +251,29 @@ function UserProfile() {
       const extRes = JSON.stringify(json);
       localStorage.setItem("Extand_Class", extRes);
     } catch (err) {
-      console.log("error in save data in contracts_Users class", err);
+      console.error("Error saving data in contracts_Users class", err);
     }
   });
-  // file upload function
+
   const fileUpload = async (event) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
+    const file = event.target.files?.[0];
+    if (!file) return;
+    uploadGenerationRef.current += 1;
+    const thisGeneration = uploadGenerationRef.current;
+    const objectPreviewUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectPreviewUrl);
+    try {
       const compressedfile = await compressImage(
         file,
         { width: 200, height: 200 },
         "file"
       );
       await handleFileUpload(compressedfile);
+    } finally {
+      URL.revokeObjectURL(objectPreviewUrl);
+      if (uploadGenerationRef.current === thisGeneration) {
+        setPreviewUrl(null);
+      }
     }
   };
 
@@ -178,21 +281,18 @@ function UserProfile() {
     const size = file.size;
     const pdfFile = file;
     const fileName = file.name;
-    const name = sanitizeFileName(fileName);
-    const parseFile = new Parse.File(name, pdfFile);
+    const sanitizedName = sanitizeFileName(fileName);
+    const parseFile = new Parse.File(sanitizedName, pdfFile);
 
     try {
       const response = await parseFile.save({
         progress: (progressValue, loaded, total) => {
           if (progressValue !== null) {
             const percentCompleted = Math.round((loaded * 100) / total);
-            // console.log("percentCompleted ", percentCompleted);
             setpercentage(percentCompleted);
           }
         }
       });
-      // // The response object will contain information about the uploaded file
-      // console.log("File uploaded:", response);
 
       if (response?.url()) {
         const fileRes = await getSecureUrl(response?.url());
@@ -209,15 +309,15 @@ function UserProfile() {
       console.error("Error uploading file:", error);
     }
   };
+
   if (
     localStorage.getItem("accesstoken") === null &&
     localStorage.getItem("pageType") === null
   ) {
-    let _redirect = `/`;
-    return <Navigate to={_redirect} />;
+    const redirectTo = `/`;
+    return <Navigate to={redirectTo} />;
   }
 
-  //`handleVerifyBtn` function is used to send otp on user mail
   const handleVerifyBtn = async () => {
     setIsVerifyModal(true);
     await handleSendOTP(Parse.User.current().getEmail());
@@ -225,7 +325,6 @@ function UserProfile() {
   const handleCloseVerifyModal = async () => {
     setIsVerifyModal(false);
   };
-  //`handleVerifyEmail` function is used to verify email with otp
   const handleVerifyEmail = async (e) => {
     e.preventDefault();
     setOtpLoader(true);
@@ -249,7 +348,6 @@ function UserProfile() {
       setOtpLoader(false);
     }
   };
-  //function to use resend otp for email verification
   const handleResend = async (e) => {
     e.preventDefault();
     setOtpLoader(true);
@@ -260,11 +358,19 @@ function UserProfile() {
 
   const handleCancel = () => {
     setEditMode(false);
+    setNameError("");
+    setPhoneError("");
     SetName(localStorage.getItem("username"));
-    SetPhone(UserProfile && UserProfile.phone);
+    SetPhone(storedUserInfo?.phone);
     setImage(localStorage.getItem("profileImg"));
-    setCompany(extendUser && extendUser?.[0]?.Company);
+    setCompany(extendUser?.[0]?.Company);
     setJobTitle(extendUser?.[0]?.JobTitle);
+  };
+
+  const handleEnterEditMode = () => {
+    setNameError("");
+    setPhoneError("");
+    setEditMode(true);
   };
 
   const handleDeleteAccountBtn = () => {
@@ -285,7 +391,7 @@ function UserProfile() {
       setDeleteUserRes(t("account-deletion-request-sent-via-mail"));
     } catch (err) {
       setDeleteUserRes(err.message);
-      console.log("Err in deleteuser acc", err);
+      console.error("Error deleting user account", err);
     } finally {
       setIsDelLoader(false);
     }
@@ -296,6 +402,12 @@ function UserProfile() {
     setDeleteUserRes("");
   };
 
+  const displayName = editmode ? name : localStorage.getItem("username");
+  const initials = getInitialsFromName(displayName);
+  const hasProfileImage = Boolean(Image);
+  const avatarImageSrc = previewUrl || (hasProfileImage ? Image : null);
+  const userRole = localStorage.getItem("_user_role");
+
   return (
     <React.Fragment>
       {isLoader ? (
@@ -303,187 +415,169 @@ function UserProfile() {
           <Loader />
         </div>
       ) : (
-        <div className="flex justify-center items-center w-full relative">
-          <div className="bg-base-100 text-base-content flex flex-col justify-center rounded-box w-[450px]">
-            <div className="flex flex-col justify-center items-center my-4">
-              <div className="w-[200px] h-[200px] overflow-hidden rounded-full">
-                <img
-                  className="object-contain w-full h-full"
-                  src={Image === "" ? dp : Image}
-                  alt="dp"
-                />
-              </div>
-              {editmode && (
-                <input
-                  type="file"
-                  className="op-file-input op-file-input-bordered op-file-input-sm max-w-[270px] mt-4 text-sm"
-                  accept="image/png, image/gif, image/jpeg"
-                  onChange={fileUpload}
-                />
-              )}
-              {percentage !== 0 && (
-                <div className="flex items-center gap-x-2">
-                  <div className="h-2 rounded-full w-[200px] md:w-[400px] bg-gray-200">
-                    <div
-                      className="h-2 rounded-full bg-blue-500"
-                      style={{ width: `${percentage}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-base-contentk text-sm">
-                    {percentage}%
-                  </span>
-                </div>
-              )}
-              <div className="text-base font-semibold pt-4">
-                {localStorage.getItem("_user_role")}
-              </div>
+        <div className="w-full max-w-3xl mx-auto py-4 px-2 md:px-0">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <ShieldCheck size={20} aria-hidden="true" />
             </div>
-            <ul className="w-full flex flex-col p-2 text-sm">
-              <li
-                className={`flex justify-between items-center border-y-[1px] border-gray-300 break-all ${
-                  editmode ? "py-1.5" : "py-2"
-                }`}
-              >
-                <span className="font-semibold">{t("name")}:</span>{" "}
-                {editmode ? (
-                  <input
-                    type="text"
-                    value={name}
-                    className="op-input op-input-bordered op-input-sm w-[180px] focus:outline-none hover:border-base-content text-sm"
-                    onChange={(e) => SetName(e.target.value)}
-                  />
-                ) : (
-                  <span>{localStorage.getItem("username")}</span>
-                )}
-              </li>
-              <li
-                className={`flex justify-between items-center border-b-[1px] border-gray-300 break-all ${
-                  editmode ? "py-1.5" : "py-2"
-                }`}
-              >
-                <span className="font-semibold">{t("phone")}:</span>{" "}
-                {editmode ? (
-                  <input
-                    type="text"
-                    className="op-input op-input-bordered op-input-sm w-[180px] focus:outline-none hover:border-base-content text-sm"
-                    onChange={(e) => SetPhone(e.target.value)}
-                    value={Phone}
-                  />
-                ) : (
-                  <span>{UserProfile && UserProfile.phone}</span>
-                )}
-              </li>
-              <li className="flex justify-between items-center border-b-[1px] border-gray-300 py-2 break-all">
-                <span
-                  data-tooltip-id="email-tooltip"
-                  className="font-semibold flex gap-1"
-                >
-                  {t("email")} :{" "}
-                  {editmode && (
-                    <Tooltip
-                      message={t("email-help")}
-                      maxWidth="max-w-[250px]"
-                    />
-                  )}
-                </span>
-                <span>{UserProfile && UserProfile.email}</span>
-              </li>
-              <li
-                className={`flex justify-between items-center border-b-[1px] border-gray-300 break-all ${
-                  editmode ? "py-1.5" : "py-2"
-                }`}
-              >
-                <span className="font-semibold">{t("company")}:</span>{" "}
-                {editmode ? (
-                  <input
-                    type="text"
-                    value={company}
-                    className="op-input op-input-bordered op-input-sm w-[180px] focus:outline-none hover:border-base-content text-sm"
-                    onChange={(e) => setCompany(e.target.value)}
-                  />
-                ) : (
-                  <span>{extendUser?.[0].Company}</span>
-                )}
-              </li>
-              <li
-                className={`flex justify-between items-center border-b-[1px] border-gray-300 break-all ${
-                  editmode ? "py-1.5" : "py-2"
-                }`}
-              >
-                <span className="font-semibold">{t("job-title")}:</span>{" "}
-                {editmode ? (
-                  <input
-                    type="text"
-                    value={jobTitle}
-                    className="op-input op-input-bordered op-input-sm w-[180px] focus:outline-none hover:border-base-content text-sm"
-                    onChange={(e) => setJobTitle(e.target.value)}
-                  />
-                ) : (
-                  <span>{extendUser?.[0]?.JobTitle}</span>
-                )}
-              </li>
-              <li className="flex justify-between items-center border-b-[1px] border-gray-300 py-2 break-all">
-                <span className="font-semibold">{t("is-email-verified")}:</span>{" "}
-                <span>
-                  {isEmailVerified ? (
-                    t("verified")
-                  ) : (
-                    <span>
-                      {t("not-verified")} (
-                      <span
-                        onClick={() => handleVerifyBtn()}
-                        className="hover:underline text-blue-600 cursor-pointer"
-                      >
-                        {t("verify")}
-                      </span>
-                      )
-                    </span>
-                  )}
-                </span>
-              </li>
-              <li
-                className={`flex justify-between items-center border-b-[1px] border-gray-300 break-all ${
-                  editmode ? "py-1.5" : "py-2"
-                }`}
-              >
-                <span className="font-semibold">{t("language")}:</span>{" "}
-                <SelectLanguage
-                  isProfile={true}
-                  updateExtUser={updateExtUser}
-                />
-              </li>
-            </ul>
-            <div className="flex flex-col md:flex-row justify-center gap-2 pt-2 pb-3 md:pt-3 md:pb-4 mx-2 md:mx-0">
-              <button
-                type="button"
-                onClick={(e) => {
-                    editmode ? handleSubmit(e) : setEditMode(true);
-                }}
-                className="op-btn op-btn-primary md:w-[100px]"
-              >
-                {editmode ? t("save") : t("edit")}
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  editmode ? handleCancel() : navigate("/changepassword")
-                }
-                className={
-                      `op-btn ${editmode ? "op-btn-ghost w-[100px]" : "op-btn-secondary"}`
-                }
-              >
-                {editmode ? t("cancel") : t("change-password")}
-              </button>
-              <button
-                onClick={() => handleDeleteAccountBtn()}
-                className="op-link op-link-accent text-sm mx-2"
-              >
-                {t("delete-account")}
-              </button>
+            <div>
+              <h1 className="text-lg font-semibold text-base-content leading-tight">
+                {t("profile")}
+              </h1>
+              <p className="text-xs text-base-content/60">
+                {t("profile-subtitle")}
+              </p>
             </div>
           </div>
+
+          <div className="flex flex-col items-center gap-2 mb-6">
+            <div className="relative w-28 h-28 md:w-32 md:h-32">
+              <div className="w-full h-full rounded-full overflow-hidden ring-4 ring-base-200 bg-base-200">
+                {avatarImageSrc ? (
+                  <img
+                    data-testid="profile-avatar-image"
+                    className="object-cover w-full h-full"
+                    src={avatarImageSrc}
+                    alt={displayName || "avatar"}
+                  />
+                ) : initials ? (
+                  <div
+                    data-testid="profile-avatar-initials"
+                    role="img"
+                    aria-label={displayName || "avatar"}
+                    className={`w-full h-full flex items-center justify-center text-2xl font-semibold ${getInitialsBadgeClass(displayName)}`}
+                  >
+                    {initials}
+                  </div>
+                ) : (
+                  <img
+                    data-testid="profile-avatar-image"
+                    className="object-cover w-full h-full"
+                    src={dp}
+                    alt="avatar"
+                  />
+                )}
+              </div>
+              {editmode && (
+                <>
+                  <input
+                    id="profile-avatar-input"
+                    ref={avatarInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="image/png, image/gif, image/jpeg"
+                    onChange={fileUpload}
+                    data-testid="avatar-file-input"
+                  />
+                  <label
+                    htmlFor="profile-avatar-input"
+                    data-testid="avatar-camera-button"
+                    aria-label={t("change-photo-help")}
+                    title={t("change-photo-help")}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+                        e.preventDefault();
+                        avatarInputRef.current?.click();
+                      }
+                    }}
+                    className="absolute bottom-0 right-0 w-9 h-9 rounded-full op-btn op-btn-circle op-btn-primary op-btn-sm border-2 border-base-100 flex items-center justify-center cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  >
+                    <Camera size={16} aria-hidden="true" />
+                  </label>
+                </>
+              )}
+            </div>
+            {percentage > 0 && (
+              <div
+                className="flex items-center gap-2 w-full max-w-[220px]"
+                data-testid="avatar-upload-progress"
+              >
+                <progress
+                  className="op-progress op-progress-primary w-full"
+                  value={percentage}
+                  max="100"
+                  data-testid="avatar-progress-bar"
+                ></progress>
+                <span className="text-xs text-base-content/70 shrink-0">
+                  {percentage}%
+                </span>
+              </div>
+            )}
+            {userRole && (
+              <span
+                className={`op-badge op-badge-sm mt-1 ${getRoleBadgeClass(userRole)}`}
+                data-testid="header-role-badge"
+              >
+                {userRole}
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+            <PersonalInfoCard
+              t={t}
+              editmode={editmode}
+              name={name}
+              onNameChange={SetName}
+              nameError={nameError}
+              displayName={displayName}
+              phone={Phone}
+              onPhoneChange={SetPhone}
+              phoneError={phoneError}
+              savedPhone={storedUserInfo?.phone}
+              email={storedUserInfo?.email}
+              isEmailVerified={isEmailVerified}
+              onVerifyEmail={handleVerifyBtn}
+            />
+
+            <ProfessionalInfoCard
+              t={t}
+              editmode={editmode}
+              company={company}
+              onCompanyChange={setCompany}
+              displayCompany={extendUser?.[0]?.Company}
+              jobTitle={jobTitle}
+              onJobTitleChange={setJobTitle}
+              displayJobTitle={extendUser?.[0]?.JobTitle}
+              userRole={userRole}
+              roleBadgeClass={getRoleBadgeClass(userRole)}
+            />
+
+            <PreferencesCard t={t} updateExtUser={updateExtUser} />
+
+            <SecurityCard
+              t={t}
+              onChangePassword={() => navigate("/changepassword")}
+              onDeleteAccount={handleDeleteAccountBtn}
+            />
+          </div>
+
+          <div className="flex flex-col md:flex-row justify-start gap-2 mt-5">
+            <button
+              type="button"
+              onClick={(e) => (editmode ? handleSubmit(e) : handleEnterEditMode())}
+              className="op-btn op-btn-primary md:w-[140px]"
+              data-testid="edit-save-button"
+            >
+              {editmode ? t("save") : t("edit")}
+            </button>
+            {editmode && (
+              <button
+                type="button"
+                onClick={() => handleCancel()}
+                className="op-btn op-btn-ghost md:w-[140px]"
+                data-testid="cancel-button"
+              >
+                {t("cancel")}
+              </button>
+            )}
+          </div>
+
           {isdeleteModal && (
             <ModalUi
+              id="delete-account-modal"
               isOpen
               title={t("delete-account")}
               handleClose={handleCloseDeleteModal}
@@ -503,15 +597,14 @@ function UserProfile() {
                       <div className="px-6 py-3 text-base-content text-sm md:text-base">
                         {t("delete-account-que")}
                       </div>
-                      <div className="px-6 mb-3">
-                        <button
-                          type="submit"
-                          className="op-btn op-btn-primary w-[100px]"
-                        >
+                      <div className="px-6 mb-3 flex gap-2">
+                        <button type="submit" className="op-btn op-btn-error">
                           {t("yes")}
                         </button>
                         <button
-                          className="op-btn op-btn-secondary ml-2 w-[100px]"
+                          ref={deleteCancelBtnRef}
+                          type="button"
+                          className="op-btn op-btn-ghost"
                           onClick={handleCloseDeleteModal}
                         >
                           {t("cancel")}
@@ -523,8 +616,10 @@ function UserProfile() {
               )}
             </ModalUi>
           )}
+
           {isVerifyModal && (
             <ModalUi
+              id="otp-verification-modal"
               isOpen
               title={t("otp-verification")}
               handleClose={handleCloseVerifyModal}
@@ -536,8 +631,11 @@ function UserProfile() {
               ) : (
                 <form onSubmit={(e) => handleVerifyEmail(e)}>
                   <div className="px-6 py-3 text-base-content">
-                    <label className="mb-2">{t("enter-otp")}</label>
+                    <label className="mb-2 text-sm font-medium block">
+                      {t("enter-otp")}
+                    </label>
                     <input
+                      ref={otpInputRef}
                       onInvalid={(e) =>
                         e.target.setCustomValidity(t("input-required"))
                       }
@@ -545,18 +643,19 @@ function UserProfile() {
                       required
                       type="tel"
                       pattern="[0-9]{4}"
-                      className="w-full op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content text-xs"
+                      className="w-full op-input op-input-bordered op-input-sm hover:border-base-content text-xs"
                       placeholder={t("otp-placeholder")}
                       value={otp}
                       onChange={(e) => setOtp(e.target.value)}
                     />
                   </div>
-                  <div className="px-6 mb-3">
+                  <div className="px-6 mb-3 flex gap-2">
                     <button type="submit" className="op-btn op-btn-primary">
                       {t("verify")}
                     </button>
                     <button
-                      className="op-btn op-btn-secondary ml-2"
+                      type="button"
+                      className="op-btn op-btn-secondary"
                       onClick={(e) => handleResend(e)}
                     >
                       {t("resend")}
