@@ -149,5 +149,6 @@ export default async function AddAdmin(request) {
     }
   } catch (err) {
     console.log('Err ', err);
+    throw err;
   }
 }

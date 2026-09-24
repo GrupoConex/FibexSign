@@ -10,7 +10,7 @@
     "dev:backend": "pnpm --filter open_sign_server dev",
     "build": "turbo build",
     "lint": "turbo lint",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "turbo test",
     "prepare": "husky install",
     "lint-staged-changes": "lint-staged"
   },
