@@ -2,10 +2,10 @@ FROM node:22-bookworm-slim AS build
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY apps/OpenSign/package*.json ./
 RUN npm ci
 
-COPY . .
+COPY apps/OpenSign/ .
 
 ENV NODE_ENV=production
 ENV GENERATE_SOURCEMAP=false
@@ -18,8 +18,8 @@ FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
 
 COPY --from=build /app/build ./build
-COPY server.cjs ./
-COPY entrypoint.sh ./
+COPY --from=build /app/server.cjs ./
+COPY --from=build /app/entrypoint.sh ./
 
 RUN chmod +x entrypoint.sh \
   && groupadd --system opensign \

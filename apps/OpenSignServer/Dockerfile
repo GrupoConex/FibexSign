@@ -6,10 +6,10 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY apps/OpenSignServer/package*.json ./
 RUN npm ci --omit=dev
 
-COPY . .
+COPY apps/OpenSignServer/ .
 
 RUN mkdir -p files logs exports \
   && groupadd --system opensign \

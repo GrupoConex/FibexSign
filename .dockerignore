@@ -1,0 +1,13 @@
+**/node_modules
+**/.env
+**/.env.*
+**/npm-debug.log*
+**/*.log
+.git
+.turbo
+.codegraph
+apps/OpenSignServer/files
+apps/OpenSignServer/logs
+apps/OpenSignServer/exports
+apps/OpenSign/build
+apps/OpenSign/public/mfbuild
