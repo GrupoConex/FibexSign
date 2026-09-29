@@ -1,2 +1,9 @@
 node_modules
 npm-debug.log
+.env
+.env.*
+build
+.turbo
+.git
+Dockerhubfile
+Dockerfile

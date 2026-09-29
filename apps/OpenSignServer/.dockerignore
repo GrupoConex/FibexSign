@@ -1,2 +1,12 @@
 node_modules
 npm-debug.log
+.env
+.env.*
+logs
+exports
+files
+pdfFile
+.git
+.turbo
+Dockerhubfile
+Dockerfile
