@@ -4,7 +4,7 @@ import logoPositivo from "../../assets/images/Fibex-logo-positivo.svg";
 
 const AuthLayout = ({ children }) => {
   return (
-    <div className="min-h-screen flex relative">
+    <div className="w-full min-h-screen flex relative">
       <div className="w-full lg:w-1/2 relative flex flex-col items-center justify-center bg-base-200/50 dark:bg-base-100 px-4 sm:px-6 py-10 overflow-y-auto min-h-screen">
         {/* Selector de modo claro / oscuro */}
         <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
