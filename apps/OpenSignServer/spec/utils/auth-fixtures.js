@@ -1,9 +1,11 @@
 import axios from 'axios';
+import { hashOtp } from '../../cloud/parsefunction/shared/otpPolicy.js';
 import { resetAuthRateLimiterStoreForTesting } from '../../utils/authRateLimiter.js';
 
 Parse.User.enableUnsafeCurrentUser();
 
 export const PASSWORD = 'Str0ngPassw0rd!';
+export const TEST_OTP = '424242';
 
 const MASTER = { useMasterKey: true };
 const REST_HEADERS = {
@@ -134,13 +136,14 @@ export const findOtpRecord = email => {
 };
 
 export async function createOtpRecord(email, fields = {}) {
-  const otp = new Parse.Object('defaultdata_Otp');
-  otp.set('Email', email);
-  otp.set('OTP', 4242);
-  otp.set('ExpiresAt', new Date(Date.now() + 60 * 1000));
-  otp.set('FailedAttempts', 0);
-  Object.entries(fields).forEach(([key, value]) => otp.set(key, value));
-  return otp.save(null, MASTER);
+  const { otp = TEST_OTP, ...storedFields } = fields;
+  const record = new Parse.Object('defaultdata_Otp');
+  record.set('Email', email);
+  record.set('OtpHash', hashOtp(otp));
+  record.set('ExpiresAt', new Date(Date.now() + 60 * 1000));
+  record.set('FailedAttempts', 0);
+  Object.entries(storedFields).forEach(([key, value]) => record.set(key, value));
+  return record.save(null, MASTER);
 }
 
 export async function purgeAllExtUsers() {

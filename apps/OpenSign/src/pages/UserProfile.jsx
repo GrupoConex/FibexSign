@@ -11,6 +11,7 @@ import {
 } from "../utils";
 import axios from "axios";
 import { getSecureUrl, handleSendOTP } from "../constant/Utils";
+import { OTP_INPUT_PATTERN, OTP_LENGTH } from "../utils/otpPolicy";
 import ModalUi from "../primitives/ModalUi";
 import Loader from "../primitives/Loader";
 import { useTranslation } from "react-i18next";
@@ -351,9 +352,11 @@ function UserProfile() {
   const handleResend = async (e) => {
     e.preventDefault();
     setOtpLoader(true);
-    await handleSendOTP(Parse.User.current().getEmail());
+    const isOtpSent = await handleSendOTP(Parse.User.current().getEmail());
     setOtpLoader(false);
-    notify.success(t("otp-sent-alert"));
+    if (isOtpSent) {
+      notify.success(t("otp-sent-alert"));
+    }
   };
 
   const handleCancel = () => {
@@ -642,7 +645,9 @@ function UserProfile() {
                       onInput={(e) => e.target.setCustomValidity("")}
                       required
                       type="tel"
-                      pattern="[0-9]{4}"
+                      pattern={OTP_INPUT_PATTERN}
+                      maxLength={OTP_LENGTH}
+                      inputMode="numeric"
                       className="w-full op-input op-input-bordered op-input-sm hover:border-base-content text-xs"
                       placeholder={t("otp-placeholder")}
                       value={otp}

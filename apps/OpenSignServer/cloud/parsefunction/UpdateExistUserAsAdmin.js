@@ -1,3 +1,14 @@
+import { timingSafeEqual } from 'node:crypto';
+
+function isMasterKey(candidate) {
+  const expected = Buffer.from(process.env.MASTER_KEY ?? '');
+  if (typeof candidate !== 'string' || expected.length === 0) {
+    return false;
+  }
+  const provided = Buffer.from(candidate);
+  return provided.length === expected.length && timingSafeEqual(provided, expected);
+}
+
 async function updateUserExceptAdmin(data) {
   const Contracts = Parse.Object.extend('contracts_Users');
   let skip = 0;
@@ -43,7 +54,7 @@ export default async function UpdateExistUserAsAdmin(request) {
   const email = request.params.email;
   const masterkey = request.params.masterkey;
   try {
-    if (masterkey !== process.env.MASTER_KEY) {
+    if (!isMasterKey(masterkey)) {
       throw new Parse.Error(404, 'Invalid master key.');
     }
     const extClsQuery = new Parse.Query('contracts_Users');

@@ -1,3 +1,5 @@
+import nodeCrypto from 'node:crypto';
+import { syncBuiltinESMExports } from 'node:module';
 import updateExistUserAsAdmin from '../../cloud/parsefunction/UpdateExistUserAsAdmin.js';
 import { knownDefect } from '../utils/known-defect.js';
 import {
@@ -19,6 +21,7 @@ import {
 
 const MASTER = { useMasterKey: true };
 const MASTER_KEY = process.env.MASTER_KEY;
+const originalTimingSafeEqual = nodeCrypto.timingSafeEqual;
 const BATCH_SIZE = 100;
 const BATCH_WAIT_MS = 12000;
 const SETTLE_MS = 100;
@@ -120,6 +123,58 @@ describe('updateuserasadmin cloud function', () => {
 
     expect(error.code).toBe(404);
     expect(error.message).toBe('Invalid master key.');
+  });
+
+  describe('master key comparison', () => {
+    const callWith = masterkey =>
+      updateExistUserAsAdmin({ params: { email: 'a@b.co', masterkey } });
+
+    it('compares equal length keys with timingSafeEqual', async () => {
+      const comparison = spyOn(nodeCrypto, 'timingSafeEqual').and.callThrough();
+      syncBuiltinESMExports();
+      let error;
+      try {
+        error = await captureRejection(callWith('x'.repeat(MASTER_KEY.length)));
+      } finally {
+        nodeCrypto.timingSafeEqual = originalTimingSafeEqual;
+        syncBuiltinESMExports();
+      }
+      expect(error.message).toBe('Invalid master key.');
+      expect(comparison).toHaveBeenCalledTimes(1);
+      expect(comparison.calls.mostRecent().args.map(buffer => buffer.length)).toEqual([
+        MASTER_KEY.length,
+        MASTER_KEY.length,
+      ]);
+    });
+
+    [
+      ['a prefix of the key', () => MASTER_KEY.slice(0, -1)],
+      ['the key with extra characters', () => `${MASTER_KEY}x`],
+      ['an empty string', () => ''],
+      ['a number', () => 12345],
+      ['an object', () => ({ toString: () => MASTER_KEY })],
+      ['an array holding the key', () => [MASTER_KEY]],
+      ['null', () => null],
+    ].forEach(([label, build]) => {
+      it(`rejects ${label} without comparing buffers of different length`, async () => {
+        const error = await captureRejection(callWith(build()));
+
+        expect(error.code).toBe(404);
+        expect(error.message).toBe('Invalid master key.');
+      });
+    });
+
+    it('rejects every key when the server master key is not configured', async () => {
+      const configured = process.env.MASTER_KEY;
+      delete process.env.MASTER_KEY;
+      try {
+        const error = await captureRejection(callWith(''));
+
+        expect(error.message).toBe('Invalid master key.');
+      } finally {
+        process.env.MASTER_KEY = configured;
+      }
+    });
   });
 
   it('rejects with DUPLICATE_VALUE when an admin with an organization already exists', async () => {

@@ -1,7 +1,10 @@
-import createUserAccount from './shared/createUserAccount.js';
+import createUserAccount, { assertValidUserDetails } from './shared/createUserAccount.js';
+
+const ALLOWED_SIGNUP_ROLES = Object.freeze(['contracts_User']);
 
 export default async function usersignup(request) {
   const userDetails = request.params.userDetails;
+  assertValidUserDetails(userDetails, ALLOWED_SIGNUP_ROLES);
 
   try {
     const user = await createUserAccount(userDetails);

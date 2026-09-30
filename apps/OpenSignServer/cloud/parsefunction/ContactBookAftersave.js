@@ -1,3 +1,4 @@
+import { generateGuestPassword } from './shared/createUserAccount.js';
 async function ContactbookAftersave(request) {
   /* In beforesave or aftersave if you want to check if an object is being inserted or updated 
     you can check as follows */
@@ -30,7 +31,7 @@ async function ContactbookAftersave(request) {
         _user.set('name', Name);
         _user.set('username', Email);
         _user.set('email', Email);
-        _user.set('password', Email);
+        _user.set('password', generateGuestPassword());
         if (Email) {
           _user.set('phone', Phone);
         }

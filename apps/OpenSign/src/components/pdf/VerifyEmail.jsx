@@ -1,6 +1,7 @@
 import React from "react";
 import Loader from "../../primitives/Loader";
 import { useTranslation } from "react-i18next";
+import { OTP_INPUT_PATTERN, OTP_LENGTH } from "../../utils/otpPolicy";
 
 function VerifyEmail(props) {
   const { t } = useTranslation();
@@ -26,7 +27,9 @@ function VerifyEmail(props) {
                 onInput={(e) => e.target.setCustomValidity("")}
                 required
                 type="tel"
-                pattern="[0-9]{4}"
+                pattern={OTP_INPUT_PATTERN}
+                maxLength={OTP_LENGTH}
+                inputMode="numeric"
                 className="w-full op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content text-xs"
                 placeholder={t("otp-placeholder")}
                 value={props.otp}

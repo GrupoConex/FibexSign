@@ -1,10 +1,10 @@
-import { knownDefect } from '../utils/known-defect.js';
 import {
   PASSWORD,
   captureRejection,
   cloudRunAs,
   createCaller,
   createPlainUser,
+  createTenantMember,
   findFirstByUserId,
   findUserByUsername,
   rejectSaveFor,
@@ -27,6 +27,12 @@ const buildParams = (caller, overrides = {}) => ({
 });
 
 const idOf = reference => reference.id || reference.objectId;
+
+const countExtUsers = userId => {
+  const query = new Parse.Query('contracts_Users');
+  query.equalTo('UserId', { __type: 'Pointer', className: '_User', objectId: userId });
+  return query.count({ useMasterKey: true });
+};
 
 const addUserAs = (caller, params) => cloudRunAs('adduser', params, caller.account.sessionToken);
 
@@ -150,49 +156,124 @@ describe('adduser cloud function creation', () => {
     expect(acl.getWriteAccess(caller.account.id)).toBeTrue();
   });
 
-  it(
-    'does not echo the plaintext password in the response',
-    knownDefect(
-      'SEC-04',
-      'addUser returns the new account with its plaintext password embedded in response.UserId',
-      async check => {
-        const caller = await createCaller('contracts_Admin');
-        const params = buildParams(caller);
+  it('does not echo the plaintext password or account credentials in the response', async () => {
+    const caller = await createCaller('contracts_Admin');
+    const params = buildParams(caller);
 
-        const result = await addUserAs(caller, params);
+    const result = await addUserAs(caller, params);
 
-        check(
-          !JSON.stringify(result).includes(MEMBER_PASSWORD),
-          'the response must not contain the password'
-        );
-      }
-    )
-  );
+    const account = await findUserByUsername(params.email);
+    expect(JSON.stringify(result)).not.toContain(MEMBER_PASSWORD);
+    expect(result.UserId.className).toBe('_User');
+    expect(result.UserId.id).toBe(account.id);
+    expect(result.UserId.attributes).toEqual({});
+  });
 
-  it(
-    'does not overwrite the password of an account that belongs to another tenant',
-    knownDefect(
-      'SEC-05',
-      'addUser resets the password of any pre-existing account matched by email, including accounts of other tenants',
-      async check => {
-        const caller = await createCaller('contracts_Admin');
-        const victim = await createCaller('contracts_Admin');
+  it('returns the linked account as a plain pointer without credentials', async () => {
+    const caller = await createCaller('contracts_Admin');
+    const orphan = await createPlainUser(uniqueEmail('orphan-response'));
 
-        await captureRejection(
-          addUserAs(
-            caller,
-            buildParams(caller, { email: victim.account.email, password: 'Attacker-Passw0rd!' })
-          )
-        );
+    const result = await addUserAs(caller, buildParams(caller, { email: orphan.email }));
 
-        await resetAuthState();
-        const victimLogin = await captureRejection(
-          Parse.User.logIn(victim.account.email, PASSWORD)
-        );
-        check(victimLogin === null, 'the victim must still log in with the original password');
-      }
-    )
-  );
+    expect(JSON.stringify(result)).not.toContain(MEMBER_PASSWORD);
+    expect(result.UserId.className).toBe('_User');
+    expect(result.UserId.id).toBe(orphan.id);
+    expect(result.UserId.attributes).toEqual({});
+  });
+
+  it('does not change the password of an orphan account when linking it', async () => {
+    const caller = await createCaller('contracts_Admin');
+    const orphan = await createPlainUser(uniqueEmail('orphan-password'));
+
+    await addUserAs(caller, buildParams(caller, { email: orphan.email }));
+
+    await resetAuthState();
+    const originalLogin = await Parse.User.logIn(orphan.email, PASSWORD);
+    expect(originalLogin.id).toBe(orphan.id);
+    await resetAuthState();
+    const suppliedLogin = await captureRejection(Parse.User.logIn(orphan.email, MEMBER_PASSWORD));
+    expect(suppliedLogin.code).toBe(Parse.Error.OBJECT_NOT_FOUND);
+  });
+
+  it('flags the extended user of a linked account as not tenant managed and says so in the response', async () => {
+    const caller = await createCaller('contracts_Admin');
+    const orphan = await createPlainUser(uniqueEmail('orphan-flag'));
+
+    const result = await addUserAs(caller, buildParams(caller, { email: orphan.email }));
+
+    const linked = await findFirstByUserId('contracts_Users', orphan.id);
+    expect(result.linkedExistingAccount).toBeTrue();
+    expect(result.IsLinkedAccount).toBeTrue();
+    expect(linked.get('IsLinkedAccount')).toBeTrue();
+  });
+
+  it('does not flag or announce anything for an account created by the call', async () => {
+    const caller = await createCaller('contracts_Admin');
+    const params = buildParams(caller);
+
+    const result = await addUserAs(caller, params);
+
+    const account = await findUserByUsername(params.email);
+    const created = await findFirstByUserId('contracts_Users', account.id);
+    expect(result.linkedExistingAccount).toBeUndefined();
+    expect(result.IsLinkedAccount).toBeUndefined();
+    expect(created.get('IsLinkedAccount')).toBeUndefined();
+  });
+
+  it('links an orphan account inside the tenant of the caller', async () => {
+    const caller = await createCaller('contracts_Admin');
+    const orphan = await createPlainUser(uniqueEmail('orphan-tenant'));
+
+    await addUserAs(caller, buildParams(caller, { email: orphan.email }));
+
+    const linked = await findFirstByUserId('contracts_Users', orphan.id);
+    expect(idOf(linked.get('TenantId'))).toBe(caller.tenant.id);
+    expect(idOf(linked.get('OrganizationId'))).toBe(caller.organization.id);
+  });
+
+  it('rejects an email that already belongs to an account of another tenant without touching it', async () => {
+    const caller = await createCaller('contracts_Admin');
+    const victim = await createCaller('contracts_Admin');
+
+    const error = await captureRejection(
+      addUserAs(
+        caller,
+        buildParams(caller, { email: victim.account.email, password: 'Attacker-Passw0rd!' })
+      )
+    );
+
+    await resetAuthState();
+    const victimLogin = await captureRejection(Parse.User.logIn(victim.account.email, PASSWORD));
+    expect(error.code).toBe(Parse.Error.DUPLICATE_VALUE);
+    expect(error.message).toBe('An account with this email already exists.');
+    expect(victimLogin).toBeNull();
+  });
+
+  it('rejects an email that already belongs to a member of the same tenant', async () => {
+    const caller = await createCaller('contracts_Admin');
+    const member = await createTenantMember('contracts_User', caller);
+
+    const error = await captureRejection(
+      addUserAs(caller, buildParams(caller, { email: member.account.email }))
+    );
+
+    expect(error.code).toBe(Parse.Error.DUPLICATE_VALUE);
+    expect(await countExtUsers(member.account.id)).toBe(1);
+  });
+
+  it('rejects an account that only has a disabled extended user', async () => {
+    const caller = await createCaller('contracts_Admin');
+    const disabled = await createTenantMember('contracts_User', {
+      ...caller,
+      extras: { IsDisabled: true },
+    });
+
+    const error = await captureRejection(
+      addUserAs(caller, buildParams(caller, { email: disabled.account.email }))
+    );
+
+    expect(error.code).toBe(Parse.Error.DUPLICATE_VALUE);
+  });
 
   it('rejects when the email is already used by an account with a different username', async () => {
     const caller = await createCaller('contracts_Admin');
@@ -209,29 +290,20 @@ describe('adduser cloud function creation', () => {
     expect(error.message).toBe('Account already exists for this email address.');
   });
 
-  it(
-    'rejects with a domain error when the username is taken by an account registered with another email',
-    knownDefect(
-      'DEF-04',
-      'addUser leaks a raw TypeError message when the taken username belongs to an account with a different email',
-      async check => {
-        const caller = await createCaller('contracts_Admin');
-        const account = await createPlainUser(uniqueEmail('username-only'));
-        const stored = await findUserByUsername(account.email);
-        await stored.save({ email: uniqueEmail('other-email') }, { useMasterKey: true });
+  it('rejects with a domain error when the username is taken by an account registered with another email', async () => {
+    const caller = await createCaller('contracts_Admin');
+    const account = await createPlainUser(uniqueEmail('username-only'));
+    const stored = await findUserByUsername(account.email);
+    await stored.save({ email: uniqueEmail('other-email') }, { useMasterKey: true });
 
-        const error = await captureRejection(
-          addUserAs(caller, buildParams(caller, { email: account.email }))
-        );
+    const error = await captureRejection(
+      addUserAs(caller, buildParams(caller, { email: account.email }))
+    );
 
-        check(error?.code === 400, 'must reject with code 400');
-        check(
-          !String(error?.message).startsWith('Cannot read properties'),
-          'message must be a domain error, not a TypeError'
-        );
-      }
-    )
-  );
+    expect(error.code).toBe(Parse.Error.DUPLICATE_VALUE);
+    expect(error.message).toBe('An account with this email already exists.');
+    expect(await countExtUsers(account.id)).toBe(0);
+  });
 
   it('falls back to a generic message when the account save fails without details', async () => {
     const caller = await createCaller('contracts_Admin');

@@ -515,9 +515,11 @@ function SignYourSelf() {
   const handleResend = async (e) => {
     e.preventDefault();
     setOtpLoader(true);
-    await handleSendOTP(Parse.User.current().getEmail());
+    const isOtpSent = await handleSendOTP(Parse.User.current().getEmail());
     setOtpLoader(false);
-    notify.success(t("otp-sent-alert"));
+    if (isOtpSent) {
+      notify.success(t("otp-sent-alert"));
+    }
   };
   //`handleVerifyEmail` function is used to verify email with otp
   const handleVerifyEmail = async (e) => {

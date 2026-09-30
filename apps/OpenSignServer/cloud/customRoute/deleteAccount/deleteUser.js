@@ -47,6 +47,9 @@ export async function deleteUser(userId, adminId, adminTenantId, isOrgAdmin, org
     const Users = Parse.Object.extend('contracts_Users');
     const userQuery = new Parse.Query(Users);
     userQuery.equalTo('UserId', userPointer);
+    if (adminTenantId || adminId) {
+      userQuery.notEqualTo('IsLinkedAccount', true);
+    }
     if (adminTenantId) {
       userQuery.equalTo('TenantId', adminTenantId);
       if (isOrgAdmin && orgPtr) {
@@ -383,6 +386,7 @@ export const deleteUserByAdmin = async (req, res) => {
     // 2. ext user details
     const extUserQuery = new Parse.Query('contracts_Users');
     extUserQuery.equalTo('UserId', { __type: 'Pointer', className: '_User', objectId: adminId });
+    extUserQuery.notEqualTo('IsLinkedAccount', true);
     const extUser = await extUserQuery.first({ useMasterKey: true });
     if (!extUser) {
       const errorMessage = 'User not found.';

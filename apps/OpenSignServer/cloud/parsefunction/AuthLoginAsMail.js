@@ -1,106 +1,68 @@
 import axios from 'axios';
 import { cloudServerUrl, serverAppId } from '../../Utils.js';
+import { OtpStatus, normalizeEmail, verifyAndConsumeOtp } from './shared/otpPolicy.js';
 
-const MAX_OTP_ATTEMPTS = 5;
 const GENERIC_INVALID_OTP_MESSAGE = 'Invalid Otp';
+const USER_NOT_FOUND_MESSAGE = 'user not found!';
+
+const buildUserNotFoundError = () =>
+  new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, USER_NOT_FOUND_MESSAGE);
+
+async function requestLoginAs(userId) {
+  try {
+    const response = await axios({
+      method: 'POST',
+      url: `${cloudServerUrl}/loginAs`,
+      headers: {
+        'Content-Type': 'application/json;charset=utf-8',
+        'X-Parse-Application-Id': serverAppId,
+        'X-Parse-Master-Key': process.env.MASTER_KEY,
+      },
+      params: { userId },
+    });
+    return response.data;
+  } catch {
+    return undefined;
+  }
+}
+
+async function fetchSession(email) {
+  const userQuery = new Parse.Query(Parse.User);
+  userQuery.equalTo('email', email);
+  const user = await userQuery.first({ useMasterKey: true });
+  const session = user && (await requestLoginAs(user.id));
+  if (!session) {
+    throw buildUserNotFoundError();
+  }
+  return session;
+}
+
+async function markEmailVerified(session) {
+  const userQuery = new Parse.Query(Parse.User);
+  const user = await userQuery.get(session.objectId, { sessionToken: session.sessionToken });
+  user.set('emailVerified', true);
+  return user.save(null, { useMasterKey: true });
+}
 
 async function AuthLoginAsMail(request) {
   try {
-    //function for login user using user objectId without touching user's password
-    const serverUrl = cloudServerUrl; //process.env.SERVER_URL;
-    const APPID = serverAppId;
-    const masterKEY = process.env.MASTER_KEY;
-
-    let otpN = request.params.otp;
-    let otp = parseInt(otpN);
-    let email = request.params.email;
-
-    let message;
-    //checking otp is correct or not which already save in defaultdata_Otp class
-    const checkOtp = new Parse.Query('defaultdata_Otp');
-    checkOtp.equalTo('Email', email);
-    const res = await checkOtp.first({ useMasterKey: true });
-
-    if (res !== undefined) {
-      let resOtp = res.get('OTP');
-      let expiresAt = res.get('ExpiresAt');
-      let failedAttempts = res.get('FailedAttempts') || 0;
-      let isExpired = expiresAt ? new Date(expiresAt).getTime() < Date.now() : false;
-      let isLockedOut = failedAttempts >= MAX_OTP_ATTEMPTS;
-
-      if (!isLockedOut && !isExpired && resOtp === otp) {
-        var result = await getToken(request);
-        if (result && !result?.emailVerified) {
-          const userQuery = new Parse.Query(Parse.User);
-          const user = await userQuery.get(result?.objectId, {
-            sessionToken: result.sessionToken,
-          });
-          // Update the emailVerified field to true
-          user.set('emailVerified', true);
-          // Save the user object
-          const res = await user.save(null, { useMasterKey: true });
-          if (res) {
-            return result;
-          } else {
-            reject('user not found!');
-          }
-        } else {
-          return result;
-        }
-
-        async function getToken(request) {
-          return new Promise(function (resolve, reject) {
-            var query = new Parse.Query(Parse.User);
-            query.equalTo('email', email);
-            query
-              .first({ useMasterKey: true })
-              .then(user => {
-                //call loginAs function to use login method passing user objectId as a userId
-
-                const url = `${serverUrl}/loginAs`;
-                axios({
-                  method: 'POST',
-                  url: url,
-                  headers: {
-                    'Content-Type': 'application/json;charset=utf-8',
-                    'X-Parse-Application-Id': APPID,
-                    'X-Parse-Master-Key': masterKEY,
-                  },
-                  params: {
-                    userId: user.id,
-                  },
-                })
-                  .then(function (res) {
-                    // console.log(res.data)
-                    if (res.data) {
-                      resolve(res.data);
-                    } else {
-                      reject('user not found!');
-                    }
-                  })
-                  .catch(err => {
-                    reject('user not found!');
-                  });
-
-                // user couldn't find lets sign up!
-              })
-              .catch(() => {
-                reject('user not found!');
-              });
-          });
-        }
-      } else {
-        if (!isLockedOut && !isExpired) {
-          res.set('FailedAttempts', failedAttempts + 1);
-          await res.save(null, { useMasterKey: true });
-        }
-        message = GENERIC_INVALID_OTP_MESSAGE;
-        return message;
-      }
-    } else {
-      message = 'user not found!';
-      return message;
+    const email = normalizeEmail(request.params.email);
+    const status = await verifyAndConsumeOtp({ email, otp: request.params.otp });
+    if (status === OtpStatus.NOT_FOUND) {
+      return USER_NOT_FOUND_MESSAGE;
     }
+    if (status !== OtpStatus.VALID) {
+      return GENERIC_INVALID_OTP_MESSAGE;
+    }
+    const session = await fetchSession(email);
+    if (session.emailVerified) {
+      return session;
+    }
+    const verifiedUser = await markEmailVerified(session);
+    if (verifiedUser) {
+      return session;
+    }
+    throw buildUserNotFoundError();
   } catch (err) {
     console.log('err in Auth');
     console.log(err);

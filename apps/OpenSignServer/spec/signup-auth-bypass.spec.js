@@ -40,7 +40,7 @@ describe('signup endpoints do not allow passwordless account takeover', () => {
     expect(JSON.stringify(result ?? {})).not.toContain('sessionToken');
   });
 
-  it('usersignup does not mint a session for an existing user even when the target extended-user record for the requested role does not exist yet', async () => {
+  it('usersignup does not mint a session for an existing user who resubmits the signup with a different password', async () => {
     const email = `usersignup-victim-${Date.now()}@example.com`;
     const firstDetails = {
       email,
@@ -48,7 +48,7 @@ describe('signup endpoints do not allow passwordless account takeover', () => {
       name: 'Victim User',
       company: 'Acme',
       jobTitle: 'Engineer',
-      role: 'contracts_Admin',
+      role: 'contracts_User',
       timezone: 'UTC',
     };
 
@@ -61,7 +61,6 @@ describe('signup endpoints do not allow passwordless account takeover', () => {
         userDetails: {
           ...firstDetails,
           password: 'totally-different-wrong-password',
-          role: 'certificates_Admin',
         },
       });
       fail('usersignup should have thrown for an existing user instead of returning a result.');
@@ -84,7 +83,7 @@ describe('signup endpoints do not allow passwordless account takeover', () => {
       name: 'Brand New User',
       company: 'Acme',
       jobTitle: 'Engineer',
-      role: 'contracts_Admin',
+      role: 'contracts_User',
       timezone: 'UTC',
     };
 

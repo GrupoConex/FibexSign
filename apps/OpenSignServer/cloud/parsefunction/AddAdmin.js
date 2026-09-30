@@ -54,10 +54,13 @@ async function addTeamAndOrg(extUser) {
   }
 }
 
-import createUserAccount from './shared/createUserAccount.js';
+import createUserAccount, { assertValidUserDetails } from './shared/createUserAccount.js';
+
+const ALLOWED_ADMIN_SIGNUP_ROLES = Object.freeze(['contracts_Admin']);
 
 export default async function AddAdmin(request) {
   const userDetails = request.params.userDetails;
+  assertValidUserDetails(userDetails, ALLOWED_ADMIN_SIGNUP_ROLES);
   const user = await createUserAccount(userDetails);
 
   try {

@@ -62,6 +62,11 @@ import updateEmailTemplates from './parsefunction/updateEmailTemplates.js';
 import triggerEvent from './parsefunction/triggerEvent.js';
 import setWidgetPreferences from './parsefunction/setWidgetPreferences.js';
 import createDocumentFromApp from './parsefunction/createDocumentFromApp.js';
+import {
+  guardContractsUsersDelete,
+  guardContractsUsersSave,
+} from './parsefunction/contractsUsersGuard.js';
+import { guardUserAccountSave } from './parsefunction/userAccountGuard.js';
 
 // This afterSave function triggers after an object is added or updated in the specified class, allowing for post-processing logic.
 Parse.Cloud.afterSave('contracts_Document', DocumentAftersave);
@@ -72,6 +77,9 @@ Parse.Cloud.afterSave('contracts_Teams', TeamsAftersave);
 // This beforeSave function triggers before an object is added or updated in the specified class, allowing for validation or modification.
 Parse.Cloud.beforeSave('contracts_Document', DocumentBeforesave);
 Parse.Cloud.beforeSave('contracts_Template', TemplateBeforeSave);
+Parse.Cloud.beforeSave('contracts_Users', guardContractsUsersSave);
+Parse.Cloud.beforeDelete('contracts_Users', guardContractsUsersDelete);
+Parse.Cloud.beforeSave(Parse.User, guardUserAccountSave);
 
 // This afterFind function triggers after a query retrieves objects from the specified class, allowing for post-processing of the results.
 Parse.Cloud.afterFind(Parse.User, UserAfterFind);

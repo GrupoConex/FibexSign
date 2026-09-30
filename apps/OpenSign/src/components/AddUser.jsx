@@ -19,6 +19,8 @@ function generatePassword(length) {
   return result;
 }
 
+const DUPLICATE_VALUE_ERROR_CODE = 137;
+
 const AddUser = (props) => {
   const { t } = useTranslation();
   const [formdata, setFormdata] = useState({
@@ -116,11 +118,23 @@ const AddUser = (props) => {
               team: "",
               role: ""
             });
-            notify.success(t("user-created-successfully"));
+            notify.success(
+              t(
+                parseData.linkedExistingAccount
+                  ? "user-linked-existing-account"
+                  : "user-created-successfully"
+              )
+            );
           } catch (err) {
             console.log("err", err);
             setIsFormLoader(false);
-            notify.error(t("something-went-wrong-mssg"));
+            notify.error(
+              t(
+                err?.code === DUPLICATE_VALUE_ERROR_CODE
+                  ? "email-already-registered"
+                  : "something-went-wrong-mssg"
+              )
+            );
           }
         } else {
           notify.error(t("something-went-wrong-mssg"));

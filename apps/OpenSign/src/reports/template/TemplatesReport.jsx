@@ -511,7 +511,12 @@ const TemplatesReport = (props) => {
       await axios.put(
         serverUrl + "classes/contracts_Users/" + extUserId,
         { TourStatus: updatedTourStatus },
-        { headers: { "X-Parse-Application-Id": appId } }
+        {
+          headers: {
+            "X-Parse-Application-Id": appId,
+            "X-Parse-Session-Token": localStorage.getItem("accesstoken")
+          }
+        }
       );
     }
   };

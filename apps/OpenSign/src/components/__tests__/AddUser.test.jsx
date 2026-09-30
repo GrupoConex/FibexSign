@@ -35,7 +35,8 @@ const cloudRun = vi.fn();
 
 vi.mock("parse", () => ({
   default: {
-    Cloud: { run: (...args) => cloudRun(...args) }
+    Cloud: { run: (...args) => cloudRun(...args) },
+    User: { current: () => ({ getSessionToken: () => "session-token" }) }
   }
 }));
 
@@ -114,5 +115,97 @@ describe("AddUser team selection", () => {
     await user.selectOptions(teamSelect, "team-sales");
 
     expect(teamSelect.value).toBe("team-sales");
+  });
+});
+
+describe("AddUser submission outcomes", () => {
+  const fillAndSubmit = async (user) => {
+    await screen.findByRole("option", { name: "Sales" });
+    await user.type(screen.getByPlaceholderText("enter-name"), "New Member");
+    await user.type(
+      screen.getByPlaceholderText("enter-email"),
+      "member@example.com"
+    );
+    await user.selectOptions(document.getElementById("role"), "Editor");
+    await user.click(screen.getByRole("button", { name: "submit" }));
+  };
+
+  const mockAddUser = (outcome) => {
+    cloudRun.mockImplementation(async (name) => {
+      if (name === "getteams") return teamListFixture;
+      if (name === "getUserDetails") return { exists: false };
+      if (name === "adduser") return outcome();
+      return {};
+    });
+  };
+
+  beforeEach(() => {
+    localStorage.setItem("TenantId", "tenant-1");
+  });
+
+  it("confirms the creation of a new account", async () => {
+    mockAddUser(() => ({ objectId: "ext-1", TeamIds: [], Name: "New Member" }));
+    const user = userEvent.setup();
+    render(<AddUser />);
+
+    await fillAndSubmit(user);
+
+    await waitFor(() =>
+      expect(notifySuccess).toHaveBeenCalledWith("user-created-successfully")
+    );
+    expect(notifySuccess).not.toHaveBeenCalledWith(
+      "user-linked-existing-account"
+    );
+  });
+
+  it("tells the admin when an existing account was linked instead of created", async () => {
+    mockAddUser(() => ({
+      objectId: "ext-2",
+      TeamIds: [],
+      Name: "New Member",
+      linkedExistingAccount: true
+    }));
+    const user = userEvent.setup();
+    render(<AddUser />);
+
+    await fillAndSubmit(user);
+
+    await waitFor(() =>
+      expect(notifySuccess).toHaveBeenCalledWith("user-linked-existing-account")
+    );
+    expect(notifySuccess).not.toHaveBeenCalledWith("user-created-successfully");
+  });
+
+  it("explains that the email is already registered when the server answers with code 137", async () => {
+    mockAddUser(() => {
+      throw {
+        code: 137,
+        message: "An account with this email already exists."
+      };
+    });
+    const user = userEvent.setup();
+    render(<AddUser />);
+
+    await fillAndSubmit(user);
+
+    await waitFor(() =>
+      expect(notifyError).toHaveBeenCalledWith("email-already-registered")
+    );
+    expect(notifyError).not.toHaveBeenCalledWith("something-went-wrong-mssg");
+  });
+
+  it("keeps the generic message for any other failure", async () => {
+    mockAddUser(() => {
+      throw { code: 400, message: "boom" };
+    });
+    const user = userEvent.setup();
+    render(<AddUser />);
+
+    await fillAndSubmit(user);
+
+    await waitFor(() =>
+      expect(notifyError).toHaveBeenCalledWith("something-went-wrong-mssg")
+    );
+    expect(notifyError).not.toHaveBeenCalledWith("email-already-registered");
   });
 });
