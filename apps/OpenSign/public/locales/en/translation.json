@@ -1598,5 +1598,7 @@
   "sort-role": "Role",
   "rows-per-page": "Per page:",
   "first": "First",
-  "last": "Last"
+  "last": "Last",
+  "password-requirements-not-met": "Password does not meet the requirements.",
+  "accept-terms-required": "You must accept the terms and conditions."
 }

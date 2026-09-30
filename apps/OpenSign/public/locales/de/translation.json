@@ -1568,5 +1568,7 @@
   "sort-role": "Rolle",
   "rows-per-page": "Pro Seite:",
   "first": "Erste",
-  "last": "Letzte"
+  "last": "Letzte",
+  "password-requirements-not-met": "Das Passwort erfüllt die Anforderungen nicht.",
+  "accept-terms-required": "Sie müssen die Allgemeinen Geschäftsbedingungen akzeptieren."
 }

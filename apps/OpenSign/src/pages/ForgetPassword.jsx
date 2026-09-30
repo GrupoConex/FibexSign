@@ -5,8 +5,11 @@ import { appInfo } from "../constant/appinfo";
 import { useDispatch } from "react-redux";
 import { fetchAppInfo } from "../redux/reducers/infoReducer";
 import {
-  emailRegex,
-} from "../constant/const";
+  applyFieldError,
+  hasErrors,
+  validateForgotPasswordForm
+} from "../utils/authFormValidation";
+import FieldError from "../components/auth/FieldError";
 import { useTranslation } from "react-i18next";
 import Loader from "../primitives/Loader";
 import Icon from "../primitives/Icon";
@@ -23,6 +26,8 @@ function ForgotPassword() {
   const navigate = useNavigate();
   const [state, setState] = useState({ email: "", password: "" });
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [image, setImage] = useState();
   const isDarkTheme = useIsDarkTheme();
   const defaultLogo = isDarkTheme ? logoNegativo : logoPositivo;
@@ -35,12 +40,29 @@ function ForgotPassword() {
       value = value?.toLowerCase()?.replace(/\s/g, "");
     }
     setState({ ...state, [name]: value });
+    if (errors[name]) {
+      revalidateField(name, value);
+    }
+  };
+
+  const revalidateField = (name, value) => {
+    const validation = validateForgotPasswordForm({ ...state, [name]: value });
+    setErrors((prev) => applyFieldError(prev, name, validation));
+  };
+
+  const handleBlur = (event) => {
+    if (!hasSubmitted) return;
+    const { name, value } = event.target;
+    revalidateField(name, value);
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!emailRegex.test(state.email)) {
-      notify.warning(t("valid-email-alert"));
+    const validation = validateForgotPasswordForm(state);
+    setHasSubmitted(true);
+    setErrors(validation);
+    if (hasErrors(validation)) {
+      document.getElementById("email")?.focus();
     } else {
       setIsLoading(true);
       localStorage.setItem("appLogo", appInfo.applogo);
@@ -93,7 +115,7 @@ function ForgotPassword() {
             alt="applogo"
           />
         )}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} noValidate className="space-y-5">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-base-content">
               {t("reset-password-heading")}
@@ -110,14 +132,17 @@ function ForgotPassword() {
               id="email"
               type="email"
               name="email"
-              className="op-input op-input-bordered w-full text-sm"
+              className={`op-input op-input-bordered w-full text-sm${errors.email ? " op-input-error" : ""}`}
               value={state.email}
               onChange={handleChange}
-              onInvalid={(e) =>
-                e.target.setCustomValidity(t("input-required"))
-              }
-              onInput={(e) => e.target.setCustomValidity("")}
+              onBlur={handleBlur}
+              aria-invalid={Boolean(errors.email)}
+              aria-describedby={errors.email ? "email-error" : undefined}
               required
+            />
+            <FieldError
+              id="email-error"
+              message={errors.email && t(errors.email)}
             />
           </div>
           <div className="space-y-3 pt-1">

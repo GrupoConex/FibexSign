@@ -11,10 +11,27 @@ import { useDispatch } from "react-redux";
 import { showTenant } from "../redux/reducers/ShowTenant";
 import Loader from "../primitives/Loader";
 import { useTranslation } from "react-i18next";
-import { emailRegex } from "../constant/const";
+import {
+  applyFieldError,
+  getFirstInvalidFieldId,
+  getPasswordRuleStatus,
+  hasErrors,
+  validateAddAdminForm
+} from "../utils/authFormValidation";
+import FieldError from "../components/auth/FieldError";
 import { notify } from "../utils";
 import AuthLayout from "../components/auth/AuthLayout";
 import Icon from "../primitives/Icon";
+
+const ADMIN_FIELD_IDS = {
+  name: "name",
+  email: "email",
+  phone: "phone",
+  company: "company",
+  jobTitle: "jobTitle",
+  password: "admin-password",
+  isAuthorize: "termsandcondition"
+};
 
 const AddAdmin = () => {
   const appName = appInfo.appName;
@@ -28,10 +45,11 @@ const AddAdmin = () => {
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
   const [jobTitle, setJobTitle] = useState("");
-  const [lengthValid, setLengthValid] = useState(false);
-  const [caseDigitValid, setCaseDigitValid] = useState(false);
-  const [specialCharValid, setSpecialCharValid] = useState(false);
   const [isAuthorize, setIsAuthorize] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const { lengthValid, caseDigitValid, specialCharValid } =
+    getPasswordRuleStatus(password);
   const [errMsg, setErrMsg] = useState("");
   const [state, setState] = useState({
     loading: false
@@ -85,69 +103,104 @@ const AddAdmin = () => {
     localStorage.setItem("favicon", favicon);
   };
 
+  const formValues = {
+    name,
+    email,
+    phone,
+    company,
+    jobTitle,
+    password,
+    isAuthorize
+  };
+
+  const revalidateField = (field, overrides) => {
+    const validation = validateAddAdminForm({ ...formValues, ...overrides });
+    setErrors((prev) => applyFieldError(prev, field, validation));
+  };
+
+  const updateField = (field, setter, value) => {
+    setter(value);
+    if (errors[field]) {
+      revalidateField(field, { [field]: value });
+    }
+  };
+
+  const validateOnBlur = (field) => () => {
+    if (hasSubmitted) revalidateField(field, {});
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!emailRegex.test(email)) {
-      notify.warning(t("valid-email-alert"));
-    } else {
-      if (lengthValid && caseDigitValid && specialCharValid) {
-        clearStorage();
-        setState({ loading: true });
-        const userDetails = {
-          name: name,
-          email: email?.toLowerCase()?.replace(/\s/g, ""),
-          phone: phone,
-          company: company,
-          jobTitle: jobTitle
-        };
-        localStorage.setItem("userDetails", JSON.stringify(userDetails));
-        try {
-          event.preventDefault();
-          const params = {
-            userDetails: {
-              jobTitle: jobTitle,
-              company: company,
-              name: name,
-              email: email?.toLowerCase()?.replace(/\s/g, ""),
-              phone: phone,
-              password: password,
-              role: "contracts_Admin",
-              timezone: usertimezone
-            }
-          };
-          const usersignup = await Parse.Cloud.run("addadmin", params);
-          if (usersignup?.sessionToken) {
-            handleNavigation(usersignup.sessionToken);
-          }
-        } catch (error) {
-          console.log("err ", error);
-          if (error.code === 202) {
-            const params = { email: email };
-            const res = await Parse.Cloud.run("getUserDetails", params);
-            // console.log("Res ", res);
-            if (res?.exists) {
-              notify.error(t("already-exists-this-username"));
-              setState({ loading: false });
-            } else {
-              // console.log("state.email ", email);
-              try {
-                await Parse.User.requestPasswordReset(email).then(
-                  async function (res) {
-                    if (res.data === undefined) {
-                      notify.success(t("verification-code-sent"));
-                    }
-                  }
-                );
-              } catch (err) {
-                console.log(err);
-              }
-              setState({ loading: false });
-            }
-          } else {
-            notify.error(error.message);
-            setState({ loading: false });
-          }
+    const validation = validateAddAdminForm(formValues);
+    setHasSubmitted(true);
+    setErrors(validation);
+    if (hasErrors(validation)) {
+      const firstInvalidId = getFirstInvalidFieldId(
+        validation,
+        ADMIN_FIELD_IDS
+      );
+      document.getElementById(firstInvalidId)?.focus();
+      return;
+    }
+    await registerAdmin();
+  };
+
+  const handleExistingUser = async () => {
+    const params = { email: email };
+    const res = await Parse.Cloud.run("getUserDetails", params);
+    if (res?.exists) {
+      notify.error(t("already-exists-this-username"));
+      setState({ loading: false });
+      return;
+    }
+    try {
+      await Parse.User.requestPasswordReset(email).then(async function (res) {
+        if (res.data === undefined) {
+          notify.success(t("verification-code-sent"));
         }
+      });
+    } catch (err) {
+      console.log(err);
+    }
+    setState({ loading: false });
+  };
+
+  const registerAdmin = async () => {
+    await clearStorage();
+    setState({ loading: true });
+    const normalizedEmail = email?.toLowerCase()?.replace(/\s/g, "");
+    const userDetails = {
+      name: name,
+      email: normalizedEmail,
+      phone: phone,
+      company: company,
+      jobTitle: jobTitle
+    };
+    localStorage.setItem("userDetails", JSON.stringify(userDetails));
+    try {
+      const params = {
+        userDetails: {
+          jobTitle: jobTitle,
+          company: company,
+          name: name,
+          email: normalizedEmail,
+          phone: phone,
+          password: password,
+          role: "contracts_Admin",
+          timezone: usertimezone
+        }
+      };
+      const usersignup = await Parse.Cloud.run("addadmin", params);
+      if (usersignup?.sessionToken) {
+        handleNavigation(usersignup.sessionToken);
+      }
+    } catch (error) {
+      console.log("err ", error);
+      if (error.code === 202) {
+        await handleExistingUser();
+      } else {
+        notify.error(error.message);
+        setState({ loading: false });
       }
     }
   };
@@ -215,18 +268,6 @@ const AddAdmin = () => {
       }
     }
   };
-  const handlePasswordChange = (e) => {
-    const newPassword = e.target.value;
-    setPassword(newPassword);
-    // Check conditions separately
-    setLengthValid(newPassword.length >= 8);
-    setCaseDigitValid(
-      /[a-z]/.test(newPassword) &&
-        /[A-Z]/.test(newPassword) &&
-        /\d/.test(newPassword)
-    );
-    setSpecialCharValid(/[!@#$%^&*()\-_=+{};:,<.>]/.test(newPassword));
-  };
   return (
     <div className="min-h-screen flex justify-center">
       {state.loading ? (
@@ -246,7 +287,7 @@ const AddAdmin = () => {
             </div>
           ) : (
             <AuthLayout>
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} noValidate className="space-y-5">
                 <h1 className="text-2xl font-semibold text-base-content text-center">
                   {t("opensign-setup", { appName })}
                 </h1>
@@ -259,15 +300,18 @@ const AddAdmin = () => {
                     <input
                       id="name"
                       type="text"
-                      className="op-input op-input-bordered w-full text-sm"
+                      className={`op-input op-input-bordered w-full text-sm${errors.name ? " op-input-error" : ""}`}
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      onInvalid={(e) =>
-                        e.target.setCustomValidity(t("input-required"))
-                      }
-                      onInput={(e) => e.target.setCustomValidity("")}
+                      onChange={(e) => updateField("name", setName, e.target.value)}
+                      onBlur={validateOnBlur("name")}
+                      aria-invalid={Boolean(errors.name)}
+                      aria-describedby={errors.name ? "name-error" : undefined}
                       required
                     />
+                      <FieldError
+                        id="name-error"
+                        message={errors.name && t(errors.name)}
+                      />
                   </div>
                   <div>
                     <label className="block text-xs mb-1 text-base-content" htmlFor="email">
@@ -277,19 +321,23 @@ const AddAdmin = () => {
                     <input
                       id="email"
                       type="email"
-                      className="op-input op-input-bordered w-full text-sm"
+                      className={`op-input op-input-bordered w-full text-sm${errors.email ? " op-input-error" : ""}`}
                       value={email}
                       onChange={(e) =>
-                        setEmail(
+                        updateField(
+                          "email",
+                          setEmail,
                           e.target.value?.toLowerCase()?.replace(/\s/g, "")
-                        )
-                      }
-                      onInvalid={(e) =>
-                        e.target.setCustomValidity(t("input-required"))
-                      }
-                      onInput={(e) => e.target.setCustomValidity("")}
+                        )}
+                      onBlur={validateOnBlur("email")}
+                      aria-invalid={Boolean(errors.email)}
+                      aria-describedby={errors.email ? "email-error" : undefined}
                       required
                     />
+                      <FieldError
+                        id="email-error"
+                        message={errors.email && t(errors.email)}
+                      />
                   </div>
                   <div>
                     <label className="block text-xs mb-1 text-base-content" htmlFor="phone">
@@ -299,15 +347,18 @@ const AddAdmin = () => {
                     <input
                       id="phone"
                       type="tel"
-                      className="op-input op-input-bordered w-full text-sm"
+                      className={`op-input op-input-bordered w-full text-sm${errors.phone ? " op-input-error" : ""}`}
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      onInvalid={(e) =>
-                        e.target.setCustomValidity(t("input-required"))
-                      }
-                      onInput={(e) => e.target.setCustomValidity("")}
+                      onChange={(e) => updateField("phone", setPhone, e.target.value)}
+                      onBlur={validateOnBlur("phone")}
+                      aria-invalid={Boolean(errors.phone)}
+                      aria-describedby={errors.phone ? "phone-error" : undefined}
                       required
                     />
+                      <FieldError
+                        id="phone-error"
+                        message={errors.phone && t(errors.phone)}
+                      />
                   </div>
                   <div>
                     <label className="block text-xs mb-1 text-base-content" htmlFor="company">
@@ -317,15 +368,18 @@ const AddAdmin = () => {
                     <input
                       id="company"
                       type="text"
-                      className="op-input op-input-bordered w-full text-sm"
+                      className={`op-input op-input-bordered w-full text-sm${errors.company ? " op-input-error" : ""}`}
                       value={company}
-                      onChange={(e) => setCompany(e.target.value)}
-                      onInvalid={(e) =>
-                        e.target.setCustomValidity(t("input-required"))
-                      }
-                      onInput={(e) => e.target.setCustomValidity("")}
+                      onChange={(e) => updateField("company", setCompany, e.target.value)}
+                      onBlur={validateOnBlur("company")}
+                      aria-invalid={Boolean(errors.company)}
+                      aria-describedby={errors.company ? "company-error" : undefined}
                       required
                     />
+                      <FieldError
+                        id="company-error"
+                        message={errors.company && t(errors.company)}
+                      />
                   </div>
                   <div>
                     <label className="block text-xs mb-1 text-base-content" htmlFor="jobTitle">
@@ -335,15 +389,18 @@ const AddAdmin = () => {
                     <input
                       id="jobTitle"
                       type="text"
-                      className="op-input op-input-bordered w-full text-sm"
+                      className={`op-input op-input-bordered w-full text-sm${errors.jobTitle ? " op-input-error" : ""}`}
                       value={jobTitle}
-                      onChange={(e) => setJobTitle(e.target.value)}
-                      onInvalid={(e) =>
-                        e.target.setCustomValidity(t("input-required"))
-                      }
-                      onInput={(e) => e.target.setCustomValidity("")}
+                      onChange={(e) => updateField("jobTitle", setJobTitle, e.target.value)}
+                      onBlur={validateOnBlur("jobTitle")}
+                      aria-invalid={Boolean(errors.jobTitle)}
+                      aria-describedby={errors.jobTitle ? "jobTitle-error" : undefined}
                       required
                     />
+                      <FieldError
+                        id="jobTitle-error"
+                        message={errors.jobTitle && t(errors.jobTitle)}
+                      />
                   </div>
                   <div>
                     <label
@@ -357,14 +414,15 @@ const AddAdmin = () => {
                       <input
                         id="admin-password"
                         type={showPassword ? "text" : "password"}
-                        className="op-input op-input-bordered w-full text-sm pr-9"
+                        className={`op-input op-input-bordered w-full text-sm pr-9${errors.password ? " op-input-error" : ""}`}
                         name="password"
                         value={password}
-                        onChange={(e) => handlePasswordChange(e)}
-                        onInvalid={(e) =>
-                          e.target.setCustomValidity(t("input-required"))
+                        onChange={(e) =>
+                          updateField("password", setPassword, e.target.value)
                         }
-                        onInput={(e) => e.target.setCustomValidity("")}
+                        onBlur={validateOnBlur("password")}
+                        aria-invalid={Boolean(errors.password)}
+                        aria-describedby={errors.password ? "password-error" : undefined}
                         required
                       />
                       <button
@@ -383,6 +441,10 @@ const AddAdmin = () => {
                         />
                       </button>
                     </div>
+                    <FieldError
+                      id="password-error"
+                      message={errors.password && t(errors.password)}
+                    />
                     {password.length > 0 && (
                       <div className="mt-1.5 text-xs space-y-0.5">
                         <p
@@ -416,29 +478,44 @@ const AddAdmin = () => {
                       </div>
                     )}
                   </div>
-                  <div className="flex flex-row items-center">
-                    <input
-                      type="checkbox"
-                      className="op-checkbox op-checkbox-sm"
-                      id="termsandcondition"
-                      checked={isAuthorize}
-                      onChange={(e) => setIsAuthorize(e.target.checked)}
-                      onInvalid={(e) =>
-                        e.target.setCustomValidity(t("input-required"))
-                      }
-                      onInput={(e) => e.target.setCustomValidity("")}
-                      required
+                  <div>
+                    <div className="flex flex-row items-center">
+                      <input
+                        type="checkbox"
+                        className="op-checkbox op-checkbox-sm"
+                        id="termsandcondition"
+                        checked={isAuthorize}
+                        onChange={(e) =>
+                          updateField(
+                            "isAuthorize",
+                            setIsAuthorize,
+                            e.target.checked
+                          )
+                        }
+                        onBlur={validateOnBlur("isAuthorize")}
+                        aria-invalid={Boolean(errors.isAuthorize)}
+                        aria-describedby={
+                          errors.isAuthorize
+                            ? "termsandcondition-error"
+                            : undefined
+                        }
+                        required
+                      />
+                      <label
+                        className="text-xs cursor-pointer ml-2 mb-0"
+                        htmlFor="termsandcondition"
+                      >
+                        {t("agree")}
+                      </label>
+                      <span className="ml-1 text-xs text-base-content/80 font-medium">
+                        {t("term")}
+                      </span>
+                      <span className="text-xs">.</span>
+                    </div>
+                    <FieldError
+                      id="termsandcondition-error"
+                      message={errors.isAuthorize && t(errors.isAuthorize)}
                     />
-                    <label
-                      className="text-xs cursor-pointer ml-2 mb-0"
-                      htmlFor="termsandcondition"
-                    >
-                      {t("agree")}
-                    </label>
-                    <span className="ml-1 text-xs text-base-content/80 font-medium">
-                      {t("term")}
-                    </span>
-                    <span className="text-xs">.</span>
                   </div>
                 </div>
                 <button
