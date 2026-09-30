@@ -1569,5 +1569,7 @@
   "sort-role": "भूमिका",
   "rows-per-page": "प्रति पृष्ठ:",
   "first": "पहला",
-  "last": "अंतिम"
+  "last": "अंतिम",
+  "password-requirements-not-met": "पासवर्ड आवश्यकताओं को पूरा नहीं करता है।",
+  "accept-terms-required": "आपको नियम और शर्तें स्वीकार करनी होंगी।"
 }

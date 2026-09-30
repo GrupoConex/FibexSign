@@ -5,8 +5,12 @@ import axios from "axios";
 import { NavLink, useNavigate, useLocation } from "react-router";
 import ModalUi from "../primitives/ModalUi";
 import {
-  emailRegex,
-} from "../constant/const";
+  applyFieldError,
+  getFirstInvalidFieldId,
+  hasErrors,
+  validateLoginForm
+} from "../utils/authFormValidation";
+import FieldError from "../components/auth/FieldError";
 import { notify } from "../utils";
 import { appInfo } from "../constant/appinfo";
 import { fetchAppInfo } from "../redux/reducers/infoReducer";
@@ -24,6 +28,8 @@ import Icon from "../primitives/Icon";
 import { useIsDarkTheme } from "../hook/useIsDarkTheme";
 import logoPositivo from "../assets/images/Fibex-logo-positivo.svg";
 import logoNegativo from "../assets/images/Fibex-logo-negativo.svg";
+
+const LOGIN_FIELD_IDS = { email: "email", password: "password" };
 
 function Login() {
   const appName = appInfo.appName;
@@ -45,6 +51,8 @@ function Login() {
   const [isModal, setIsModal] = useState(false);
   const [image, setImage] = useState();
   const [errMsg, setErrMsg] = useState();
+  const [errors, setErrors] = useState({});
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const isDarkTheme = useIsDarkTheme();
   const defaultLogo = isDarkTheme ? logoNegativo : logoPositivo;
   const currentLogo =
@@ -96,6 +104,20 @@ function Login() {
       value = value?.toLowerCase()?.replace(/\s/g, "");
     }
     setState({ ...state, [name]: value });
+    if (errors[name]) {
+      revalidateField(name, value);
+    }
+  };
+
+  const revalidateField = (name, value) => {
+    const validation = validateLoginForm({ ...state, [name]: value });
+    setErrors((prev) => applyFieldError(prev, name, validation));
+  };
+
+  const handleBlur = (event) => {
+    if (!hasSubmitted) return;
+    const { name, value } = event.target;
+    revalidateField(name, value);
   };
 
   const handleLogin = async (
@@ -146,8 +168,12 @@ function Login() {
   };
   const handleLoginBtn = async (event) => {
     event.preventDefault();
-    if (!emailRegex.test(state.email)) {
-      notify.warning(t("valid-email-alert"));
+    const validation = validateLoginForm(state);
+    setHasSubmitted(true);
+    setErrors(validation);
+    if (hasErrors(validation)) {
+      const firstInvalidId = getFirstInvalidFieldId(validation, LOGIN_FIELD_IDS);
+      document.getElementById(firstInvalidId)?.focus();
       return;
     }
     await handleLogin();
@@ -451,6 +477,7 @@ function Login() {
               )}
               <form
                 onSubmit={handleLoginBtn}
+                noValidate
                 aria-label="Login Form"
                 className="space-y-5"
               >
@@ -473,16 +500,19 @@ function Login() {
                     <input
                       id="email"
                       type="email"
-                      className="op-input op-input-bordered w-full text-sm"
+                      className={`op-input op-input-bordered w-full text-sm${errors.email ? " op-input-error" : ""}`}
                       name="email"
                       autoComplete="username"
                       value={state.email}
                       onChange={handleChange}
+                      onBlur={handleBlur}
+                      aria-invalid={Boolean(errors.email)}
+                      aria-describedby={errors.email ? "email-error" : undefined}
                       required
-                      onInvalid={(e) =>
-                        e.target.setCustomValidity(t("input-required"))
-                      }
-                      onInput={(e) => e.target.setCustomValidity("")}
+                    />
+                    <FieldError
+                      id="email-error"
+                      message={errors.email && t(errors.email)}
                     />
                   </div>
                   <div>
@@ -493,15 +523,16 @@ function Login() {
                       <input
                         id="password"
                         type={state.passwordVisible ? "text" : "password"}
-                        className="op-input op-input-bordered w-full text-sm pr-9"
+                        className={`op-input op-input-bordered w-full text-sm pr-9${errors.password ? " op-input-error" : ""}`}
                         name="password"
                         value={state.password}
                         autoComplete="current-password"
                         onChange={handleChange}
-                        onInvalid={(e) =>
-                          e.target.setCustomValidity(t("input-required"))
+                        onBlur={handleBlur}
+                        aria-invalid={Boolean(errors.password)}
+                        aria-describedby={
+                          errors.password ? "password-error" : undefined
                         }
-                        onInput={(e) => e.target.setCustomValidity("")}
                         required
                       />
                       <button
@@ -520,6 +551,10 @@ function Login() {
                         />
                       </button>
                     </div>
+                    <FieldError
+                      id="password-error"
+                      message={errors.password && t(errors.password)}
+                    />
                   </div>
                   <div className="flex justify-end">
                     <NavLink

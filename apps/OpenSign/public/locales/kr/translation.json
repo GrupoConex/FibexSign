@@ -1569,5 +1569,7 @@
   "sort-role": "역할",
   "rows-per-page": "페이지당:",
   "first": "처음",
-  "last": "마지막"
+  "last": "마지막",
+  "password-requirements-not-met": "비밀번호가 요구 사항을 충족하지 않습니다.",
+  "accept-terms-required": "이용 약관에 동의해야 합니다."
 }
