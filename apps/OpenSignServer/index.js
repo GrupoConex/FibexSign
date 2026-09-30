@@ -142,7 +142,9 @@ export const config = {
   masterKeyIps,
   serverURL: cloudServerUrl, // Don't forget to change to https if needed
   verifyUserEmails: false,
-  publicServerURL: process.env.SERVER_URL || cloudServerUrl,
+  publicServerURL: process.env.PUBLIC_URL
+    ? `${process.env.PUBLIC_URL.replace(/\/$/, '')}${process.env.PARSE_MOUNT || '/app'}`
+    : cloudServerUrl,
   // Your apps name. This will appear in the subject and body of the emails that are sent.
   appName: appName,
   allowClientClassCreation: false,
