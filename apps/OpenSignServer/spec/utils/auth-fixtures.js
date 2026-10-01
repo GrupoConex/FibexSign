@@ -61,11 +61,82 @@ export async function createPlainUser(email = uniqueEmail('plain'), password = P
   return { id: response.data.objectId, email, sessionToken: response.data.sessionToken };
 }
 
+const SESSION_HEADERS = sessionToken => ({
+  'X-Parse-Application-Id': process.env.APP_ID,
+  'X-Parse-Javascript-Key': 'test',
+  'X-Parse-Session-Token': sessionToken,
+});
+
+export async function isSessionValid(sessionToken) {
+  const response = await axios.get(`${process.env.SERVER_URL}/users/me`, {
+    headers: SESSION_HEADERS(sessionToken),
+    validateStatus: () => true,
+  });
+  return response.status === 200;
+}
+
+export async function canReadDocument(sessionToken, documentId) {
+  const response = await axios.get(
+    `${process.env.SERVER_URL}/classes/contracts_Document/${documentId}`,
+    { headers: SESSION_HEADERS(sessionToken), validateStatus: () => true }
+  );
+  return response.status === 200 && response.data.objectId === documentId;
+}
+
+export async function openPasswordSession(email, password = PASSWORD) {
+  const response = await axios.post(
+    `${process.env.SERVER_URL}/login`,
+    { username: email, password },
+    { headers: SESSION_HEADERS('') }
+  );
+  return response.data.sessionToken;
+}
+
+export async function createMasterKeySession(userId) {
+  const response = await axios.post(`${process.env.SERVER_URL}/loginAs`, null, {
+    headers: REST_HEADERS,
+    params: { userId },
+  });
+  return response.data.sessionToken;
+}
+
+export async function createAuthDataAccount(authId = uniqueEmail('anon')) {
+  const response = await axios.post(
+    `${process.env.SERVER_URL}/users`,
+    { authData: { anonymous: { id: authId } } },
+    { headers: REST_HEADERS }
+  );
+  return { id: response.data.objectId, sessionToken: response.data.sessionToken };
+}
+
+export async function loginRejected(email, password) {
+  await Parse.User.logOut();
+  const error = await captureRejection(Parse.User.logIn(email, password));
+  await Parse.User.logOut();
+  return error !== null;
+}
+
+export async function markEmailVerified(userId) {
+  const user = await new Parse.Query(Parse.User).get(userId, MASTER);
+  user.set('emailVerified', true);
+  return user.save(null, MASTER);
+}
+
 export async function createTenant(name = 'Tenant') {
   const tenant = new Parse.Object('partners_Tenant');
   tenant.set('TenantName', name);
   tenant.set('IsActive', true);
   return tenant.save(null, MASTER);
+}
+
+export async function createTenantOwner(prefix = 'owner') {
+  const account = await createPlainUser(uniqueEmail(prefix));
+  const tenant = new Parse.Object('partners_Tenant');
+  tenant.set('TenantName', 'Owned Tenant');
+  tenant.set('IsActive', true);
+  tenant.set('UserId', pointer('_User', account.id));
+  await tenant.save(null, MASTER);
+  return { account, tenant };
 }
 
 export async function createOrganization(tenant, name = 'Org') {

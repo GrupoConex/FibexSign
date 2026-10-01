@@ -290,7 +290,7 @@ describe('resetpassword cloud function', () => {
       expect(linked.linkedExistingAccount).toBeTrue();
       expect(error.code).toBe(Parse.Error.OBJECT_NOT_FOUND);
       expect(error.message).toBe('User not found or not allowed.');
-      expect(await canLogIn(guest.email, PASSWORD)).toBeTrue();
+      expect(await canLogIn(guest.email, PASSWORD)).toBeFalse();
       expect(await canLogIn(guest.email, NEW_PASSWORD)).toBeFalse();
     });
 
@@ -302,7 +302,7 @@ describe('resetpassword cloud function', () => {
       const error = await resetAs(orgAdmin, { userId: guest.id, password: NEW_PASSWORD });
 
       expect(error.message).toBe('User not found or not allowed.');
-      expect(await canLogIn(guest.email, PASSWORD)).toBeTrue();
+      expect(await canLogIn(guest.email, NEW_PASSWORD)).toBeFalse();
     });
 
     it('still resets members that the tenant created itself', async () => {

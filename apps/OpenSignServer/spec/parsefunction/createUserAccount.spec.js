@@ -113,7 +113,7 @@ describe('createUserAccount shared helper', () => {
 
     const error = await captureRejection(createUserAccount(details));
 
-    expect(error.message).toBe('Cannot sign up user with an empty username.');
+    expect(error.message).toBe('bad or missing username');
   });
 
   it('rejects when the password is missing', async () => {
@@ -121,7 +121,7 @@ describe('createUserAccount shared helper', () => {
 
     const error = await captureRejection(createUserAccount(details));
 
-    expect(error.message).toBe('Cannot sign up user with an empty password.');
+    expect(error.message).toBe('password is required');
   });
 
   it('propagates a failure of the follow-up login', async () => {

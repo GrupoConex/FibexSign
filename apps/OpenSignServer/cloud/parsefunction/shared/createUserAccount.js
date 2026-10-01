@@ -1,8 +1,6 @@
-import { randomBytes } from 'node:crypto';
+import { createAccountAsServer } from './accountTakeoverGuard.js';
 
-const GUEST_PASSWORD_BYTES = 32;
-
-export const generateGuestPassword = () => randomBytes(GUEST_PASSWORD_BYTES).toString('hex');
+export { generateGuestPassword } from './guestPassword.js';
 
 const REQUIRED_USER_DETAIL_FIELDS = Object.freeze(['name', 'email', 'password', 'company']);
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -47,17 +45,12 @@ export default async function createUserAccount(userDetails) {
     throw new Parse.Error(Parse.Error.USERNAME_TAKEN, 'An account with this email already exists.');
   }
 
-  const user = new Parse.User();
-  user.set('username', normalizedEmail);
-  user.set('password', userDetails.password);
-  user.set('email', normalizedEmail);
-  user.set('normalizedEmail', normalizedEmail);
-  if (userDetails?.phone) {
-    user.set('phone', userDetails.phone);
-  }
-  user.set('name', userDetails.name);
-
-  await user.signUp();
+  await createAccountAsServer({
+    name: userDetails.name,
+    email: normalizedEmail,
+    password: userDetails.password,
+    phone: userDetails.phone,
+  });
   const loggedInUser = await Parse.User.logIn(normalizedEmail, userDetails.password);
   return { id: loggedInUser.id, sessionToken: loggedInUser.getSessionToken() };
 }

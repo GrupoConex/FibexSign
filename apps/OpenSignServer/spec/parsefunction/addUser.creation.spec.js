@@ -181,15 +181,15 @@ describe('adduser cloud function creation', () => {
     expect(result.UserId.attributes).toEqual({});
   });
 
-  it('does not change the password of an orphan account when linking it', async () => {
+  it('locks the old password of an orphan account out without adopting the supplied one', async () => {
     const caller = await createCaller('contracts_Admin');
     const orphan = await createPlainUser(uniqueEmail('orphan-password'));
 
     await addUserAs(caller, buildParams(caller, { email: orphan.email }));
 
     await resetAuthState();
-    const originalLogin = await Parse.User.logIn(orphan.email, PASSWORD);
-    expect(originalLogin.id).toBe(orphan.id);
+    const originalLogin = await captureRejection(Parse.User.logIn(orphan.email, PASSWORD));
+    expect(originalLogin.code).toBe(Parse.Error.OBJECT_NOT_FOUND);
     await resetAuthState();
     const suppliedLogin = await captureRejection(Parse.User.logIn(orphan.email, MEMBER_PASSWORD));
     expect(suppliedLogin.code).toBe(Parse.Error.OBJECT_NOT_FOUND);

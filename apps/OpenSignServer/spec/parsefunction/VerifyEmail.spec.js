@@ -1,6 +1,11 @@
 import { OTP_MAX_FAILED_ATTEMPTS } from '../../cloud/parsefunction/shared/otpPolicy.js';
 import {
   TEST_OTP,
+  PASSWORD,
+  createMasterKeySession,
+  isSessionValid,
+  openPasswordSession,
+  loginRejected,
   captureRejection,
   cloudRunAs,
   createOtpRecord,
@@ -145,6 +150,53 @@ describe('verifyemail cloud function', () => {
     expect(error.message).toBe('lookup failed');
     expect(lookup.hits()).toBe(1);
     expect(await readEmailVerified(account.id)).toBeFalsy();
+  });
+
+  describe('session hygiene after a successful verification', () => {
+    it('revokes the other password sessions and keeps the current one', async () => {
+      const account = await createPlainUser(uniqueEmail('verify-sessions'));
+      await createOtpRecord(account.email);
+      const otherToken = await openPasswordSession(account.email);
+      const serverToken = await createMasterKeySession(account.id);
+
+      await verifyAs(account, { email: account.email, otp: OTP_VALUE });
+
+      expect(await isSessionValid(account.sessionToken)).toBeTrue();
+      expect(await isSessionValid(otherToken)).toBeFalse();
+      expect(await isSessionValid(serverToken)).toBeTrue();
+    });
+
+    it('does not rotate the password of the caller', async () => {
+      const account = await createPlainUser(uniqueEmail('verify-password'));
+      await createOtpRecord(account.email);
+
+      await verifyAs(account, { email: account.email, otp: OTP_VALUE });
+
+      expect(await loginRejected(account.email, PASSWORD)).toBeFalse();
+    });
+
+    it('removes the provider credentials of the account', async () => {
+      const account = await createPlainUser(uniqueEmail('verify-authdata'));
+      await createOtpRecord(account.email);
+      const user = await new Parse.Query(Parse.User).get(account.id, { useMasterKey: true });
+      user.set('authData', { anonymous: { id: uniqueEmail('anon') } });
+      await user.save(null, { useMasterKey: true });
+
+      await verifyAs(account, { email: account.email, otp: OTP_VALUE });
+
+      const stored = await new Parse.Query(Parse.User).get(account.id, { useMasterKey: true });
+      expect(stored.get('authData')).toBeFalsy();
+    });
+
+    it('does not revoke any session when the otp is wrong', async () => {
+      const account = await createPlainUser(uniqueEmail('verify-keep'));
+      await createOtpRecord(account.email);
+      const otherToken = await openPasswordSession(account.email);
+
+      await captureRejection(verifyAs(account, { email: account.email, otp: WRONG_OTP }));
+
+      expect(await isSessionValid(otherToken)).toBeTrue();
+    });
   });
 
   describe('defensive branches (unreachable via public API)', () => {
