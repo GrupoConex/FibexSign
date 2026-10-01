@@ -9,7 +9,15 @@ const SPANISH_TEXTS = {
     "Has solicitado demasiados códigos. Intenta de nuevo en unos minutos.",
   "email-already-registered": "Este correo ya está registrado.",
   "user-linked-existing-account":
-    "El usuario ya tenía una cuenta: se agregó al equipo y deberá usar su contraseña actual o recuperarla."
+    "El usuario ya tenía una cuenta: se agregó al equipo y deberá usar su contraseña actual o recuperarla.",
+  "send-verification-code": "Enviar código de verificación",
+  "otp-sent-to-email": "Enviamos un código de 6 dígitos a {{email}}.",
+  "otp-too-many-attempts": "Demasiados intentos. Intenta de nuevo más tarde.",
+  "login-email-verification-required":
+    "Debes verificar tu correo. Ingresa el código que enviamos a {{email}}.",
+  "invalid-credentials-or-otp": "Credenciales o código inválidos.",
+  "otp-send-failed-hint":
+    "No pudimos enviar el código. Pulsa Reenviar para intentarlo de nuevo."
 };
 const KEYS = Object.keys(SPANISH_TEXTS);
 

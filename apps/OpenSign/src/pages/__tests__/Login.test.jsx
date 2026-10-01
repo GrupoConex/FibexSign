@@ -7,6 +7,7 @@ import Login from "../Login";
 const cloudRun = vi.fn();
 const notifyError = vi.fn();
 const notifyWarning = vi.fn();
+const sendOtp = vi.fn();
 
 vi.mock("../../utils", async (importOriginal) => ({
   ...(await importOriginal()),
@@ -44,6 +45,7 @@ vi.mock("parse", () => ({
 vi.mock("../../constant/Utils", async (importOriginal) => ({
   ...(await importOriginal()),
   getAppLogo: vi.fn().mockResolvedValue({ user: "exist" }),
+  handleSendOTP: (...args) => sendOtp(...args),
   saveLanguageInLocal: vi.fn(),
   usertimezone: "UTC"
 }));
@@ -295,5 +297,282 @@ describe("Login additional information submission", () => {
     await submitAdditionalInfo();
 
     await waitFor(() => expect(notifyError).toHaveBeenCalledTimes(2));
+  });
+});
+
+describe("Login email verification step", () => {
+  const VERIFIED_USER = { sessionToken: "session-token", email: "a@b.co" };
+
+  const unverified = () =>
+    Object.assign(new Error("Email not verified."), { code: 205 });
+
+  const reachOtpStep = async () => {
+    renderLogin();
+    await userEvent.type(await screen.findByLabelText("email"), "a@b.co");
+    await userEvent.type(screen.getByLabelText("password"), "secret");
+    await submit();
+    return screen.findByLabelText(/^verification-code/);
+  };
+
+  const submitOtp = async (code) => {
+    await userEvent.type(screen.getByLabelText(/^verification-code/), code);
+    await userEvent.click(screen.getByRole("button", { name: "verify" }));
+  };
+
+  const requireVerification = () =>
+    cloudRun.mockImplementation(async (name) => {
+      if (name === "loginuser") throw unverified();
+      return undefined;
+    });
+
+  beforeEach(() => {
+    cloudRun.mockReset();
+    notifyError.mockReset();
+    sendOtp.mockReset();
+    sendOtp.mockResolvedValue(true);
+    localStorage.clear();
+  });
+
+  it("switches to the otp step and sends the code when the server answers 205", async () => {
+    requireVerification();
+
+    await reachOtpStep();
+
+    expect(sendOtp).toHaveBeenCalledWith("a@b.co");
+    expect(screen.queryByLabelText("password")).toBeNull();
+    expect(notifyError).not.toHaveBeenCalled();
+  });
+
+  it("verifies with email, password and otp and then runs the normal success path", async () => {
+    cloudRun.mockImplementation(async (name) => {
+      if (name === "loginuser") throw unverified();
+      if (name === "verifyloginotp") return VERIFIED_USER;
+      if (name === "getUserDetails") {
+        return {
+          get: (key) => (key === "UserRole" ? "contracts_Unmapped" : undefined)
+        };
+      }
+      return undefined;
+    });
+    await reachOtpStep();
+
+    await submitOtp("123456");
+
+    await waitFor(() =>
+      expect(cloudRun).toHaveBeenCalledWith("verifyloginotp", {
+        email: "a@b.co",
+        password: "secret",
+        otp: "123456"
+      })
+    );
+    await waitFor(() =>
+      expect(localStorage.getItem("accesstoken")).toBe("session-token")
+    );
+    expect(JSON.parse(localStorage.getItem("UserInformation"))).toEqual(
+      VERIFIED_USER
+    );
+    await waitFor(() =>
+      expect(cloudRun).toHaveBeenCalledWith("getUserDetails")
+    );
+  });
+
+  it("does not call the server when the code is not 6 digits", async () => {
+    requireVerification();
+    await reachOtpStep();
+
+    await submitOtp("12");
+
+    expect(cloudRun).not.toHaveBeenCalledWith(
+      "verifyloginotp",
+      expect.anything()
+    );
+    expect(screen.getByText("verification-code-invalid")).toHaveAttribute(
+      "aria-live",
+      "polite"
+    );
+    expect(screen.getByLabelText(/^verification-code/)).toHaveAttribute(
+      "aria-describedby",
+      "otp-error"
+    );
+  });
+
+  it("shows the generic credentials-or-code message on 101 and stays on the step", async () => {
+    cloudRun.mockImplementation(async (name) => {
+      if (name === "loginuser") throw unverified();
+      if (name === "verifyloginotp") throw { code: 101 };
+      return undefined;
+    });
+    await reachOtpStep();
+
+    await submitOtp("123456");
+
+    expect(
+      await screen.findByText("invalid-credentials-or-otp")
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/^verification-code/)).toBeInTheDocument();
+  });
+
+  it("shows the lock message on 155", async () => {
+    cloudRun.mockImplementation(async (name) => {
+      if (name === "loginuser") throw unverified();
+      if (name === "verifyloginotp") throw { code: 155 };
+      return undefined;
+    });
+    await reachOtpStep();
+
+    await submitOtp("123456");
+
+    expect(
+      await screen.findByText("otp-too-many-attempts")
+    ).toBeInTheDocument();
+  });
+
+  it("resends the code to the same email", async () => {
+    requireVerification();
+    await reachOtpStep();
+    sendOtp.mockClear();
+
+    await userEvent.click(screen.getByRole("button", { name: "resend" }));
+
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledWith("a@b.co"));
+  });
+
+  it("keeps the step open with a resend option when the first send is rejected", async () => {
+    sendOtp.mockResolvedValue(false);
+    requireVerification();
+
+    await reachOtpStep();
+
+    expect(screen.getByRole("button", { name: "resend" })).toBeInTheDocument();
+  });
+
+  it("returns to the credentials form from the otp step", async () => {
+    requireVerification();
+    await reachOtpStep();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "back-to-login" })
+    );
+
+    expect(await screen.findByLabelText("password")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^verification-code/)).toBeNull();
+  });
+
+  it("clears the password from state when going back from the otp step", async () => {
+    requireVerification();
+    await reachOtpStep();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "back-to-login" })
+    );
+
+    expect(await screen.findByLabelText("password")).toHaveValue("");
+  });
+
+  it("clears the password from state after a successful verification", async () => {
+    cloudRun.mockImplementation(async (name) => {
+      if (name === "loginuser") throw unverified();
+      if (name === "verifyloginotp") return VERIFIED_USER;
+      if (name === "getUserDetails") {
+        return {
+          get: (key) => (key === "UserRole" ? "contracts_Unmapped" : undefined)
+        };
+      }
+      return undefined;
+    });
+    await reachOtpStep();
+    await submitOtp("123456");
+    await waitFor(() =>
+      expect(localStorage.getItem("accesstoken")).toBe("session-token")
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "back-to-login", hidden: true })
+    );
+
+    expect(await screen.findByLabelText("password")).toHaveValue("");
+  });
+
+  it("disables resend while a code is being sent", async () => {
+    requireVerification();
+    await reachOtpStep();
+    let finishSend;
+    sendOtp.mockClear();
+    sendOtp.mockReturnValue(
+      new Promise((resolve) => {
+        finishSend = resolve;
+      })
+    );
+    const resend = screen.getByRole("button", { name: "resend" });
+
+    await userEvent.click(resend);
+    await userEvent.click(resend);
+
+    expect(sendOtp).toHaveBeenCalledTimes(1);
+    expect(resend).toBeDisabled();
+    finishSend(true);
+    await waitFor(() => expect(resend).not.toBeDisabled());
+  });
+
+  it("maps a 429 during verification like the normal login", async () => {
+    cloudRun.mockImplementation(async (name) => {
+      if (name === "loginuser") throw unverified();
+      if (name === "verifyloginotp") throw { code: 429 };
+      return undefined;
+    });
+    await reachOtpStep();
+
+    await submitOtp("123456");
+
+    await waitFor(() =>
+      expect(notifyError).toHaveBeenCalledWith("too-many-login-attempts")
+    );
+  });
+
+  it("maps a connection failure during verification like the normal login", async () => {
+    cloudRun.mockImplementation(async (name) => {
+      if (name === "loginuser") throw unverified();
+      if (name === "verifyloginotp") throw { code: 100 };
+      return undefined;
+    });
+    await reachOtpStep();
+
+    await submitOtp("123456");
+
+    await waitFor(() =>
+      expect(notifyError).toHaveBeenCalledWith("server-error")
+    );
+  });
+
+  it("shows an inline hint when the first code could not be sent and clears it after a resend", async () => {
+    sendOtp.mockResolvedValue(false);
+    requireVerification();
+    await reachOtpStep();
+
+    expect(screen.getByText("otp-send-failed-hint")).toHaveAttribute(
+      "aria-live",
+      "polite"
+    );
+
+    sendOtp.mockResolvedValue(true);
+    await userEvent.click(screen.getByRole("button", { name: "resend" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("otp-send-failed-hint")).toBeNull()
+    );
+  });
+
+  it("leaves a normal login untouched", async () => {
+    cloudRun.mockResolvedValue(null);
+    renderLogin();
+    await userEvent.type(await screen.findByLabelText("email"), "a@b.co");
+    await userEvent.type(screen.getByLabelText("password"), "secret");
+    await submit();
+
+    await waitFor(() =>
+      expect(cloudRun).toHaveBeenCalledWith("loginuser", expect.anything())
+    );
+    expect(sendOtp).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText(/^verification-code/)).toBeNull();
   });
 });
