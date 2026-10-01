@@ -27,7 +27,12 @@ const captureRejection = async promise => {
 
 describe('userAccountGuard', () => {
   it('protects the identity fields of an account', () => {
-    expect([...PROTECTED_USER_FIELDS].sort()).toEqual(['email', 'normalizedEmail', 'username']);
+    expect([...PROTECTED_USER_FIELDS].sort()).toEqual([
+      'credentialsSecuredAt',
+      'email',
+      'normalizedEmail',
+      'username',
+    ]);
   });
 
   it('never blocks the master key', async () => {

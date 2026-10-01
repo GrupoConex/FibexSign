@@ -1,4 +1,9 @@
-export const PROTECTED_USER_FIELDS = Object.freeze(['email', 'username', 'normalizedEmail']);
+export const PROTECTED_USER_FIELDS = Object.freeze([
+  'email',
+  'username',
+  'normalizedEmail',
+  'credentialsSecuredAt',
+]);
 
 const buildForbiddenError = field =>
   new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, `${field} cannot be modified.`);
