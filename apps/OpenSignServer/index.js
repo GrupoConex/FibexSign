@@ -19,7 +19,12 @@ import { SSOAuth } from './auth/authadapter.js';
 import runDbMigrations from './migrationdb/index.js';
 import { validateSignedLocalUrl } from './cloud/parsefunction/getSignedUrl.js';
 import { buildCorsOptions } from './utils/corsOptions.js';
-import { buildAuthRateLimiterMiddleware } from './utils/authRateLimiter.js';
+import {
+  buildAuthRateLimiterMiddleware,
+  buildBatchGuardMiddleware,
+  buildParseServerRateLimits,
+  reportMissingTrustProxy,
+} from './utils/authRateLimiter.js';
 let fsAdapter;
 
 if (useLocal !== 'true') {
@@ -157,6 +162,7 @@ export const config = {
     threshold: accountLockoutThreshold,
   },
   sessionLength: sessionLengthSeconds,
+  rateLimit: buildParseServerRateLimits(),
   ...(isMailAdapter === true
     ? {
         emailAdapter: {
@@ -203,11 +209,13 @@ if (trustProxyHops > 0) {
   app.set('trust proxy', trustProxyHops);
 } else {
   app.set('trust proxy', false);
+  reportMissingTrustProxy();
   console.warn(
     'TRUST_PROXY_HOPS is not set (defaulting to 0/disabled) - if this server runs behind a reverse proxy or load balancer in production, set TRUST_PROXY_HOPS to the correct hop count or the auth rate limiter will not isolate attackers from legitimate users.'
   );
 }
 app.use(cors(buildCorsOptions()));
+app.use(buildBatchGuardMiddleware());
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use(buildAuthRateLimiterMiddleware());
@@ -278,6 +286,7 @@ app.get('/', function (req, res) {
 });
 
 if (!process.env.TESTING) {
+  await runDbMigrations();
   const port = process.env.PORT || 8080;
   const httpServer = http.createServer(app);
   // Set the Keep-Alive and headers timeout to 100 seconds
@@ -287,7 +296,6 @@ if (!process.env.TESTING) {
     console.log('firma-server running on port ' + port + '.');
     const isWindows = process.platform === 'win32';
     // console.log('isWindows', isWindows);
-    runDbMigrations();
     const migrateCmd = 'node ./node_modules/parse-dbtool/src/parse-dbtool.js migrate';
     exec(
       migrateCmd,

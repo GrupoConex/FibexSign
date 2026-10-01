@@ -1,5 +1,4 @@
 import getUserId from '../../cloud/parsefunction/getUserId.js';
-import { knownDefect } from '../utils/known-defect.js';
 import {
   captureRejection,
   createPlainUser,
@@ -46,36 +45,23 @@ describe('getUserId cloud function', () => {
     expect(result).toEqual({ id: account.id });
   });
 
-  it(
-    'rejects with OBJECT_NOT_FOUND when no user matches',
-    knownDefect(
-      'DEF-03',
-      'getUserId resolves with the caught TypeError as a value instead of rejecting with OBJECT_NOT_FOUND',
-      async check => {
-        const outcome = await captureRejection(
-          getUserId({ params: { username: uniqueEmail('missing') } })
-        );
+  it('rejects with OBJECT_NOT_FOUND when no user matches', async () => {
+    const outcome = await captureRejection(
+      getUserId({ params: { username: uniqueEmail('missing') } })
+    );
 
-        check(outcome !== null, 'must reject when no user matches');
-        check(outcome?.code === Parse.Error.OBJECT_NOT_FOUND, 'must reject with OBJECT_NOT_FOUND');
-      }
-    )
-  );
+    expect(outcome).not.toBeNull();
+    expect(outcome.code).toBe(Parse.Error.OBJECT_NOT_FOUND);
+    expect(outcome.message).toBe('User not found.');
+  });
 
-  it(
-    'rejects with the failure when the query fails',
-    knownDefect(
-      'DEF-03',
-      'getUserId resolves with the caught TypeError as a value instead of rejecting with OBJECT_NOT_FOUND',
-      async check => {
-        const failure = new Error('db down');
-        const lookup = rejectFirstFor('_User', failure);
+  it('rejects with the failure when the query fails', async () => {
+    const failure = new Error('db down');
+    const lookup = rejectFirstFor('_User', failure);
 
-        const outcome = await captureRejection(getUserId({ params: { username: 'anyone' } }));
+    const outcome = await captureRejection(getUserId({ params: { username: 'anyone' } }));
 
-        check(lookup.hits() === 1, 'the user lookup must run');
-        check(outcome === failure, 'must reject with the original failure');
-      }
-    )
-  );
+    expect(lookup.hits()).toBe(1);
+    expect(outcome).toBe(failure);
+  });
 });

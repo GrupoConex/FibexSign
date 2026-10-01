@@ -1,5 +1,7 @@
 import http from 'http';
 import { ParseServer } from 'parse-server';
+import { MongoClient } from 'mongodb';
+import { OTP_COLLECTION, migrateOtpTable } from '../../scripts/migrate-otp-table.js';
 import { app, config } from '../../index.js';
 
 export const dropDB = async () => {
@@ -7,6 +9,16 @@ export const dropDB = async () => {
   return await Parse.Server.database.deleteEverything(true);
 };
 let parseServerState = {};
+
+async function ensureOtpUniqueness(databaseURI) {
+  const client = new MongoClient(databaseURI);
+  await client.connect();
+  try {
+    await migrateOtpTable({ collection: client.db().collection(OTP_COLLECTION), apply: true });
+  } finally {
+    await client.close();
+  }
+}
 
 /**
  * Starts the ParseServer instance
@@ -28,6 +40,7 @@ export async function startParseServer() {
   });
   const parseServer = new ParseServer(parseServerOptions);
   await parseServer.start();
+  await ensureOtpUniqueness(parseServerOptions.databaseURI);
   app.use(parseServerOptions.mountPath, parseServer.app);
   const httpServer = http.createServer(app);
   await new Promise(resolve => httpServer.listen(parseServerOptions.port, resolve));

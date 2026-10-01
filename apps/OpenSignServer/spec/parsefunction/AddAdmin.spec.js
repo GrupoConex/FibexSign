@@ -99,7 +99,6 @@ describe('addadmin cloud function', () => {
   it('omits optional fields that were not provided', async () => {
     const details = buildUserDetails({
       email: uniqueEmail('admin-min'),
-      company: '',
       jobTitle: '',
       timezone: '',
     });
@@ -110,7 +109,7 @@ describe('addadmin cloud function', () => {
     ['ContactNumber', 'PinCode', 'Country', 'State', 'City', 'Address'].forEach(field => {
       expect(tenant.get(field)).toBeUndefined();
     });
-    ['Phone', 'Company', 'JobTitle', 'Timezone'].forEach(field => {
+    ['Phone', 'JobTitle', 'Timezone'].forEach(field => {
       expect(extUser.get(field)).toBeUndefined();
     });
   });
@@ -149,12 +148,72 @@ describe('addadmin cloud function', () => {
     expect(extUser.get('TeamIds').map(entry => entry.id)).toEqual([team.id]);
   });
 
-  it('forces the extended user role to contracts_Admin whatever role was requested', async () => {
-    const details = buildUserDetails({ email: uniqueEmail('admin-role'), role: 'contracts_User' });
+  describe('input validation before account creation', () => {
+    const signUp = userDetails => captureRejection(Parse.Cloud.run('addadmin', { userDetails }));
 
-    const { extUser } = await signUpAdmin(details);
+    const expectRejectedWithoutAccount = async (details, message) => {
+      const error = await signUp(details);
 
-    expect(extUser.get('UserRole')).toBe('contracts_Admin');
+      expect(error.code).toBe(Parse.Error.VALIDATION_ERROR);
+      expect(error.message).toBe(message);
+      expect(await findUserByUsername(details.email)).toBeUndefined();
+    };
+
+    it('stores the contracts_Admin role for an allowed request', async () => {
+      const { extUser } = await signUpAdmin(buildUserDetails({ email: uniqueEmail('admin-role') }));
+
+      expect(extUser.get('UserRole')).toBe('contracts_Admin');
+    });
+
+    [
+      undefined,
+      null,
+      '',
+      'contracts_User',
+      'contracts_OrgAdmin',
+      'contracts_Editor',
+      'certificates_Admin',
+      'Admin',
+      '__proto__',
+      42,
+      ['contracts_Admin'],
+    ].forEach(role => {
+      it(`rejects the role ${JSON.stringify(role) ?? 'undefined'} without creating an account`, async () => {
+        const details = buildUserDetails({ email: uniqueEmail('admin-bad-role'), role });
+
+        await expectRejectedWithoutAccount(details, 'Invalid role.');
+      });
+    });
+
+    ['name', 'email', 'password', 'company'].forEach(field => {
+      [undefined, null, '', '   ', 42].forEach(value => {
+        it(`rejects ${field} = ${JSON.stringify(value) ?? 'undefined'}`, async () => {
+          const email = uniqueEmail('admin-required');
+          const details = buildUserDetails({ email, [field]: value });
+
+          const error = await signUp(details);
+
+          expect(error.code).toBe(Parse.Error.VALIDATION_ERROR);
+          expect(error.message).toBe(`Missing or invalid required fields: ${field}.`);
+          expect(await findUserByUsername(email)).toBeUndefined();
+        });
+      });
+    });
+
+    ['plainaddress', 'no-tld@example', '@example.com', 'two@@example.com'].forEach(email => {
+      it(`rejects the malformed email ${email}`, async () => {
+        await expectRejectedWithoutAccount(buildUserDetails({ email }), 'Invalid email address.');
+      });
+    });
+
+    [undefined, null, 'text', 42, []].forEach(userDetails => {
+      it(`rejects userDetails = ${JSON.stringify(userDetails) ?? 'undefined'}`, async () => {
+        const error = await signUp(userDetails);
+
+        expect(error.code).toBe(Parse.Error.VALIDATION_ERROR);
+        expect(error.message).toBe('Please provide user details.');
+      });
+    });
   });
 
   it('rejects with USERNAME_TAKEN when the email is already registered', async () => {
@@ -250,7 +309,8 @@ describe('addadmin cloud function', () => {
 
     const error = await captureRejection(Parse.Cloud.run('addadmin', { userDetails: details }));
 
-    expect(error.message).toBe('Cannot sign up user with an empty username.');
+    expect(error.code).toBe(Parse.Error.VALIDATION_ERROR);
+    expect(error.message).toBe('Missing or invalid required fields: email.');
     expect(await new Parse.Query('partners_Tenant').count(MASTER)).toBe(tenantsBefore);
     expect(await new Parse.Query('contracts_Users').count(MASTER)).toBe(extUsersBefore);
   });

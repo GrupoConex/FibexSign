@@ -1,9 +1,21 @@
 import createContactIndex from './createContactIndex.js';
 import createDocumentIndex from './createDocumentIndex.js';
 import createNormalizedEmailUnique from './createNormalizedEmailUnqiue.js';
+import { runOtpTableMigration } from '../scripts/migrate-otp-table.js';
 
-export default async function runDbMigrations() {
-  await createContactIndex();
-  await createDocumentIndex();
-  await createNormalizedEmailUnique();
+export const DB_MIGRATION_STEPS = Object.freeze([
+  { name: 'createContactIndex', run: createContactIndex },
+  { name: 'createDocumentIndex', run: createDocumentIndex },
+  { name: 'createNormalizedEmailUnique', run: createNormalizedEmailUnique },
+  { name: 'runOtpTableMigration', run: () => runOtpTableMigration({ argv: ['--apply'] }) },
+]);
+
+export default async function runDbMigrations(steps = DB_MIGRATION_STEPS) {
+  for (const step of steps) {
+    try {
+      await step.run();
+    } catch (error) {
+      console.error(`ERROR Running database migration ${step.name}:`, error);
+    }
+  }
 }

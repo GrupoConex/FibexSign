@@ -1,4 +1,3 @@
-import { knownDefect } from '../utils/known-defect.js';
 import {
   buildUserDetails,
   captureRejection,
@@ -12,8 +11,11 @@ import {
   uniqueEmail,
 } from '../utils/auth-fixtures.js';
 
+const signupDetails = (overrides = {}) =>
+  buildUserDetails({ role: 'contracts_User', ...overrides });
+
 const fullDetails = overrides =>
-  buildUserDetails({
+  signupDetails({
     phone: '+5804141234567',
     pincode: '1010',
     country: 'VE',
@@ -67,7 +69,7 @@ describe('usersignup cloud function', () => {
     const user = await findUserByUsername(details.email);
     const tenant = await findTenantOf(user.id);
     const extUser = await findFirstByUserId('contracts_Users', user.id);
-    expect(extUser.get('UserRole')).toBe('contracts_Admin');
+    expect(extUser.get('UserRole')).toBe('contracts_User');
     expect(extUser.get('Email')).toBe(details.email);
     expect(extUser.get('Name')).toBe('Test User');
     expect(extUser.get('Phone')).toBe('+5804141234567');
@@ -78,7 +80,7 @@ describe('usersignup cloud function', () => {
   });
 
   it('returns a usable session token for the new user', async () => {
-    const details = buildUserDetails({ email: uniqueEmail('signup-token') });
+    const details = signupDetails({ email: uniqueEmail('signup-token') });
 
     const result = await Parse.Cloud.run('usersignup', { userDetails: details });
 
@@ -87,9 +89,8 @@ describe('usersignup cloud function', () => {
   });
 
   it('omits optional fields that were not provided', async () => {
-    const details = buildUserDetails({
+    const details = signupDetails({
       email: uniqueEmail('signup-min'),
-      company: '',
       jobTitle: '',
       timezone: '',
     });
@@ -102,7 +103,7 @@ describe('usersignup cloud function', () => {
     ['ContactNumber', 'PinCode', 'Country', 'State', 'City', 'Address'].forEach(field => {
       expect(tenant.get(field)).toBeUndefined();
     });
-    ['Phone', 'Company', 'JobTitle', 'Timezone'].forEach(field => {
+    ['Phone', 'JobTitle', 'Timezone'].forEach(field => {
       expect(extUser.get(field)).toBeUndefined();
     });
   });
@@ -111,7 +112,7 @@ describe('usersignup cloud function', () => {
     const rawEmail = `  Signup.Norm ${Date.now()}@Example.COM `;
     const expected = rawEmail.toLowerCase().replace(/\s/g, '');
 
-    await Parse.Cloud.run('usersignup', { userDetails: buildUserDetails({ email: rawEmail }) });
+    await Parse.Cloud.run('usersignup', { userDetails: signupDetails({ email: rawEmail }) });
 
     const user = await findUserByUsername(expected);
     const tenant = await findTenantOf(user.id);
@@ -120,64 +121,128 @@ describe('usersignup cloud function', () => {
     expect(extUser.get('Email')).toBe(expected);
   });
 
-  it('stores the extended user in the class derived from the role prefix', async () => {
-    const details = buildUserDetails({
-      email: uniqueEmail('signup-role'),
-      role: 'certificates_Admin',
-    });
+  it('stores the extended user in the contracts class for the allowed role', async () => {
+    const details = signupDetails({ email: uniqueEmail('signup-role') });
 
     const result = await Parse.Cloud.run('usersignup', { userDetails: details });
 
     const user = await findUserByUsername(details.email);
-    const extUser = await findFirstByUserId('certificates_Users', user.id);
+    const extUser = await findFirstByUserId('contracts_Users', user.id);
     expect(result.message).toBe('User sign up');
-    expect(extUser.get('UserRole')).toBe('certificates_Admin');
+    expect(extUser.get('UserRole')).toBe('contracts_User');
   });
 
   it('rejects with USERNAME_TAKEN and creates no tenant when the email is already registered', async () => {
     const account = await createPlainUser(uniqueEmail('signup-taken'));
 
     const error = await captureRejection(
-      Parse.Cloud.run('usersignup', { userDetails: buildUserDetails({ email: account.email }) })
+      Parse.Cloud.run('usersignup', { userDetails: signupDetails({ email: account.email }) })
     );
 
     expect(error.code).toBe(Parse.Error.USERNAME_TAKEN);
     expect(await findTenantOf(account.id)).toBeUndefined();
   });
 
-  it('rejects when the role is missing without creating a tenant or an extended user', async () => {
-    const details = buildUserDetails({ email: uniqueEmail('signup-norole'), role: undefined });
+  describe('input validation before account creation', () => {
+    const signUp = userDetails => captureRejection(Parse.Cloud.run('usersignup', { userDetails }));
 
-    const error = await captureRejection(Parse.Cloud.run('usersignup', { userDetails: details }));
+    const expectRejectedWithoutAccount = async (details, message) => {
+      const error = await signUp(details);
 
-    const user = await findUserByUsername(details.email);
-    expect(error.code).toBe(Parse.Error.SCRIPT_FAILED);
-    expect(error.message).toContain("reading 'split'");
-    expect(await findTenantOf(user.id)).toBeUndefined();
-    expect(await findFirstByUserId('contracts_Users', user.id)).toBeUndefined();
+      expect(error.code).toBe(Parse.Error.VALIDATION_ERROR);
+      expect(error.message).toBe(message);
+      expect(await findUserByUsername(details.email)).toBeUndefined();
+    };
+
+    ['name', 'email', 'password', 'company'].forEach(field => {
+      [undefined, null, '', '   ', 42, {}].forEach(value => {
+        it(`rejects ${field} = ${JSON.stringify(value) ?? 'undefined'} without creating an account`, async () => {
+          const email = uniqueEmail('signup-required');
+          const details = signupDetails({ email, [field]: value });
+
+          const error = await signUp(details);
+
+          expect(error.code).toBe(Parse.Error.VALIDATION_ERROR);
+          expect(error.message).toBe(`Missing or invalid required fields: ${field}.`);
+          expect(await findUserByUsername(email)).toBeUndefined();
+          expect(await findUserByUsername(details.email)).toBeUndefined();
+        });
+      });
+    });
+
+    it('lists every missing required field in the message', async () => {
+      const error = await signUp(
+        signupDetails({ email: undefined, name: '', password: undefined, company: undefined })
+      );
+
+      expect(error.code).toBe(Parse.Error.VALIDATION_ERROR);
+      expect(error.message).toBe(
+        'Missing or invalid required fields: name, email, password, company.'
+      );
+    });
+
+    [
+      'plainaddress',
+      'missing-at.example.com',
+      'two@@example.com',
+      'no-tld@example',
+      '@example.com',
+    ].forEach(email => {
+      it(`rejects the malformed email ${email}`, async () => {
+        await expectRejectedWithoutAccount(signupDetails({ email }), 'Invalid email address.');
+      });
+    });
+
+    it('accepts an email surrounded by whitespace and uppercase characters', async () => {
+      const email = `  Valid.${Date.now()}@Example.COM `;
+
+      const result = await Parse.Cloud.run('usersignup', { userDetails: signupDetails({ email }) });
+
+      expect(result.message).toBe('User sign up');
+    });
+
+    [
+      undefined,
+      null,
+      '',
+      'contracts_Admin',
+      'contracts_OrgAdmin',
+      'contracts_Editor',
+      'certificates_Admin',
+      'partners_User',
+      'User',
+      '__proto__',
+      42,
+      ['contracts_User'],
+    ].forEach(role => {
+      it(`rejects the role ${JSON.stringify(role) ?? 'undefined'} without creating an account or tenant`, async () => {
+        const details = signupDetails({ email: uniqueEmail('signup-role-invalid'), role });
+
+        await expectRejectedWithoutAccount(details, 'Invalid role.');
+      });
+    });
+
+    [undefined, null, 'text', 42, []].forEach(userDetails => {
+      it(`rejects userDetails = ${JSON.stringify(userDetails) ?? 'undefined'}`, async () => {
+        const error = await signUp(userDetails);
+
+        expect(error.code).toBe(Parse.Error.VALIDATION_ERROR);
+        expect(error.message).toBe('Please provide user details.');
+      });
+    });
+
+    it('does not query or create anything when validation fails', async () => {
+      const createSpy = spyOn(Parse.User.prototype, 'signUp').and.callThrough();
+
+      await signUp(signupDetails({ role: undefined, email: uniqueEmail('signup-no-io') }));
+
+      expect(createSpy).not.toHaveBeenCalled();
+    });
   });
-
-  it(
-    'does not leave an orphan account behind when the role is missing',
-    knownDefect(
-      'SEC-07',
-      'usersignup validates the role after creating the account, leaving an orphan _User when the role is missing',
-      async check => {
-        const details = buildUserDetails({ email: uniqueEmail('signup-orphan'), role: undefined });
-
-        await captureRejection(Parse.Cloud.run('usersignup', { userDetails: details }));
-
-        check(
-          (await findUserByUsername(details.email)) === undefined,
-          'no _User may remain after a rejected signup'
-        );
-      }
-    )
-  );
 
   it('propagates a failure while saving the tenant', async () => {
     rejectSaveFor('partners_Tenant', new Parse.Error(141, 'tenant save failed'));
-    const details = buildUserDetails({ email: uniqueEmail('signup-tenant-fail') });
+    const details = signupDetails({ email: uniqueEmail('signup-tenant-fail') });
 
     const error = await captureRejection(Parse.Cloud.run('usersignup', { userDetails: details }));
 
@@ -186,7 +251,7 @@ describe('usersignup cloud function', () => {
 
   it('propagates a failure while saving the extended user', async () => {
     rejectSaveFor('contracts_Users', new Parse.Error(141, 'ext save failed'));
-    const details = buildUserDetails({ email: uniqueEmail('signup-ext-fail') });
+    const details = signupDetails({ email: uniqueEmail('signup-ext-fail') });
 
     const error = await captureRejection(Parse.Cloud.run('usersignup', { userDetails: details }));
 
@@ -196,7 +261,7 @@ describe('usersignup cloud function', () => {
   describe('defensive branches (unreachable via public API)', () => {
     it('answers that the user already exists when an extended user is already linked', async () => {
       const lookup = stubFirstFor('contracts_Users', { id: 'existing-ext-user' });
-      const details = buildUserDetails({ email: uniqueEmail('signup-linked') });
+      const details = signupDetails({ email: uniqueEmail('signup-linked') });
 
       const result = await Parse.Cloud.run('usersignup', { userDetails: details });
 

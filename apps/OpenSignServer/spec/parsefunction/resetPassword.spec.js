@@ -1,4 +1,3 @@
-import { knownDefect } from '../utils/known-defect.js';
 import {
   PASSWORD,
   captureConsoleError,
@@ -196,29 +195,128 @@ describe('resetpassword cloud function', () => {
     expect(await canLogIn(target.account.email, PASSWORD)).toBeTrue();
   });
 
-  it(
-    'does not let an org admin reset the password of a user in another organization',
-    knownDefect(
-      'SEC-06',
-      'resetPassword enforces tenant scope only, so an OrgAdmin can reset users of other organizations while addUser scopes OrgAdmin by organization',
-      async check => {
-        const caller = await createCaller('contracts_OrgAdmin');
-        const siblingOrganization = await createOrganization(caller.tenant, 'Sibling');
-        const siblingTeam = await createTeam(siblingOrganization);
-        const target = await createTenantMember('contracts_User', {
-          tenant: caller.tenant,
-          organization: siblingOrganization,
-          team: siblingTeam,
-        });
+  describe('organization and account status scoping', () => {
+    it('does not let an org admin reset the password of a user in another organization', async () => {
+      const caller = await createCaller('contracts_OrgAdmin');
+      const siblingOrganization = await createOrganization(caller.tenant, 'Sibling');
+      const siblingTeam = await createTeam(siblingOrganization);
+      const target = await createTenantMember('contracts_User', {
+        tenant: caller.tenant,
+        organization: siblingOrganization,
+        team: siblingTeam,
+      });
+
+      const error = await resetAs(caller, { userId: target.account.id, password: NEW_PASSWORD });
+
+      expect(error.code).toBe(Parse.Error.OBJECT_NOT_FOUND);
+      expect(error.message).toBe('User not found or not allowed.');
+      expect(await canLogIn(target.account.email, PASSWORD)).toBeTrue();
+    });
+
+    it('does not let an org admin reset a user that has no organization', async () => {
+      const caller = await createCaller('contracts_OrgAdmin');
+      const target = await createTenantMember('contracts_User', { tenant: caller.tenant });
+
+      const error = await resetAs(caller, { userId: target.account.id, password: NEW_PASSWORD });
+
+      expect(error.message).toBe('User not found or not allowed.');
+      expect(await canLogIn(target.account.email, PASSWORD)).toBeTrue();
+    });
+
+    it('rejects an org admin that has no organization', async () => {
+      const caller = await createCaller('contracts_OrgAdmin', { organization: undefined });
+      const target = await createTenantMember('contracts_User', caller);
+
+      const error = await resetAs(caller, { userId: target.account.id, password: NEW_PASSWORD });
+
+      expect(error.code).toBe(Parse.Error.INVALID_QUERY);
+      expect(error.message).toBe('Unauthorized.');
+      expect(await canLogIn(target.account.email, PASSWORD)).toBeTrue();
+    });
+
+    it('still lets a tenant admin reset users of any organization of its tenant', async () => {
+      const caller = await createCaller('contracts_Admin');
+      const siblingOrganization = await createOrganization(caller.tenant, 'Sibling');
+      const siblingTeam = await createTeam(siblingOrganization);
+      const target = await createTenantMember('contracts_User', {
+        tenant: caller.tenant,
+        organization: siblingOrganization,
+        team: siblingTeam,
+      });
+
+      const result = await resetAs(caller, { userId: target.account.id, password: NEW_PASSWORD });
+
+      expect(result).toBeNull();
+      expect(await canLogIn(target.account.email, NEW_PASSWORD)).toBeTrue();
+    });
+
+    ['contracts_Admin', 'contracts_OrgAdmin'].forEach(role => {
+      it(`rejects a disabled ${role} caller`, async () => {
+        const caller = await createCaller(role, {}, { IsDisabled: true });
+        const target = await createTenantMember('contracts_User', caller);
 
         const error = await resetAs(caller, { userId: target.account.id, password: NEW_PASSWORD });
 
-        check(error !== null, 'must reject a reset outside the caller organization');
-        check(
-          await canLogIn(target.account.email, PASSWORD),
-          'the target must keep the original password'
-        );
-      }
-    )
-  );
+        expect(error.code).toBe(Parse.Error.OBJECT_NOT_FOUND);
+        expect(error.message).toBe('Admin user tenant not found.');
+        expect(await canLogIn(target.account.email, PASSWORD)).toBeTrue();
+      });
+    });
+  });
+
+  describe('accounts linked from another tenant', () => {
+    const linkGuestInto = (admin, guest) =>
+      cloudRunAs(
+        'adduser',
+        {
+          name: 'Linked Guest',
+          email: guest.email,
+          password: 'Attacker-Passw0rd!',
+          organization: { objectId: admin.organization.id, company: 'Acme' },
+          team: admin.team.id,
+          role: 'User',
+          tenantId: admin.tenant.id,
+        },
+        admin.account.sessionToken
+      );
+
+    it('refuses to reset the password of a guest account linked by another tenant admin', async () => {
+      const tenantBAdmin = await createCaller('contracts_Admin');
+      const guest = await createPlainUser(uniqueEmail('guest-signer'));
+      const linked = await linkGuestInto(tenantBAdmin, guest);
+
+      const error = await resetAs(tenantBAdmin, { userId: guest.id, password: NEW_PASSWORD });
+
+      expect(linked.linkedExistingAccount).toBeTrue();
+      expect(error.code).toBe(Parse.Error.OBJECT_NOT_FOUND);
+      expect(error.message).toBe('User not found or not allowed.');
+      expect(await canLogIn(guest.email, PASSWORD)).toBeTrue();
+      expect(await canLogIn(guest.email, NEW_PASSWORD)).toBeFalse();
+    });
+
+    it('refuses the reset for an org admin as well', async () => {
+      const orgAdmin = await createCaller('contracts_OrgAdmin');
+      const guest = await createPlainUser(uniqueEmail('guest-org'));
+      await linkGuestInto(orgAdmin, guest);
+
+      const error = await resetAs(orgAdmin, { userId: guest.id, password: NEW_PASSWORD });
+
+      expect(error.message).toBe('User not found or not allowed.');
+      expect(await canLogIn(guest.email, PASSWORD)).toBeTrue();
+    });
+
+    it('still resets members that the tenant created itself', async () => {
+      const admin = await createCaller('contracts_Admin');
+      const email = uniqueEmail('own-member');
+      await linkGuestInto(admin, { email });
+      const created = await new Parse.Query(Parse.User)
+        .equalTo('username', email)
+        .first({ useMasterKey: true });
+
+      const result = await resetAs(admin, { userId: created.id, password: NEW_PASSWORD });
+
+      expect(result).toBeNull();
+      expect(await canLogIn(email, NEW_PASSWORD)).toBeTrue();
+    });
+  });
 });

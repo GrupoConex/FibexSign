@@ -18,16 +18,17 @@ export default async function resetPassword(request) {
     // 1. Get Admin User TenantId
     const adminUserQuery = new Parse.Query('contracts_Users');
     adminUserQuery.equalTo('UserId', request.user);
+    adminUserQuery.notEqualTo('IsDisabled', true);
     const adminUser = await adminUserQuery.first({ useMasterKey: true });
 
     const tenantId = adminUser?.get('TenantId');
     if (!tenantId) {
       throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'Admin user tenant not found.');
     }
-    const isAdmin =
-      adminUser.get('UserRole') === 'contracts_Admin' ||
-      adminUser.get('UserRole') === 'contracts_OrgAdmin';
-    if (!isAdmin) {
+    const isTenantAdmin = adminUser.get('UserRole') === 'contracts_Admin';
+    const isOrgAdmin = adminUser.get('UserRole') === 'contracts_OrgAdmin';
+    const organizationId = adminUser.get('OrganizationId');
+    if ((!isTenantAdmin && !isOrgAdmin) || (isOrgAdmin && !organizationId)) {
       throw new Parse.Error(Parse.Error.INVALID_QUERY, 'Unauthorized.');
     }
 
@@ -36,6 +37,10 @@ export default async function resetPassword(request) {
     targetUserQuery.equalTo('UserId', { __type: 'Pointer', className: '_User', objectId: userId });
     targetUserQuery.equalTo('TenantId', tenantId);
     targetUserQuery.notEqualTo('UserRole', 'contracts_Admin');
+    targetUserQuery.notEqualTo('IsLinkedAccount', true);
+    if (isOrgAdmin) {
+      targetUserQuery.equalTo('OrganizationId', organizationId);
+    }
     const targetUser = await targetUserQuery.first({ useMasterKey: true });
 
     if (!targetUser) {

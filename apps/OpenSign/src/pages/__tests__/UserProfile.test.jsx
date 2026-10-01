@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
@@ -261,7 +261,7 @@ describe("UserProfile email OTP verification flow", () => {
     await waitFor(() => expect(handleSendOTPMock).toHaveBeenCalled());
 
     const otpInput = await screen.findByPlaceholderText("otp-placeholder");
-    await user.type(otpInput, "1234");
+    await user.type(otpInput, "123456");
 
     const dialog = document.getElementById("otp-verification-modal");
     await waitFor(() => expect(dialog).not.toBeNull());
@@ -269,7 +269,7 @@ describe("UserProfile email OTP verification flow", () => {
 
     await waitFor(() =>
       expect(cloudRunMock).toHaveBeenCalledWith("verifyemail", {
-        otp: "1234",
+        otp: "123456",
         email: "user@example.com"
       })
     );
@@ -281,6 +281,60 @@ describe("UserProfile email OTP verification flow", () => {
     await waitFor(() =>
       expect(screen.getByTestId("email-verified-badge")).toBeInTheDocument()
     );
+  });
+});
+
+describe("UserProfile OTP input and resend", () => {
+  afterEach(() => {
+    handleSendOTPMock.mockReset();
+  });
+
+  const openOtpModal = async (user) => {
+    await waitFor(() =>
+      expect(screen.getByTestId("verify-email-button")).toBeInTheDocument()
+    );
+    await user.click(screen.getByTestId("verify-email-button"));
+    await waitFor(() => expect(handleSendOTPMock).toHaveBeenCalled());
+    return screen.findByPlaceholderText("otp-placeholder");
+  };
+
+  it("expects exactly six digits in the OTP input", async () => {
+    const user = userEvent.setup();
+    renderProfile();
+
+    const otpInput = await openOtpModal(user);
+
+    expect(otpInput).toHaveAttribute("pattern", "[0-9]{6}");
+    expect(otpInput).toHaveAttribute("maxlength", "6");
+    expect(otpInput).toHaveAttribute("inputmode", "numeric");
+  });
+
+  it("confirms the resend only when the code was actually sent", async () => {
+    const user = userEvent.setup();
+    handleSendOTPMock.mockResolvedValue(true);
+    renderProfile();
+    await openOtpModal(user);
+    notifySuccess.mockClear();
+
+    await user.click(screen.getByText("resend"));
+
+    await waitFor(() =>
+      expect(notifySuccess).toHaveBeenCalledWith("otp-sent-alert")
+    );
+  });
+
+  it("does not confirm the resend when sending the code failed", async () => {
+    const user = userEvent.setup();
+    handleSendOTPMock.mockResolvedValue(false);
+    renderProfile();
+    await openOtpModal(user);
+    notifySuccess.mockClear();
+    handleSendOTPMock.mockClear();
+
+    await user.click(screen.getByText("resend"));
+
+    await waitFor(() => expect(handleSendOTPMock).toHaveBeenCalledTimes(1));
+    expect(notifySuccess).not.toHaveBeenCalledWith("otp-sent-alert");
   });
 });
 

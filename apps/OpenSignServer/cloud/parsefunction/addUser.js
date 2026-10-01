@@ -1,3 +1,61 @@
+const MASTER = { useMasterKey: true };
+
+const toUserPointer = userId => ({ __type: 'Pointer', className: '_User', objectId: userId });
+
+const buildMemberAcl = (callerId, memberId) => {
+  const acl = new Parse.ACL();
+  [callerId, memberId].forEach(userId => {
+    acl.setReadAccess(userId, true);
+    acl.setWriteAccess(userId, true);
+  });
+  return acl;
+};
+
+const serializeExtUser = (extUser, accountId, isLinkedAccount) => ({
+  ...JSON.parse(JSON.stringify(extUser)),
+  UserId: toUserPointer(accountId),
+  ...(isLinkedAccount && { linkedExistingAccount: true }),
+});
+
+const buildDuplicateAccountError = () =>
+  new Parse.Error(Parse.Error.DUPLICATE_VALUE, 'An account with this email already exists.');
+
+const hasTenantMembership = account => {
+  const membershipQuery = new Parse.Query('contracts_Users');
+  membershipQuery.equalTo('UserId', toUserPointer(account.id));
+  return membershipQuery.first(MASTER);
+};
+
+async function findOrphanAccount(email) {
+  const accountQuery = new Parse.Query(Parse.User);
+  accountQuery.equalTo('email', email);
+  const account = await accountQuery.first(MASTER);
+  if (!account || (await hasTenantMembership(account))) {
+    throw buildDuplicateAccountError();
+  }
+  return account;
+}
+
+async function obtainAccount({ name, email, password, phone }) {
+  const account = new Parse.User();
+  account.set('name', name);
+  account.set('username', email);
+  account.set('email', email);
+  account.set('password', password);
+  if (phone) {
+    account.set('phone', phone);
+  }
+  try {
+    const createdAccount = await account.save();
+    return createdAccount && { account: createdAccount, isLinkedAccount: false };
+  } catch (err) {
+    if (err.code === Parse.Error.USERNAME_TAKEN) {
+      return { account: await findOrphanAccount(email), isLinkedAccount: true };
+    }
+    throw new Parse.Error(400, err?.message || 'something went wrong');
+  }
+}
+
 export default async function addUser(request) {
   const { phone, name, password, organization, team, tenantId, timezone, role } = request.params;
   const email = request.params?.email?.toLowerCase()?.replace(/\s/g, '');
@@ -91,60 +149,24 @@ export default async function addUser(request) {
       if (timezone) {
         extUser.set('Timezone', timezone);
       }
-      try {
-        const _users = Parse.Object.extend('User');
-        const _user = new _users();
-        _user.set('name', name);
-        _user.set('username', email);
-        _user.set('email', email);
-        _user.set('password', password);
-        if (phone) {
-          _user.set('phone', phone);
-        }
-
-        const user = await _user.save();
-        if (user) {
-          extUser.set('CreatedBy', currentUser);
-
-          extUser.set('UserId', user);
-          const acl = new Parse.ACL();
-          acl.setReadAccess(request.user.id, true);
-          acl.setWriteAccess(request.user.id, true);
-          acl.setReadAccess(user.id, true);
-          acl.setWriteAccess(user.id, true);
-          extUser.setACL(acl);
-          const extUserRes = await extUser.save();
-
-          const parseData = JSON.parse(JSON.stringify(extUserRes));
-          return parseData;
-        }
-      } catch (err) {
-        console.log('err ', err);
-        if (err.code === 202) {
-          const userQuery = new Parse.Query(Parse.User);
-          userQuery.equalTo('email', email);
-          const userRes = await userQuery.first({ useMasterKey: true });
-          userRes.setPassword(password);
-          await userRes.save(null, { useMasterKey: true });
-          extUser.set('CreatedBy', currentUser);
-          extUser.set('UserId', { __type: 'Pointer', className: '_User', objectId: userRes.id });
-          const acl = new Parse.ACL();
-          acl.setReadAccess(request.user.id, true);
-          acl.setWriteAccess(request.user.id, true);
-          acl.setReadAccess(userRes.id, true);
-          acl.setWriteAccess(userRes.id, true);
-
-          extUser.setACL(acl);
-          const res = await extUser.save();
-
-          const parseData = JSON.parse(JSON.stringify(res));
-          return parseData;
-        } else {
-          throw new Parse.Error(400, err?.message || 'something went wrong');
-        }
+      const obtainedAccount = await obtainAccount({ name, email, password, phone });
+      if (!obtainedAccount) {
+        return undefined;
       }
+      const { account, isLinkedAccount } = obtainedAccount;
+      if (isLinkedAccount) {
+        extUser.set('IsLinkedAccount', true);
+      }
+      extUser.set('CreatedBy', currentUser);
+      extUser.set('UserId', toUserPointer(account.id));
+      extUser.setACL(buildMemberAcl(request.user.id, account.id));
+      const savedExtUser = await extUser.save(null, MASTER);
+      return serializeExtUser(savedExtUser, account.id, isLinkedAccount);
     } catch (err) {
       console.log('err', err);
+      if (err?.code === Parse.Error.DUPLICATE_VALUE) {
+        throw err;
+      }
       throw new Parse.Error(400, err?.message || 'something went wrong');
     }
   } else {

@@ -1,16 +1,24 @@
 import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { knownDefect } from '../utils/known-defect.js';
 import sendMailOTPv1 from '../../cloud/parsefunction/SendMailOTPv1.js';
+import {
+  OTP_MAX_FAILED_ATTEMPTS,
+  OTP_RESEND_LIMIT,
+  OTP_RESEND_WINDOW_MS,
+  OTP_TTL_MS,
+  hashOtp,
+} from '../../cloud/parsefunction/shared/otpPolicy.js';
 import { smtpenable } from '../../Utils.js';
 import {
+  captureConsoleError,
   captureRejection,
   createExtUser,
   createOtpRecord,
   createPlainUser,
   findOtpRecord,
   rejectFirstFor,
+  rejectSaveFor,
   resetAuthState,
   silenceConsole,
   stubFirstFor,
@@ -26,10 +34,16 @@ const MAILGUN_SENDER = 'mailgun-sender@example.com';
 const PROBE_TIMEOUT_MS = 25000;
 const PROBE_SPEC_TIMEOUT_MS = 30000;
 const EMAIL_COUNT_WAIT_MS = 2000;
-const TEN_MINUTES_MS = 10 * 60 * 1000;
+const SIX_DIGIT_CODE_PATTERN = />(\d{6})<\/p>/;
+const LIMIT_MESSAGE = 'Too many OTP requests. Please try again later.';
+const SEND_FAILURE_MESSAGE = 'Could not send the OTP email. Please try again later.';
+const INTERNAL_FAILURE_MESSAGE = 'Could not process the OTP request. Please try again later.';
 const MASTER = { useMasterKey: true };
+const PARALLEL_REQUESTS = 8;
 
 const sendOtp = params => Parse.Cloud.run('SendOTPMailV1', params);
+
+const sentCode = spy => spy.calls.mostRecent().args[0].html.match(SIX_DIGIT_CODE_PATTERN)[1];
 
 const documentOwnedBy = extUserId => ({
   toJSON: () => ({ ExtUserPtr: { objectId: extUserId } }),
@@ -37,10 +51,18 @@ const documentOwnedBy = extUserId => ({
 
 describe('SendOTPMailV1 cloud function', () => {
   let sendEmailSpy;
+  let consoleError;
   let previousEnv;
+
+  const exhaustResendLimit = async email => {
+    for (let sent = 0; sent < OTP_RESEND_LIMIT; sent += 1) {
+      await sendOtp({ email });
+    }
+  };
 
   beforeEach(async () => {
     silenceConsole();
+    consoleError = captureConsoleError();
     await resetAuthState();
     previousEnv = {
       smtp: process.env.SMTP_USER_EMAIL,
@@ -71,6 +93,15 @@ describe('SendOTPMailV1 cloud function', () => {
 
     expect(result).toBe('Please Enter valid email');
     expect(sendEmailSpy).not.toHaveBeenCalled();
+  });
+
+  [' ', '   ', 42, { $ne: '' }, ['a@b.c']].forEach(email => {
+    it(`asks for a valid email when the email is ${JSON.stringify(email)}`, async () => {
+      const result = await sendOtp({ email });
+
+      expect(result).toBe('Please Enter valid email');
+      expect(sendEmailSpy).not.toHaveBeenCalled();
+    });
   });
 
   it('sends the otp email to the recipient with the configured sender', async () => {
@@ -109,17 +140,16 @@ describe('SendOTPMailV1 cloud function', () => {
     PROBE_SPEC_TIMEOUT_MS
   );
 
-  it('embeds the persisted otp code in the email body', async () => {
+  it('embeds in the email body the code whose hash is persisted', async () => {
     const email = uniqueEmail('otp-body');
 
     await sendOtp({ email });
 
     const stored = await findOtpRecord(email);
-    const payload = sendEmailSpy.calls.mostRecent().args[0];
-    expect(payload.html).toContain(String(stored.get('OTP')));
+    expect(stored.get('OtpHash')).toBe(hashOtp(sentCode(sendEmailSpy)));
   });
 
-  it('stores a four digit otp valid for ten minutes with no failed attempts', async () => {
+  it('stores a six digit otp only as a hash valid for ten minutes with no failed attempts', async () => {
     const email = uniqueEmail('otp-store');
     const before = Date.now();
 
@@ -127,11 +157,30 @@ describe('SendOTPMailV1 cloud function', () => {
 
     const stored = await findOtpRecord(email);
     const expiresAt = stored.get('ExpiresAt').getTime();
-    expect(stored.get('OTP')).toBeGreaterThanOrEqual(1000);
-    expect(stored.get('OTP')).toBeLessThanOrEqual(9999);
+    expect(sentCode(sendEmailSpy)).toMatch(/^\d{6}$/);
+    expect(stored.get('OtpHash')).toMatch(/^[0-9a-f]{64}$/);
+    expect(stored.get('OTP')).toBeUndefined();
     expect(stored.get('FailedAttempts')).toBe(0);
-    expect(expiresAt).toBeGreaterThanOrEqual(before + TEN_MINUTES_MS);
-    expect(expiresAt).toBeLessThanOrEqual(Date.now() + TEN_MINUTES_MS);
+    expect(expiresAt).toBeGreaterThanOrEqual(before + OTP_TTL_MS);
+    expect(expiresAt).toBeLessThanOrEqual(Date.now() + OTP_TTL_MS);
+  });
+
+  it('never stores the plaintext code in the record', async () => {
+    const email = uniqueEmail('otp-plaintext');
+
+    await sendOtp({ email });
+
+    const stored = await findOtpRecord(email);
+    expect(JSON.stringify(stored.toJSON())).not.toContain(sentCode(sendEmailSpy));
+  });
+
+  it('normalizes the recipient email before storing and sending', async () => {
+    const email = uniqueEmail('otp-normalize');
+
+    await sendOtp({ email: `  ${email.toUpperCase()} ` });
+
+    expect(sendEmailSpy.calls.mostRecent().args[0].recipient).toBe(email);
+    expect((await findOtpRecord(email))?.get('Email')).toBe(email);
   });
 
   it('stores the tenant id when it is provided', async () => {
@@ -155,7 +204,7 @@ describe('SendOTPMailV1 cloud function', () => {
   it('refreshes an existing otp record instead of creating another one', async () => {
     const email = uniqueEmail('otp-refresh');
     const existing = await createOtpRecord(email, {
-      OTP: 1000,
+      otp: 100000,
       FailedAttempts: 4,
       ExpiresAt: new Date(Date.now() - 1000),
     });
@@ -172,15 +221,26 @@ describe('SendOTPMailV1 cloud function', () => {
     expect(records[0].get('ExpiresAt').getTime()).toBeGreaterThan(Date.now());
   });
 
-  it('still stores the otp and answers success when the email transport fails', async () => {
+  it('rejects with a controlled error and never reports success when the email transport fails', async () => {
     const email = uniqueEmail('otp-transport');
+    const transportFailure = new Error('smtp unavailable');
+    sendEmailSpy.and.rejectWith(transportFailure);
+
+    const error = await captureRejection(sendOtp({ email }));
+
+    expect(error.code).toBe(Parse.Error.INTERNAL_SERVER_ERROR);
+    expect(error.message).toBe(SEND_FAILURE_MESSAGE);
+    expect(sendEmailSpy).toHaveBeenCalledTimes(1);
+    expect(consoleError).toHaveBeenCalledWith('error in send OTP mail', transportFailure);
+  });
+
+  it('does not touch the document owner counter when the email transport fails', async () => {
+    const documentLookup = stubFirstFor('contracts_Document', documentOwnedBy('owner-1'));
     sendEmailSpy.and.rejectWith(new Error('smtp unavailable'));
 
-    const result = await sendOtp({ email });
+    await captureRejection(sendOtp({ email: uniqueEmail('otp-transport-doc'), docId: 'doc-1' }));
 
-    expect(result).toBe('Otp send');
-    expect(sendEmailSpy).toHaveBeenCalledTimes(1);
-    expect((await findOtpRecord(email))?.get('Email')).toBe(email);
+    expect(documentLookup.hits()).toBe(0);
   });
 
   it('increments the email counter of the document owner when a docId is provided', async () => {
@@ -240,35 +300,132 @@ describe('SendOTPMailV1 cloud function', () => {
     });
   });
 
-  it(
-    'rejects instead of resolving with the error when the otp lookup fails',
-    knownDefect(
-      'DEF-02',
-      'sendMailOTPv1 swallows internal failures and resolves with the caught error object as a value',
-      async check => {
-        const failure = new Error('otp lookup failed');
-        const lookup = rejectFirstFor('defaultdata_Otp', failure);
+  describe('internal failures', () => {
+    it('rejects with the original Parse error when the otp lookup fails', async () => {
+      const failure = new Parse.Error(Parse.Error.SCRIPT_FAILED, 'otp lookup failed');
+      const lookup = rejectFirstFor('defaultdata_Otp', failure);
 
-        const outcome = await captureRejection(
-          sendMailOTPv1({ params: { email: uniqueEmail('otp-lookup') } })
-        );
+      const outcome = await captureRejection(
+        sendMailOTPv1({ params: { email: uniqueEmail('otp-lookup') } })
+      );
 
-        check(lookup.hits() === 1, 'the otp lookup must run');
-        check(outcome === failure, 'must reject with the original failure');
-      }
-    )
-  );
+      expect(lookup.hits()).toBe(1);
+      expect(outcome).toBe(failure);
+    });
 
-  it(
-    'rejects instead of resolving with the error when the request has no params',
-    knownDefect(
-      'DEF-02',
-      'sendMailOTPv1 swallows internal failures and resolves with the caught error object as a value',
-      async check => {
-        const outcome = await captureRejection(sendMailOTPv1({}));
+    it('rejects with a controlled error that hides unexpected failures', async () => {
+      const failure = new Error('otp lookup failed');
+      rejectFirstFor('defaultdata_Otp', failure);
 
-        check(outcome !== null, 'must reject when the request is malformed');
-      }
-    )
-  );
+      const outcome = await captureRejection(
+        sendMailOTPv1({ params: { email: uniqueEmail('otp-lookup-raw') } })
+      );
+
+      expect(outcome instanceof Parse.Error).toBeTrue();
+      expect(outcome.code).toBe(Parse.Error.INTERNAL_SERVER_ERROR);
+      expect(outcome.message).toBe(INTERNAL_FAILURE_MESSAGE);
+      expect(consoleError).toHaveBeenCalledWith('err in sendMailOTPv1', failure);
+    });
+
+    it('rejects with a controlled error when the request has no params', async () => {
+      const outcome = await captureRejection(sendMailOTPv1({}));
+
+      expect(outcome instanceof Parse.Error).toBeTrue();
+      expect(outcome.message).toBe(INTERNAL_FAILURE_MESSAGE);
+    });
+
+    it('rejects with a controlled error and sends nothing when the otp cannot be stored', async () => {
+      rejectSaveFor('defaultdata_Otp', new Error('db down'));
+
+      const outcome = await captureRejection(sendOtp({ email: uniqueEmail('otp-store-fail') }));
+
+      expect(outcome.message).toBe(INTERNAL_FAILURE_MESSAGE);
+      expect(sendEmailSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('resend limit', () => {
+    it('allows three sends per recipient inside the window and rejects the fourth', async () => {
+      const email = uniqueEmail('otp-limit');
+      await exhaustResendLimit(email);
+
+      const error = await captureRejection(sendOtp({ email }));
+
+      expect(error.code).toBe(Parse.Error.REQUEST_LIMIT_EXCEEDED);
+      expect(error.message).toBe(LIMIT_MESSAGE);
+      expect(sendEmailSpy).toHaveBeenCalledTimes(OTP_RESEND_LIMIT);
+    });
+
+    it('delivers at most three emails when several requests arrive in parallel', async () => {
+      const email = uniqueEmail('otp-limit-parallel');
+
+      const outcomes = await Promise.allSettled(
+        Array.from({ length: PARALLEL_REQUESTS }, () => sendOtp({ email }))
+      );
+
+      const delivered = outcomes.filter(outcome => outcome.status === 'fulfilled');
+      const refused = outcomes.filter(outcome => outcome.status === 'rejected');
+      const query = new Parse.Query('defaultdata_Otp');
+      query.equalTo('Email', email);
+      expect(delivered.length).toBe(OTP_RESEND_LIMIT);
+      expect(sendEmailSpy).toHaveBeenCalledTimes(OTP_RESEND_LIMIT);
+      expect(
+        refused.every(outcome => outcome.reason.code === Parse.Error.REQUEST_LIMIT_EXCEEDED)
+      ).toBeTrue();
+      expect(await query.count(MASTER)).toBe(1);
+    });
+
+    it('keeps the last delivered code stored after a rejected resend', async () => {
+      const email = uniqueEmail('otp-limit-keep');
+      await exhaustResendLimit(email);
+      const lastDelivered = sentCode(sendEmailSpy);
+
+      await captureRejection(sendOtp({ email }));
+
+      expect((await findOtpRecord(email)).get('OtpHash')).toBe(hashOtp(lastDelivered));
+    });
+
+    it('limits each recipient independently', async () => {
+      await exhaustResendLimit(uniqueEmail('otp-limit-a'));
+
+      const result = await sendOtp({ email: uniqueEmail('otp-limit-b') });
+
+      expect(result).toBe('Otp send');
+    });
+
+    it('applies the limit regardless of email casing', async () => {
+      const email = uniqueEmail('otp-limit-case');
+      await exhaustResendLimit(email);
+
+      const error = await captureRejection(sendOtp({ email: email.toUpperCase() }));
+
+      expect(error.code).toBe(Parse.Error.REQUEST_LIMIT_EXCEEDED);
+    });
+
+    it('allows sending again once the window has expired', async () => {
+      const email = uniqueEmail('otp-limit-window');
+      await exhaustResendLimit(email);
+      const row = await findOtpRecord(email);
+      row.set('SendWindowStart', new Date(Date.now() - OTP_RESEND_WINDOW_MS - 1000));
+      await row.save(null, MASTER);
+
+      const result = await sendOtp({ email });
+
+      expect(result).toBe('Otp send');
+      expect((await findOtpRecord(email)).get('SendCount')).toBe(1);
+    });
+
+    it('does not reset the failed attempts when resending inside the window', async () => {
+      const email = uniqueEmail('otp-limit-failures');
+      await createOtpRecord(email, {
+        FailedAttempts: OTP_MAX_FAILED_ATTEMPTS,
+        SendCount: 1,
+        SendWindowStart: new Date(),
+      });
+
+      await sendOtp({ email });
+
+      expect((await findOtpRecord(email)).get('FailedAttempts')).toBe(OTP_MAX_FAILED_ATTEMPTS);
+    });
+  });
 });

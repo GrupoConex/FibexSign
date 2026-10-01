@@ -1,16 +1,19 @@
-import { knownDefect } from '../utils/known-defect.js';
+import { OTP_MAX_FAILED_ATTEMPTS } from '../../cloud/parsefunction/shared/otpPolicy.js';
 import {
+  TEST_OTP,
   captureRejection,
   cloudRunAs,
   createOtpRecord,
   createPlainUser,
+  findOtpRecord,
   rejectFirstFor,
   resetAuthState,
   silenceConsole,
   uniqueEmail,
 } from '../utils/auth-fixtures.js';
 
-const OTP_VALUE = 4242;
+const OTP_VALUE = TEST_OTP;
+const WRONG_OTP = '111111';
 
 const readEmailVerified = async userId => {
   const user = await new Parse.Query(Parse.User).get(userId, { useMasterKey: true });
@@ -46,7 +49,7 @@ describe('verifyemail cloud function', () => {
 
   it('marks the email as verified when the otp matches', async () => {
     const account = await createPlainUser(uniqueEmail('verify-ok'));
-    await createOtpRecord(account.email, { OTP: OTP_VALUE });
+    await createOtpRecord(account.email);
 
     const result = await verifyAs(account, { email: account.email, otp: OTP_VALUE });
 
@@ -54,18 +57,30 @@ describe('verifyemail cloud function', () => {
     expect(await readEmailVerified(account.id)).toBeTrue();
   });
 
-  it('accepts the otp when it is sent as a numeric string', async () => {
-    const account = await createPlainUser(uniqueEmail('verify-string'));
-    await createOtpRecord(account.email, { OTP: OTP_VALUE });
+  it('accepts the otp when it is sent as a number', async () => {
+    const account = await createPlainUser(uniqueEmail('verify-number'));
+    await createOtpRecord(account.email);
 
-    const result = await verifyAs(account, { email: account.email, otp: String(OTP_VALUE) });
+    const result = await verifyAs(account, { email: account.email, otp: Number(OTP_VALUE) });
+
+    expect(result.message).toBe('Email is verified.');
+  });
+
+  it('accepts the email regardless of casing and surrounding whitespace', async () => {
+    const account = await createPlainUser(uniqueEmail('verify-casing'));
+    await createOtpRecord(account.email);
+
+    const result = await verifyAs(account, {
+      email: ` ${account.email.toUpperCase()} `,
+      otp: OTP_VALUE,
+    });
 
     expect(result.message).toBe('Email is verified.');
   });
 
   it('answers that the email is already verified', async () => {
     const account = await createPlainUser(uniqueEmail('verify-twice'));
-    await createOtpRecord(account.email, { OTP: OTP_VALUE });
+    await createOtpRecord(account.email);
     await markVerified(account.id);
 
     const result = await verifyAs(account, { email: account.email, otp: OTP_VALUE });
@@ -75,9 +90,11 @@ describe('verifyemail cloud function', () => {
 
   it('rejects with a script failure when the otp is wrong', async () => {
     const account = await createPlainUser(uniqueEmail('verify-wrong'));
-    await createOtpRecord(account.email, { OTP: OTP_VALUE });
+    await createOtpRecord(account.email);
 
-    const error = await captureRejection(verifyAs(account, { email: account.email, otp: 1111 }));
+    const error = await captureRejection(
+      verifyAs(account, { email: account.email, otp: WRONG_OTP })
+    );
 
     expect(error.code).toBe(Parse.Error.SCRIPT_FAILED);
     expect(error.message).toBe('OTP is invalid.');
@@ -97,7 +114,7 @@ describe('verifyemail cloud function', () => {
 
   it('rejects a non numeric otp and leaves the email unverified', async () => {
     const account = await createPlainUser(uniqueEmail('verify-nan'));
-    await createOtpRecord(account.email, { OTP: OTP_VALUE });
+    await createOtpRecord(account.email);
 
     const error = await captureRejection(verifyAs(account, { email: account.email, otp: 'abcd' }));
 
@@ -108,7 +125,7 @@ describe('verifyemail cloud function', () => {
 
   it('rejects a missing otp and leaves the email unverified', async () => {
     const account = await createPlainUser(uniqueEmail('verify-missing'));
-    await createOtpRecord(account.email, { OTP: OTP_VALUE });
+    await createOtpRecord(account.email);
 
     const error = await captureRejection(verifyAs(account, { email: account.email }));
 
@@ -133,7 +150,7 @@ describe('verifyemail cloud function', () => {
   describe('defensive branches (unreachable via public API)', () => {
     it('rejects with a script failure when the saved user comes back empty', async () => {
       const account = await createPlainUser(uniqueEmail('verify-empty-save'));
-      await createOtpRecord(account.email, { OTP: OTP_VALUE });
+      await createOtpRecord(account.email);
       const userSave = spyOn(Parse.User.prototype, 'save').and.resolveTo(undefined);
 
       const error = await captureRejection(
@@ -146,45 +163,86 @@ describe('verifyemail cloud function', () => {
     });
   });
 
-  it(
-    'does not verify the account with an otp issued for a different email',
-    knownDefect(
-      'SEC-02',
-      'VerifyEmail does not bind the otp email to the calling user, so any issued otp verifies the caller',
-      async check => {
-        const account = await createPlainUser(uniqueEmail('verify-victim'));
-        const otherEmail = uniqueEmail('verify-attacker-owned');
-        await createOtpRecord(otherEmail, { OTP: OTP_VALUE });
+  describe('ownership, expiry, lockout and one-time use', () => {
+    it('does not verify the account with an otp issued for a different email', async () => {
+      const account = await createPlainUser(uniqueEmail('verify-victim'));
+      const otherEmail = uniqueEmail('verify-attacker-owned');
+      await createOtpRecord(otherEmail);
 
-        const error = await captureRejection(
-          verifyAs(account, { email: otherEmail, otp: OTP_VALUE })
-        );
+      const error = await captureRejection(
+        verifyAs(account, { email: otherEmail, otp: OTP_VALUE })
+      );
 
-        check(error !== null, 'must reject an otp that belongs to another email');
-        check(!(await readEmailVerified(account.id)), 'caller must stay unverified');
-      }
-    )
-  );
+      expect(error).not.toBeNull();
+      expect(error.message).toBe('OTP is invalid.');
+      expect(await readEmailVerified(account.id)).toBeFalsy();
+    });
 
-  it(
-    'rejects an expired otp',
-    knownDefect(
-      'SEC-03',
-      'VerifyEmail ignores ExpiresAt and FailedAttempts, unlike AuthLoginAsMail, so there is no expiry or lockout',
-      async check => {
-        const account = await createPlainUser(uniqueEmail('verify-expired'));
-        await createOtpRecord(account.email, {
-          OTP: OTP_VALUE,
-          ExpiresAt: new Date(Date.now() - 60 * 1000),
-        });
+    it('leaves the otp of the other email untouched when the email does not match the caller', async () => {
+      const account = await createPlainUser(uniqueEmail('verify-bystander'));
+      const otherEmail = uniqueEmail('verify-other-owner');
+      await createOtpRecord(otherEmail);
 
-        const error = await captureRejection(
-          verifyAs(account, { email: account.email, otp: OTP_VALUE })
-        );
+      await captureRejection(verifyAs(account, { email: otherEmail, otp: WRONG_OTP }));
 
-        check(error !== null, 'must reject an expired otp');
-        check(!(await readEmailVerified(account.id)), 'caller must stay unverified');
-      }
-    )
-  );
+      const stored = await findOtpRecord(otherEmail);
+      expect(stored.get('FailedAttempts')).toBe(0);
+      expect(stored.get('OtpHash')).toBeDefined();
+    });
+
+    it('rejects when the email is missing', async () => {
+      const account = await createPlainUser(uniqueEmail('verify-no-email'));
+      await createOtpRecord(account.email);
+
+      const error = await captureRejection(verifyAs(account, { otp: OTP_VALUE }));
+
+      expect(error.message).toBe('OTP is invalid.');
+      expect(await readEmailVerified(account.id)).toBeFalsy();
+    });
+
+    it('rejects an expired otp', async () => {
+      const account = await createPlainUser(uniqueEmail('verify-expired'));
+      await createOtpRecord(account.email, { ExpiresAt: new Date(Date.now() - 60 * 1000) });
+
+      const error = await captureRejection(
+        verifyAs(account, { email: account.email, otp: OTP_VALUE })
+      );
+
+      expect(error.message).toBe('OTP is invalid.');
+      expect(await readEmailVerified(account.id)).toBeFalsy();
+    });
+
+    it('counts a wrong otp as a failed attempt', async () => {
+      const account = await createPlainUser(uniqueEmail('verify-count'));
+      await createOtpRecord(account.email);
+
+      await captureRejection(verifyAs(account, { email: account.email, otp: WRONG_OTP }));
+
+      expect((await findOtpRecord(account.email)).get('FailedAttempts')).toBe(1);
+    });
+
+    it('refuses even the correct otp after too many wrong attempts', async () => {
+      const account = await createPlainUser(uniqueEmail('verify-lockout'));
+      await createOtpRecord(account.email, { FailedAttempts: OTP_MAX_FAILED_ATTEMPTS });
+
+      const error = await captureRejection(
+        verifyAs(account, { email: account.email, otp: OTP_VALUE })
+      );
+
+      expect(error.message).toBe('OTP is invalid.');
+      expect(await readEmailVerified(account.id)).toBeFalsy();
+    });
+
+    it('does not accept the same otp twice', async () => {
+      const account = await createPlainUser(uniqueEmail('verify-replay'));
+      await createOtpRecord(account.email);
+      await verifyAs(account, { email: account.email, otp: OTP_VALUE });
+
+      const error = await captureRejection(
+        verifyAs(account, { email: account.email, otp: OTP_VALUE })
+      );
+
+      expect(error.message).toBe('OTP is invalid.');
+    });
+  });
 });

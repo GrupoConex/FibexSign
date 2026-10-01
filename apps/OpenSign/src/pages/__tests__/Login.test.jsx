@@ -1,10 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import Login from "../Login";
 
 const cloudRun = vi.fn();
+const notifyError = vi.fn();
+const notifyWarning = vi.fn();
+
+vi.mock("../../utils", async (importOriginal) => ({
+  ...(await importOriginal()),
+  notify: {
+    success: vi.fn(),
+    error: (...args) => notifyError(...args),
+    warning: (...args) => notifyWarning(...args),
+    info: vi.fn(),
+    dismiss: vi.fn()
+  }
+}));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal()),
@@ -19,7 +32,7 @@ vi.mock("react-redux", () => ({ useDispatch: () => vi.fn() }));
 vi.mock("parse", () => ({
   default: {
     Cloud: { run: (...args) => cloudRun(...args) },
-    User: { become: vi.fn(), logOut: vi.fn() },
+    User: { become: vi.fn().mockResolvedValue({}), logOut: vi.fn() },
     Error: {
       OBJECT_NOT_FOUND: 101,
       CONNECTION_FAILED: 100,
@@ -152,5 +165,135 @@ describe("Login inline validation", () => {
       })
     );
     expect(liveMessages(container)).toHaveLength(0);
+  });
+});
+
+describe("Login additional information submission", () => {
+  const SSO_USER = {
+    sessionToken: "session-token",
+    name: "",
+    email: "sso.user@example.com"
+  };
+
+  const openAdditionalInfoModal = async () => {
+    cloudRun.mockImplementation(async (name) => {
+      if (name === "loginuser") return SSO_USER;
+      if (name === "getUserDetails") {
+        return {
+          get: (key) => (key === "UserRole" ? "contracts_Unmapped" : undefined)
+        };
+      }
+      return undefined;
+    });
+    renderLogin();
+    await userEvent.type(await screen.findByLabelText("email"), "a@b.co");
+    await userEvent.type(screen.getByLabelText("password"), "secret");
+    await submit();
+    const company = await screen.findByLabelText(/company/);
+    await userEvent.type(company, "Acme");
+    await userEvent.type(screen.getByLabelText(/job-title/), "Engineer");
+  };
+
+  const submitAdditionalInfo = () => {
+    const modal = screen.getByText("additional-info").closest("dialog");
+    return userEvent.click(within(modal).getByText("login"));
+  };
+
+  beforeEach(() => {
+    cloudRun.mockReset();
+    notifyError.mockReset();
+    notifyWarning.mockReset();
+    localStorage.clear();
+  });
+
+  it("sends the signup with the local part of the email when the name is empty", async () => {
+    await openAdditionalInfoModal();
+    cloudRun.mockImplementation(async (name) => {
+      if (name === "usersignup") return { message: "User already exist" };
+      return undefined;
+    });
+
+    await submitAdditionalInfo();
+
+    await waitFor(() =>
+      expect(cloudRun).toHaveBeenCalledWith(
+        "usersignup",
+        expect.objectContaining({
+          userDetails: expect.objectContaining({
+            name: "sso.user",
+            email: "sso.user@example.com",
+            role: "contracts_User",
+            company: "Acme",
+            jobTitle: "Engineer"
+          })
+        })
+      )
+    );
+  });
+
+  it("keeps the name when the user already has one", async () => {
+    await openAdditionalInfoModal();
+    localStorage.setItem(
+      "UserInformation",
+      JSON.stringify({ ...SSO_USER, name: "Real Name" })
+    );
+    cloudRun.mockImplementation(async () => ({
+      message: "User already exist"
+    }));
+
+    await submitAdditionalInfo();
+
+    await waitFor(() =>
+      expect(cloudRun).toHaveBeenCalledWith(
+        "usersignup",
+        expect.objectContaining({
+          userDetails: expect.objectContaining({ name: "Real Name" })
+        })
+      )
+    );
+  });
+
+  it("shows the server message instead of failing silently when the signup is rejected", async () => {
+    await openAdditionalInfoModal();
+    cloudRun.mockImplementation(async (name) => {
+      if (name === "usersignup") {
+        throw { code: 142, message: "Invalid role." };
+      }
+      return undefined;
+    });
+
+    await submitAdditionalInfo();
+
+    await waitFor(() =>
+      expect(notifyError).toHaveBeenCalledWith("Invalid role.")
+    );
+  });
+
+  it("falls back to the generic message when the rejection has no message", async () => {
+    await openAdditionalInfoModal();
+    cloudRun.mockImplementation(async (name) => {
+      if (name === "usersignup") throw {};
+      return undefined;
+    });
+
+    await submitAdditionalInfo();
+
+    await waitFor(() =>
+      expect(notifyError).toHaveBeenCalledWith("something-went-wrong-mssg")
+    );
+  });
+
+  it("lets the user submit again after a rejected signup", async () => {
+    await openAdditionalInfoModal();
+    cloudRun.mockImplementation(async (name) => {
+      if (name === "usersignup") throw { message: "Invalid role." };
+      return undefined;
+    });
+    await submitAdditionalInfo();
+    await waitFor(() => expect(notifyError).toHaveBeenCalledTimes(1));
+
+    await submitAdditionalInfo();
+
+    await waitFor(() => expect(notifyError).toHaveBeenCalledTimes(2));
   });
 });

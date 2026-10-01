@@ -2,22 +2,38 @@ import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const sentEmails = [];
+let storedRow;
 
 globalThis.Parse = {
   Query: class {
     equalTo() {}
+    ascending() {}
+    addAscending() {}
     include() {}
     notEqualTo() {}
     async first() {
-      return undefined;
+      return storedRow;
     }
   },
   Object: {
     extend: () =>
       class {
-        set() {}
+        attributes = {};
+        set(key, value) {
+          this.attributes[key] = value;
+        }
+        unset(key) {
+          delete this.attributes[key];
+        }
+        increment(key, amount = 1) {
+          this.attributes[key] = (this.attributes[key] || 0) + amount;
+        }
+        get(key) {
+          return this.attributes[key];
+        }
         async save() {
-          return {};
+          storedRow = this;
+          return this;
         }
       },
   },

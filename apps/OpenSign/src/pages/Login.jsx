@@ -31,6 +31,8 @@ import logoNegativo from "../assets/images/Fibex-logo-negativo.svg";
 
 const LOGIN_FIELD_IDS = { email: "email", password: "password" };
 
+const getEmailLocalPart = (email) => email?.split("@")[0] || "";
+
 function Login() {
   const appName = appInfo.appName;
   const { t, i18n } = useTranslation();
@@ -316,8 +318,42 @@ function Login() {
     setState({ ...state, passwordVisible: !state.passwordVisible });
   };
 
+  const submitAdditionalDetails = async (userInformation) => {
+    const params = {
+      userDetails: {
+        name: userInformation.name || getEmailLocalPart(userInformation.email),
+        email: userInformation.email,
+        phone: userInformation?.phone || "",
+        role: "contracts_User",
+        company: userDetails.Company,
+        jobTitle: userDetails.Destination,
+        timezone: usertimezone
+      }
+    };
+    try {
+      const userSignUp = await Parse.Cloud.run("usersignup", params);
+      if (userSignUp && userSignUp.sessionToken) {
+        const LocalUserDetails = {
+          name: params.userDetails.name,
+          email: userInformation.email,
+          phone: userInformation?.phone || "",
+          company: userDetails.Company,
+          jobTitle: userDetails.JobTitle
+        };
+        localStorage.setItem("userDetails", JSON.stringify(LocalUserDetails));
+        thirdpartyLoginfn(userSignUp.sessionToken);
+      } else {
+        notify.error(userSignUp.message);
+      }
+    } catch (error) {
+      console.error("err in additional details signup", error);
+      setThirdpartyLoader(false);
+      notify.error(error?.message || t("something-went-wrong-mssg"));
+    }
+  };
+
   const handleSubmitbtn = async (e) => {
-    e.preventDefault();
+    e?.preventDefault?.();
     if (userDetails.Destination && userDetails.Company) {
       setThirdpartyLoader(true);
       const payload = { sessionToken: localStorage.getItem("accesstoken") };
@@ -325,31 +361,7 @@ function Login() {
         localStorage.getItem("UserInformation")
       );
       if (payload && payload.sessionToken) {
-        const params = {
-          userDetails: {
-            name: userInformation.name,
-            email: userInformation.email,
-            phone: userInformation?.phone || "",
-            role: "contracts_User",
-            company: userDetails.Company,
-            jobTitle: userDetails.Destination,
-            timezone: usertimezone
-          }
-        };
-        const userSignUp = await Parse.Cloud.run("usersignup", params);
-        if (userSignUp && userSignUp.sessionToken) {
-          const LocalUserDetails = {
-            name: userInformation.name,
-            email: userInformation.email,
-            phone: userInformation?.phone || "",
-            company: userDetails.Company,
-            jobTitle: userDetails.JobTitle
-          };
-          localStorage.setItem("userDetails", JSON.stringify(LocalUserDetails));
-          thirdpartyLoginfn(userSignUp.sessionToken);
-        } else {
-          notify.error(userSignUp.message);
-        }
+        await submitAdditionalDetails(userInformation);
       } else if (
         payload &&
         payload.message.replace(/ /g, "_") === "Internal_server_err"

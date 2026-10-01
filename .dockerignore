@@ -11,3 +11,7 @@ apps/OpenSignServer/logs
 apps/OpenSignServer/exports
 apps/OpenSign/build
 apps/OpenSign/public/mfbuild
+apps/OpenSignServer/spec
+apps/OpenSignServer/coverage
+apps/OpenSignServer/.nyc_output
+**/*.spec.js

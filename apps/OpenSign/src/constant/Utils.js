@@ -17,6 +17,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { SCALE_STEPS, themeColor } from "./const";
 import { format, toZonedTime } from "date-fns-tz";
 import i18n from "../i18n";
+import { isOtpResendLimitError } from "../utils/otpPolicy";
 import {
   applyNumberFormulasToPages,
   buildDownloadFilename,
@@ -2937,8 +2938,12 @@ export const handleSendOTP = async (email) => {
       email: email
     };
     await axios.post(url, body, { headers: headers });
+    return true;
   } catch (error) {
-    notify.error(error.message);
+    notify.error(
+      isOtpResendLimitError(error) ? i18n.t("otp-resend-limit") : error.message
+    );
+    return false;
   }
 };
 export const fetchUrl = async (url, fileName) => {

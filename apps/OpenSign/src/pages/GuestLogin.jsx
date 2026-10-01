@@ -16,6 +16,11 @@ import LoaderWithMsg from "../primitives/LoaderWithMsg";
 import ModalUi from "../primitives/ModalUi";
 import Loader from "../primitives/Loader";
 import { notify } from "../utils";
+import {
+  OTP_INPUT_PATTERN,
+  OTP_LENGTH,
+  isOtpResendLimitError
+} from "../utils/otpPolicy";
 import { useIsDarkTheme } from "../hook/useIsDarkTheme";
 import logoPositivo from "../assets/images/Fibex-logo-positivo.svg";
 import logoNegativo from "../assets/images/Fibex-logo-negativo.svg";
@@ -144,7 +149,13 @@ function GuestLogin() {
         setEnterOtp(true);
       }
     } catch (error) {
-      notify.error(t("something-went-wrong-mssg"));
+      notify.error(
+        t(
+          isOtpResendLimitError(error)
+            ? "otp-resend-limit"
+            : "something-went-wrong-mssg"
+        )
+      );
       setLoading(false);
     }
   };
@@ -283,7 +294,9 @@ function GuestLogin() {
                   onInput={(e) => e.target.setCustomValidity("")}
                   required
                   type="tel"
-                  pattern="[0-9]{4}"
+                  pattern={OTP_INPUT_PATTERN}
+                  maxLength={OTP_LENGTH}
+                  inputMode="numeric"
                   className="w-full op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content text-xs"
                   placeholder={t("otp-placeholder")}
                   value={OTP}

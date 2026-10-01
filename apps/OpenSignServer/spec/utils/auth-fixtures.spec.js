@@ -1,3 +1,4 @@
+import { hashOtp } from '../../cloud/parsefunction/shared/otpPolicy.js';
 import {
   buildUserDetails,
   captureConsoleError,
@@ -75,10 +76,11 @@ describe('auth fixtures', () => {
   it('creates and finds an otp record keyed by email', async () => {
     const email = uniqueEmail('otp-fixture');
 
-    await createOtpRecord(email, { OTP: 1234 });
+    await createOtpRecord(email, { otp: 123456 });
     const stored = await findOtpRecord(email);
 
-    expect(stored.get('OTP')).toBe(1234);
+    expect(stored.get('OtpHash')).toBe(hashOtp(123456));
+    expect(stored.get('OTP')).toBeUndefined();
     expect(stored.get('FailedAttempts')).toBe(0);
   });
 
