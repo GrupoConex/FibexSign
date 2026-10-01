@@ -4,6 +4,7 @@ import rateLimit, { ipKeyGenerator, MemoryStore } from 'express-rate-limit';
 
 export const STRICT_AUTH_PATH_SUFFIXES = [
   '/login',
+  '/verifyPassword',
   '/requestPasswordReset',
   '/functions/loginuser',
   '/functions/AuthLoginAsMail',
@@ -11,6 +12,7 @@ export const STRICT_AUTH_PATH_SUFFIXES = [
   '/functions/addadmin',
   '/functions/usersignup',
   '/functions/verifyemail',
+  '/functions/verifyloginotp',
 ];
 
 export const OPERATIONAL_PATH_SUFFIXES = ['/functions/getUserDetails', '/functions/declinedoc'];

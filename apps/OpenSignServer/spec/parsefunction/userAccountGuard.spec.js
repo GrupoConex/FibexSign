@@ -53,10 +53,9 @@ describe('_User account guard', () => {
     const account = await createPlainUser(uniqueEmail('credentials'));
     await putUser(account, { email: uniqueEmail('hijack') });
 
-    await resetAuthState();
-    const login = await Parse.User.logIn(account.email, PASSWORD);
+    const login = await Parse.User.verifyPassword(account.email, PASSWORD);
 
-    expect(login.id).toBe(account.id);
+    expect(login.objectId).toBe(account.id);
   });
 
   it('lets a user update its profile fields and resend the same email', async () => {

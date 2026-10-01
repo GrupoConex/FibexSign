@@ -1,4 +1,5 @@
 import { createAccountAsServer } from './accountTakeoverGuard.js';
+import { consumeOtpOrThrow } from './otpPolicy.js';
 
 export { generateGuestPassword } from './guestPassword.js';
 
@@ -35,8 +36,9 @@ export function assertValidUserDetails(userDetails, allowedRoles) {
   }
 }
 
-export default async function createUserAccount(userDetails) {
+export default async function createUserAccount(userDetails, otp) {
   const normalizedEmail = userDetails.email?.toLowerCase()?.replace(/\s/g, '');
+  await consumeOtpOrThrow({ email: normalizedEmail, otp });
   const userQuery = new Parse.Query(Parse.User);
   userQuery.equalTo('username', normalizedEmail);
   const userRes = await userQuery.first({ useMasterKey: true });
@@ -50,6 +52,7 @@ export default async function createUserAccount(userDetails) {
     email: normalizedEmail,
     password: userDetails.password,
     phone: userDetails.phone,
+    emailVerified: true,
   });
   const loggedInUser = await Parse.User.logIn(normalizedEmail, userDetails.password);
   return { id: loggedInUser.id, sessionToken: loggedInUser.getSessionToken() };

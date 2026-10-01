@@ -1,6 +1,7 @@
 import { generateGuestPassword } from './guestPassword.js';
 
 const MASTER = { useMasterKey: true };
+const EMAIL_NOT_VERIFIED_MESSAGE = 'Email not verified.';
 const SERVER_AUTH_PROVIDER = 'masterkey';
 const SESSION_CLASS = '_Session';
 const SESSION_BATCH_SIZE = 1000;
@@ -16,7 +17,7 @@ const toTenantPointer = tenantId => ({
 
 const normalizeEmail = email => email?.toLowerCase()?.replace(/\s/g, '');
 
-export async function createAccountAsServer({ name, email, password, phone }) {
+export async function createAccountAsServer({ name, email, password, phone, emailVerified }) {
   const normalizedEmail = normalizeEmail(email);
   const account = new Parse.User();
   account.set('username', normalizedEmail);
@@ -26,6 +27,9 @@ export async function createAccountAsServer({ name, email, password, phone }) {
   account.set('name', name);
   if (phone) {
     account.set('phone', phone);
+  }
+  if (emailVerified === true) {
+    account.set('emailVerified', true);
   }
   return account.save(null, MASTER);
 }
@@ -72,7 +76,7 @@ export async function findTenantIdOfUser(userId) {
   return membership?.get('TenantId')?.id;
 }
 
-const ownsTenant = async userId => {
+export const isTenantOwner = async userId => {
   const query = new Parse.Query('partners_Tenant');
   query.equalTo('UserId', toUserPointer(userId));
   return Boolean(await query.first(MASTER));
@@ -89,7 +93,7 @@ const isActiveMemberOfTenant = async (userId, tenantId) => {
 
 const isAccountClaimed = async (user, linkingTenantId) =>
   user.get('emailVerified') === true ||
-  (await ownsTenant(user.id)) ||
+  (await isTenantOwner(user.id)) ||
   (await isActiveMemberOfTenant(user.id, linkingTenantId));
 
 export const unlinkAuthProviders = user => {
@@ -113,4 +117,12 @@ export async function secureUnverifiedAccount(userId, { linkingTenantId } = {}) 
   await replaceCredentials(user);
   await revokeAllSessionsWithFinalPass(userId);
   return { secured: true };
+}
+
+export async function assertEmailVerifiedOrTenantOwner(request) {
+  const user = request.object;
+  if (user.get('emailVerified') === true || (await isTenantOwner(user.id))) {
+    return;
+  }
+  throw new Parse.Error(Parse.Error.EMAIL_NOT_FOUND, EMAIL_NOT_VERIFIED_MESSAGE);
 }

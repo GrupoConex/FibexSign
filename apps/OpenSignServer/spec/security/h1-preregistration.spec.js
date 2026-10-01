@@ -8,12 +8,14 @@ import {
   createCaller,
   createPlainUser,
   openPasswordSession,
+  openPasswordSessionBypassingGate,
   createTenantMember,
   isSessionValid,
   loginRejected,
   markEmailVerified,
   pointer,
   resetAuthState,
+  runSignup,
   silenceConsole,
   uniqueEmail,
   waitUntil,
@@ -105,7 +107,7 @@ const becomeAnonymousAdmin = async () => {
     company: 'Evil Corp',
     role: 'contracts_Admin',
   };
-  await Parse.Cloud.run('addadmin', { userDetails: details });
+  await runSignup('addadmin', details);
   await Parse.User.logOut();
   const sessionToken = await openPasswordSession(details.email, ATTACKER_PASSWORD);
   const account = await new Parse.Query(Parse.User)
@@ -125,8 +127,8 @@ const becomeAnonymousAdmin = async () => {
 
 const plantMember = async (mallory, email = uniqueEmail('planted-victim')) => {
   await cloudRunAs('adduser', addUserParams(mallory, email), mallory.account.sessionToken);
-  const sessionToken = await openPasswordSession(email, MEMBER_PASSWORD);
   const account = await new Parse.Query(Parse.User).equalTo('username', email).first(MASTER);
+  const sessionToken = await openPasswordSessionBypassingGate(account.id, email, MEMBER_PASSWORD);
   return { id: account.id, email, sessionToken };
 };
 

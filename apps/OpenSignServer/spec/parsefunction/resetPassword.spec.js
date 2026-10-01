@@ -21,12 +21,8 @@ const NEW_PASSWORD = 'Brand-New-Passw0rd!';
 const resetAs = (caller, params) =>
   captureRejection(cloudRunAs('resetpassword', params, caller.account.sessionToken));
 
-const canLogIn = async (email, password) => {
-  await resetAuthState();
-  const error = await captureRejection(Parse.User.logIn(email, password));
-  await resetAuthState();
-  return error === null;
-};
+const canLogIn = async (email, password) =>
+  (await captureRejection(Parse.User.verifyPassword(email, password))) === null;
 
 describe('resetpassword cloud function', () => {
   let consoleError;

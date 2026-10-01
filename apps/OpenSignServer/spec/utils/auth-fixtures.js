@@ -110,9 +110,7 @@ export async function createAuthDataAccount(authId = uniqueEmail('anon')) {
 }
 
 export async function loginRejected(email, password) {
-  await Parse.User.logOut();
-  const error = await captureRejection(Parse.User.logIn(email, password));
-  await Parse.User.logOut();
+  const error = await captureRejection(Parse.User.verifyPassword(email, password));
   return error !== null;
 }
 
@@ -120,6 +118,15 @@ export async function markEmailVerified(userId) {
   const user = await new Parse.Query(Parse.User).get(userId, MASTER);
   user.set('emailVerified', true);
   return user.save(null, MASTER);
+}
+
+export async function openPasswordSessionBypassingGate(userId, email, password = PASSWORD) {
+  await markEmailVerified(userId);
+  const sessionToken = await openPasswordSession(email, password);
+  const user = await new Parse.Query(Parse.User).get(userId, MASTER);
+  user.set('emailVerified', false);
+  await user.save(null, MASTER);
+  return sessionToken;
 }
 
 export async function createTenant(name = 'Tenant') {
@@ -206,6 +213,13 @@ export const findOtpRecord = email => {
   return query.first(MASTER);
 };
 
+async function purgeOtpRecord(email) {
+  const existing = await findOtpRecord(email);
+  if (existing) {
+    await existing.destroy(MASTER);
+  }
+}
+
 export async function createOtpRecord(email, fields = {}) {
   const { otp = TEST_OTP, ...storedFields } = fields;
   const record = new Parse.Object('defaultdata_Otp');
@@ -216,6 +230,20 @@ export async function createOtpRecord(email, fields = {}) {
   Object.entries(storedFields).forEach(([key, value]) => record.set(key, value));
   return record.save(null, MASTER);
 }
+
+const toAccountEmail = email => email.toLowerCase().replace(/\s/g, '');
+
+export async function buildSignupParams(userDetails, otpFields = {}) {
+  const email = userDetails?.email;
+  if (typeof email === 'string') {
+    await purgeOtpRecord(toAccountEmail(email));
+    await createOtpRecord(toAccountEmail(email), otpFields);
+  }
+  return { userDetails, otp: otpFields.otp ?? TEST_OTP };
+}
+
+export const runSignup = async (functionName, userDetails) =>
+  Parse.Cloud.run(functionName, await buildSignupParams(userDetails));
 
 export async function purgeAllExtUsers() {
   let batch = await new Parse.Query('contracts_Users').limit(1000).find(MASTER);

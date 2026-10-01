@@ -16,7 +16,7 @@ import {
   createTenantScope,
   findUserByUsername,
   isSessionValid,
-  openPasswordSession,
+  openPasswordSessionBypassingGate,
   loginRejected,
   markEmailVerified,
   resetAuthState,
@@ -65,7 +65,7 @@ describe('accountTakeoverGuard', () => {
 
     it('revokes every password session of the account', async () => {
       const attacker = await createPlainUser(uniqueEmail('guard-many'));
-      const secondToken = await openPasswordSession(attacker.email);
+      const secondToken = await openPasswordSessionBypassingGate(attacker.id, attacker.email);
 
       await secureUnverifiedAccount(attacker.id);
 
@@ -233,7 +233,7 @@ describe('accountTakeoverGuard', () => {
   describe('revokeUntrustedSessions', () => {
     it('revokes every non server session except the one to keep', async () => {
       const owner = await createPlainUser(uniqueEmail('revoke-others'));
-      const otherToken = await openPasswordSession(owner.email);
+      const otherToken = await openPasswordSessionBypassingGate(owner.id, owner.email);
       const serverToken = await createMasterKeySession(owner.id);
 
       await revokeUntrustedSessions(owner.id, owner.sessionToken);

@@ -130,15 +130,15 @@ describe('adduser cloud function creation', () => {
     expect(acl.getPublicWriteAccess()).toBeFalse();
   });
 
-  it('lets the new member log in with the supplied password', async () => {
+  it('stores the supplied password for the new member', async () => {
     const caller = await createCaller('contracts_Admin');
     const params = buildParams(caller);
 
     await addUserAs(caller, params);
     await resetAuthState();
 
-    const loggedIn = await Parse.User.logIn(params.email, MEMBER_PASSWORD);
-    expect(loggedIn.get('username')).toBe(params.email);
+    const verified = await Parse.User.verifyPassword(params.email, MEMBER_PASSWORD);
+    expect(verified.username).toBe(params.email);
   });
 
   it('links an already registered account to the new extended user', async () => {
@@ -243,7 +243,9 @@ describe('adduser cloud function creation', () => {
     );
 
     await resetAuthState();
-    const victimLogin = await captureRejection(Parse.User.logIn(victim.account.email, PASSWORD));
+    const victimLogin = await captureRejection(
+      Parse.User.verifyPassword(victim.account.email, PASSWORD)
+    );
     expect(error.code).toBe(Parse.Error.DUPLICATE_VALUE);
     expect(error.message).toBe('An account with this email already exists.');
     expect(victimLogin).toBeNull();

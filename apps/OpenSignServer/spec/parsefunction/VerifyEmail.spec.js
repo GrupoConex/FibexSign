@@ -4,7 +4,7 @@ import {
   PASSWORD,
   createMasterKeySession,
   isSessionValid,
-  openPasswordSession,
+  openPasswordSessionBypassingGate,
   loginRejected,
   captureRejection,
   cloudRunAs,
@@ -156,7 +156,7 @@ describe('verifyemail cloud function', () => {
     it('revokes the other password sessions and keeps the current one', async () => {
       const account = await createPlainUser(uniqueEmail('verify-sessions'));
       await createOtpRecord(account.email);
-      const otherToken = await openPasswordSession(account.email);
+      const otherToken = await openPasswordSessionBypassingGate(account.id, account.email);
       const serverToken = await createMasterKeySession(account.id);
 
       await verifyAs(account, { email: account.email, otp: OTP_VALUE });
@@ -191,7 +191,7 @@ describe('verifyemail cloud function', () => {
     it('does not revoke any session when the otp is wrong', async () => {
       const account = await createPlainUser(uniqueEmail('verify-keep'));
       await createOtpRecord(account.email);
-      const otherToken = await openPasswordSession(account.email);
+      const otherToken = await openPasswordSessionBypassingGate(account.id, account.email);
 
       await captureRejection(verifyAs(account, { email: account.email, otp: WRONG_OTP }));
 

@@ -7,7 +7,7 @@ export default async function usersignup(request) {
   assertValidUserDetails(userDetails, ALLOWED_SIGNUP_ROLES);
 
   try {
-    const user = await createUserAccount(userDetails);
+    const user = await createUserAccount(userDetails, request.params.otp);
     const extClass = userDetails.role.split('_')[0];
 
     const extQuery = new Parse.Query(extClass + '_Users');

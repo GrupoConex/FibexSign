@@ -6,6 +6,7 @@ import {
   findUserByUsername,
   rejectSaveFor,
   resetAuthState,
+  runSignup,
   silenceConsole,
   stubFirstFor,
   uniqueEmail,
@@ -44,7 +45,7 @@ describe('usersignup cloud function', () => {
   it('creates the tenant with every optional address field when provided', async () => {
     const details = fullDetails({ email: uniqueEmail('signup-full') });
 
-    const result = await Parse.Cloud.run('usersignup', { userDetails: details });
+    const result = await runSignup('usersignup', details);
 
     const user = await findUserByUsername(details.email);
     const tenant = await findTenantOf(user.id);
@@ -64,7 +65,7 @@ describe('usersignup cloud function', () => {
   it('creates the extended user with every optional field when provided', async () => {
     const details = fullDetails({ email: uniqueEmail('signup-ext') });
 
-    await Parse.Cloud.run('usersignup', { userDetails: details });
+    await runSignup('usersignup', details);
 
     const user = await findUserByUsername(details.email);
     const tenant = await findTenantOf(user.id);
@@ -82,7 +83,7 @@ describe('usersignup cloud function', () => {
   it('returns a usable session token for the new user', async () => {
     const details = signupDetails({ email: uniqueEmail('signup-token') });
 
-    const result = await Parse.Cloud.run('usersignup', { userDetails: details });
+    const result = await runSignup('usersignup', details);
 
     const me = await Parse.User.become(result.sessionToken);
     expect(me.get('username')).toBe(details.email);
@@ -95,7 +96,7 @@ describe('usersignup cloud function', () => {
       timezone: '',
     });
 
-    await Parse.Cloud.run('usersignup', { userDetails: details });
+    await runSignup('usersignup', details);
 
     const user = await findUserByUsername(details.email);
     const tenant = await findTenantOf(user.id);
@@ -112,7 +113,7 @@ describe('usersignup cloud function', () => {
     const rawEmail = `  Signup.Norm ${Date.now()}@Example.COM `;
     const expected = rawEmail.toLowerCase().replace(/\s/g, '');
 
-    await Parse.Cloud.run('usersignup', { userDetails: signupDetails({ email: rawEmail }) });
+    await runSignup('usersignup', signupDetails({ email: rawEmail }));
 
     const user = await findUserByUsername(expected);
     const tenant = await findTenantOf(user.id);
@@ -124,7 +125,7 @@ describe('usersignup cloud function', () => {
   it('stores the extended user in the contracts class for the allowed role', async () => {
     const details = signupDetails({ email: uniqueEmail('signup-role') });
 
-    const result = await Parse.Cloud.run('usersignup', { userDetails: details });
+    const result = await runSignup('usersignup', details);
 
     const user = await findUserByUsername(details.email);
     const extUser = await findFirstByUserId('contracts_Users', user.id);
@@ -136,7 +137,7 @@ describe('usersignup cloud function', () => {
     const account = await createPlainUser(uniqueEmail('signup-taken'));
 
     const error = await captureRejection(
-      Parse.Cloud.run('usersignup', { userDetails: signupDetails({ email: account.email }) })
+      runSignup('usersignup', signupDetails({ email: account.email }))
     );
 
     expect(error.code).toBe(Parse.Error.USERNAME_TAKEN);
@@ -144,7 +145,7 @@ describe('usersignup cloud function', () => {
   });
 
   describe('input validation before account creation', () => {
-    const signUp = userDetails => captureRejection(Parse.Cloud.run('usersignup', { userDetails }));
+    const signUp = userDetails => captureRejection(runSignup('usersignup', userDetails));
 
     const expectRejectedWithoutAccount = async (details, message) => {
       const error = await signUp(details);
@@ -196,7 +197,7 @@ describe('usersignup cloud function', () => {
     it('accepts an email surrounded by whitespace and uppercase characters', async () => {
       const email = `  Valid.${Date.now()}@Example.COM `;
 
-      const result = await Parse.Cloud.run('usersignup', { userDetails: signupDetails({ email }) });
+      const result = await runSignup('usersignup', signupDetails({ email }));
 
       expect(result.message).toBe('User sign up');
     });
@@ -244,7 +245,7 @@ describe('usersignup cloud function', () => {
     rejectSaveFor('partners_Tenant', new Parse.Error(141, 'tenant save failed'));
     const details = signupDetails({ email: uniqueEmail('signup-tenant-fail') });
 
-    const error = await captureRejection(Parse.Cloud.run('usersignup', { userDetails: details }));
+    const error = await captureRejection(runSignup('usersignup', details));
 
     expect(error.message).toBe('tenant save failed');
   });
@@ -253,7 +254,7 @@ describe('usersignup cloud function', () => {
     rejectSaveFor('contracts_Users', new Parse.Error(141, 'ext save failed'));
     const details = signupDetails({ email: uniqueEmail('signup-ext-fail') });
 
-    const error = await captureRejection(Parse.Cloud.run('usersignup', { userDetails: details }));
+    const error = await captureRejection(runSignup('usersignup', details));
 
     expect(error.message).toBe('ext save failed');
   });
@@ -263,7 +264,7 @@ describe('usersignup cloud function', () => {
       const lookup = stubFirstFor('contracts_Users', { id: 'existing-ext-user' });
       const details = signupDetails({ email: uniqueEmail('signup-linked') });
 
-      const result = await Parse.Cloud.run('usersignup', { userDetails: details });
+      const result = await runSignup('usersignup', details);
 
       const user = await findUserByUsername(details.email);
       expect(result).toEqual({ message: 'User already exist' });

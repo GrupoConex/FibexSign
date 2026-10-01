@@ -1,3 +1,5 @@
+import { runSignup } from './utils/auth-fixtures.js';
+
 describe('signup endpoints do not allow passwordless account takeover', () => {
   Parse.User.enableUnsafeCurrentUser();
 
@@ -13,7 +15,7 @@ describe('signup endpoints do not allow passwordless account takeover', () => {
       timezone: 'UTC',
     };
 
-    await Parse.Cloud.run('addadmin', { userDetails: validDetails });
+    await runSignup('addadmin', validDetails);
 
     const expectedNormalizedEmail = email.toLowerCase().replace(/\s/g, '');
     const createdUserQuery = new Parse.Query(Parse.User);
@@ -26,8 +28,9 @@ describe('signup endpoints do not allow passwordless account takeover', () => {
     let thrown = null;
     let result = null;
     try {
-      result = await Parse.Cloud.run('addadmin', {
-        userDetails: { ...validDetails, password: 'totally-different-wrong-password' },
+      result = await runSignup('addadmin', {
+        ...validDetails,
+        password: 'totally-different-wrong-password',
       });
       fail('addadmin should have thrown for an existing user instead of returning a result.');
     } catch (err) {
@@ -52,16 +55,14 @@ describe('signup endpoints do not allow passwordless account takeover', () => {
       timezone: 'UTC',
     };
 
-    await Parse.Cloud.run('usersignup', { userDetails: firstDetails });
+    await runSignup('usersignup', firstDetails);
 
     let thrown = null;
     let result = null;
     try {
-      result = await Parse.Cloud.run('usersignup', {
-        userDetails: {
-          ...firstDetails,
-          password: 'totally-different-wrong-password',
-        },
+      result = await runSignup('usersignup', {
+        ...firstDetails,
+        password: 'totally-different-wrong-password',
       });
       fail('usersignup should have thrown for an existing user instead of returning a result.');
     } catch (err) {
@@ -87,7 +88,7 @@ describe('signup endpoints do not allow passwordless account takeover', () => {
       timezone: 'UTC',
     };
 
-    const result = await Parse.Cloud.run('usersignup', { userDetails: newUserDetails });
+    const result = await runSignup('usersignup', newUserDetails);
 
     expect(result).toBeDefined();
     expect(result.message).toBe('User sign up');
