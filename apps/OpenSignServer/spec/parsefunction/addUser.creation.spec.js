@@ -130,15 +130,15 @@ describe('adduser cloud function creation', () => {
     expect(acl.getPublicWriteAccess()).toBeFalse();
   });
 
-  it('lets the new member log in with the supplied password', async () => {
+  it('stores the supplied password for the new member', async () => {
     const caller = await createCaller('contracts_Admin');
     const params = buildParams(caller);
 
     await addUserAs(caller, params);
     await resetAuthState();
 
-    const loggedIn = await Parse.User.logIn(params.email, MEMBER_PASSWORD);
-    expect(loggedIn.get('username')).toBe(params.email);
+    const verified = await Parse.User.verifyPassword(params.email, MEMBER_PASSWORD);
+    expect(verified.username).toBe(params.email);
   });
 
   it('links an already registered account to the new extended user', async () => {
@@ -181,15 +181,15 @@ describe('adduser cloud function creation', () => {
     expect(result.UserId.attributes).toEqual({});
   });
 
-  it('does not change the password of an orphan account when linking it', async () => {
+  it('locks the old password of an orphan account out without adopting the supplied one', async () => {
     const caller = await createCaller('contracts_Admin');
     const orphan = await createPlainUser(uniqueEmail('orphan-password'));
 
     await addUserAs(caller, buildParams(caller, { email: orphan.email }));
 
     await resetAuthState();
-    const originalLogin = await Parse.User.logIn(orphan.email, PASSWORD);
-    expect(originalLogin.id).toBe(orphan.id);
+    const originalLogin = await captureRejection(Parse.User.logIn(orphan.email, PASSWORD));
+    expect(originalLogin.code).toBe(Parse.Error.OBJECT_NOT_FOUND);
     await resetAuthState();
     const suppliedLogin = await captureRejection(Parse.User.logIn(orphan.email, MEMBER_PASSWORD));
     expect(suppliedLogin.code).toBe(Parse.Error.OBJECT_NOT_FOUND);
@@ -243,7 +243,9 @@ describe('adduser cloud function creation', () => {
     );
 
     await resetAuthState();
-    const victimLogin = await captureRejection(Parse.User.logIn(victim.account.email, PASSWORD));
+    const victimLogin = await captureRejection(
+      Parse.User.verifyPassword(victim.account.email, PASSWORD)
+    );
     expect(error.code).toBe(Parse.Error.DUPLICATE_VALUE);
     expect(error.message).toBe('An account with this email already exists.');
     expect(victimLogin).toBeNull();

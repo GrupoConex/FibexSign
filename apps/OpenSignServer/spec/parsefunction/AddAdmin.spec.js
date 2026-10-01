@@ -8,6 +8,7 @@ import {
   pointer,
   rejectSaveFor,
   resetAuthState,
+  runSignup,
   silenceConsole,
   stubFirstFor,
   stubGetFor,
@@ -40,7 +41,7 @@ const findOrganizationOf = extUserId => {
 };
 
 const signUpAdmin = async details => {
-  const result = await Parse.Cloud.run('addadmin', { userDetails: details });
+  const result = await runSignup('addadmin', details);
   const user = await findUserByUsername(details.email);
   const extUser = await findFirstByUserId('contracts_Users', user.id);
   return { result, user, extUser };
@@ -118,7 +119,7 @@ describe('addadmin cloud function', () => {
     const rawEmail = `  Admin.Norm ${Date.now()}@Example.COM `;
     const expected = rawEmail.toLowerCase().replace(/\s/g, '');
 
-    await Parse.Cloud.run('addadmin', { userDetails: buildUserDetails({ email: rawEmail }) });
+    await runSignup('addadmin', buildUserDetails({ email: rawEmail }));
 
     const user = await findUserByUsername(expected);
     const tenant = await findTenantOf(user.id);
@@ -149,7 +150,7 @@ describe('addadmin cloud function', () => {
   });
 
   describe('input validation before account creation', () => {
-    const signUp = userDetails => captureRejection(Parse.Cloud.run('addadmin', { userDetails }));
+    const signUp = userDetails => captureRejection(runSignup('addadmin', userDetails));
 
     const expectRejectedWithoutAccount = async (details, message) => {
       const error = await signUp(details);
@@ -220,7 +221,7 @@ describe('addadmin cloud function', () => {
     const account = await createPlainUser(uniqueEmail('admin-taken'));
 
     const error = await captureRejection(
-      Parse.Cloud.run('addadmin', { userDetails: buildUserDetails({ email: account.email }) })
+      runSignup('addadmin', buildUserDetails({ email: account.email }))
     );
 
     expect(error.code).toBe(Parse.Error.USERNAME_TAKEN);
@@ -242,7 +243,7 @@ describe('addadmin cloud function', () => {
     rejectSaveFor('partners_Tenant', new Parse.Error(141, 'tenant save failed'));
     const details = buildUserDetails({ email: uniqueEmail('admin-tenant-fail') });
 
-    const error = await captureRejection(Parse.Cloud.run('addadmin', { userDetails: details }));
+    const error = await captureRejection(runSignup('addadmin', details));
 
     expect(error.message).toBe('tenant save failed');
   });
@@ -251,7 +252,7 @@ describe('addadmin cloud function', () => {
     rejectSaveFor('contracts_Users', new Parse.Error(141, 'ext save failed'));
     const details = buildUserDetails({ email: uniqueEmail('admin-ext-fail') });
 
-    const error = await captureRejection(Parse.Cloud.run('addadmin', { userDetails: details }));
+    const error = await captureRejection(runSignup('addadmin', details));
 
     expect(error.message).toBe('ext save failed');
   });
@@ -261,7 +262,7 @@ describe('addadmin cloud function', () => {
       const lookup = stubFirstFor('contracts_Users', { id: 'existing-ext-user' });
       const details = buildUserDetails({ email: uniqueEmail('admin-linked') });
 
-      const result = await Parse.Cloud.run('addadmin', { userDetails: details });
+      const result = await runSignup('addadmin', details);
 
       const user = await findUserByUsername(details.email);
       expect(result).toEqual({ message: 'User already exist' });
@@ -307,7 +308,7 @@ describe('addadmin cloud function', () => {
     const tenantsBefore = await new Parse.Query('partners_Tenant').count(MASTER);
     const extUsersBefore = await new Parse.Query('contracts_Users').count(MASTER);
 
-    const error = await captureRejection(Parse.Cloud.run('addadmin', { userDetails: details }));
+    const error = await captureRejection(runSignup('addadmin', details));
 
     expect(error.code).toBe(Parse.Error.VALIDATION_ERROR);
     expect(error.message).toBe('Missing or invalid required fields: email.');

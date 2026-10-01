@@ -1,5 +1,10 @@
 import getUserId from './getUserId.js';
-import { generateGuestPassword } from './shared/createUserAccount.js';
+import { generateGuestPassword } from './shared/guestPassword.js';
+import {
+  createAccountAsServer,
+  findTenantIdOfUser,
+  secureUnverifiedAccount,
+} from './shared/accountTakeoverGuard.js';
 
 export default async function editContact(request) {
   const { contactId, name, email, phone, tenantId } = request.params;
@@ -45,17 +50,12 @@ export default async function editContact(request) {
         objectId: tenantId,
       });
       try {
-        const _users = Parse.Object.extend('User');
-        const _user = new _users();
-        _user.set('name', name);
-        _user.set('username', email?.toLowerCase()?.replace(/\s/g, ''));
-        _user.set('email', email?.toLowerCase()?.replace(/\s/g, ''));
-        _user.set('password', generateGuestPassword());
-        if (phone) {
-          _user.set('phone', phone);
-        }
-
-        const user = await _user.save();
+        const user = await createAccountAsServer({
+          name,
+          email,
+          password: generateGuestPassword(),
+          phone,
+        });
         if (user) {
           contactQuery.set('CreatedBy', createdBy);
           contactQuery.set('UserId', user);
@@ -73,8 +73,10 @@ export default async function editContact(request) {
       } catch (err) {
         console.log('err ', err);
         if (err.code === 202) {
-          const params = { email: email };
+          const params = { email: email?.toLowerCase()?.replace(/\s/g, '') };
           const userRes = await getUserId({ params });
+          const linkingTenantId = await findTenantIdOfUser(createdBy.objectId);
+          await secureUnverifiedAccount(userRes.id, { linkingTenantId });
           contactQuery.set('CreatedBy', createdBy);
           contactQuery.set('UserId', {
             __type: 'Pointer',

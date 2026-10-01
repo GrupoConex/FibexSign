@@ -2,7 +2,12 @@ import { describe, it, expect } from "vitest";
 import {
   OTP_INPUT_PATTERN,
   OTP_LENGTH,
+  OTP_INVALID_ERROR_CODE,
+  EMAIL_NOT_VERIFIED_ERROR_CODE,
   OTP_RESEND_LIMIT_ERROR_CODE,
+  isEmailNotVerifiedError,
+  isOtpFormatValid,
+  isOtpInvalidError,
   isOtpResendLimitError
 } from "../otpPolicy";
 
@@ -49,5 +54,40 @@ describe("isOtpResendLimitError", () => {
     expect(isOtpResendLimitError({ response: {} })).toBe(false);
     expect(isOtpResendLimitError(undefined)).toBe(false);
     expect(isOtpResendLimitError(null)).toBe(false);
+  });
+});
+
+describe("isOtpFormatValid", () => {
+  it("accepts exactly six digits", () => {
+    expect(isOtpFormatValid("123456")).toBe(true);
+    expect(isOtpFormatValid("000000")).toBe(true);
+  });
+
+  it("rejects wrong length, non digits and non strings", () => {
+    expect(isOtpFormatValid("12345")).toBe(false);
+    expect(isOtpFormatValid("1234567")).toBe(false);
+    expect(isOtpFormatValid("12345a")).toBe(false);
+    expect(isOtpFormatValid("")).toBe(false);
+    expect(isOtpFormatValid(123456)).toBe(false);
+    expect(isOtpFormatValid(undefined)).toBe(false);
+  });
+});
+
+describe("server error code helpers", () => {
+  it("maps the contract codes", () => {
+    expect(OTP_INVALID_ERROR_CODE).toBe(142);
+    expect(EMAIL_NOT_VERIFIED_ERROR_CODE).toBe(205);
+  });
+
+  it("detects invalid otp errors", () => {
+    expect(isOtpInvalidError({ code: 142 })).toBe(true);
+    expect(isOtpInvalidError({ code: 101 })).toBe(false);
+    expect(isOtpInvalidError(undefined)).toBe(false);
+  });
+
+  it("detects email not verified errors", () => {
+    expect(isEmailNotVerifiedError({ code: 205 })).toBe(true);
+    expect(isEmailNotVerifiedError({ code: 202 })).toBe(false);
+    expect(isEmailNotVerifiedError(null)).toBe(false);
   });
 });

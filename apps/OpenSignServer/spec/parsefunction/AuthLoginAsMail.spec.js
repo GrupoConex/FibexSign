@@ -1,6 +1,14 @@
 import axios from 'axios';
 import {
   TEST_OTP,
+  PASSWORD,
+  createMasterKeySession,
+  createTenantMember,
+  createTenantOwner,
+  createTenantScope,
+  isSessionValid,
+  loginRejected,
+  markEmailVerified,
   createOtpRecord,
   createPlainUser,
   findOtpRecord,
@@ -212,7 +220,8 @@ describe('AuthLoginAsMail cloud function', () => {
 
   describe('defensive branches (unreachable via public API)', () => {
     it('reports a controlled not found reason instead of a ReferenceError when saving the verified user yields nothing', async () => {
-      const account = await createOtpUser('otp-empty-save');
+      const { account } = await createTenantOwner('otp-empty-save');
+      await createOtpRecord(account.email, { otp: OTP_VALUE });
       const userSave = spyOn(Parse.User.prototype, 'save').and.resolveTo(undefined);
 
       const result = await loginWith({ email: account.email, otp: OTP_VALUE });
@@ -224,6 +233,65 @@ describe('AuthLoginAsMail cloud function', () => {
       expect(loggedValues.some(value => value instanceof ReferenceError)).toBeFalse();
       expect(loggedErrors.map(error => error.message)).toEqual(['user not found!']);
       expect(loggedErrors[0] instanceof Parse.Error).toBeTrue();
+    });
+  });
+
+  describe('account takeover protection', () => {
+    it('rotates the password and revokes the old sessions of an unverified account', async () => {
+      const account = await createOtpUser('otp-takeover');
+
+      const result = await loginWith({ email: account.email, otp: OTP_VALUE });
+
+      expect(await loginRejected(account.email, PASSWORD)).toBeTrue();
+      expect(await isSessionValid(account.sessionToken)).toBeFalse();
+      expect(await isSessionValid(result.sessionToken)).toBeTrue();
+      expect((await readUser(account.id)).get('emailVerified')).toBeTrue();
+    });
+
+    it('revokes the sessions the server opened earlier and still returns a valid new one', async () => {
+      const account = await createOtpUser('otp-takeover-server');
+      const serverToken = await createMasterKeySession(account.id);
+
+      const result = await loginWith({ email: account.email, otp: OTP_VALUE });
+
+      expect(await isSessionValid(serverToken)).toBeFalse();
+      expect(await isSessionValid(result.sessionToken)).toBeTrue();
+    });
+
+    it('secures an unverified tenant member that does not own the tenant', async () => {
+      const scope = await createTenantScope();
+      const { account } = await createTenantMember('contracts_Admin', scope, 'otp-member');
+      await createOtpRecord(account.email, { otp: OTP_VALUE });
+
+      const result = await loginWith({ email: account.email, otp: OTP_VALUE });
+
+      expect(await loginRejected(account.email, PASSWORD)).toBeTrue();
+      expect(await isSessionValid(account.sessionToken)).toBeFalse();
+      expect(await isSessionValid(result.sessionToken)).toBeTrue();
+      expect((await readUser(account.id)).get('emailVerified')).toBeTrue();
+    });
+
+    it('leaves the credentials of an already verified account alone', async () => {
+      const account = await createOtpUser('otp-takeover-verified');
+      await markEmailVerified(account.id);
+
+      const result = await loginWith({ email: account.email, otp: OTP_VALUE });
+
+      expect(result.objectId).toBe(account.id);
+      expect(await loginRejected(account.email, PASSWORD)).toBeFalse();
+      expect(await isSessionValid(account.sessionToken)).toBeTrue();
+    });
+
+    it('keeps the password of an unverified tenant owner and marks it verified', async () => {
+      const { account } = await createTenantOwner('otp-owner');
+      await createOtpRecord(account.email, { otp: OTP_VALUE });
+
+      const result = await loginWith({ email: account.email, otp: OTP_VALUE });
+
+      expect(result.objectId).toBe(account.id);
+      expect(await loginRejected(account.email, PASSWORD)).toBeFalse();
+      expect(await isSessionValid(account.sessionToken)).toBeTrue();
+      expect((await readUser(account.id)).get('emailVerified')).toBeTrue();
     });
   });
 

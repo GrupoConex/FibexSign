@@ -1,3 +1,5 @@
+import { createAccountAsServer, secureUnverifiedAccount } from './shared/accountTakeoverGuard.js';
+
 const MASTER = { useMasterKey: true };
 
 const toUserPointer = userId => ({ __type: 'Pointer', className: '_User', objectId: userId });
@@ -36,21 +38,15 @@ async function findOrphanAccount(email) {
   return account;
 }
 
-async function obtainAccount({ name, email, password, phone }) {
-  const account = new Parse.User();
-  account.set('name', name);
-  account.set('username', email);
-  account.set('email', email);
-  account.set('password', password);
-  if (phone) {
-    account.set('phone', phone);
-  }
+async function obtainAccount({ name, email, password, phone, tenantId }) {
   try {
-    const createdAccount = await account.save();
+    const createdAccount = await createAccountAsServer({ name, email, password, phone });
     return createdAccount && { account: createdAccount, isLinkedAccount: false };
   } catch (err) {
     if (err.code === Parse.Error.USERNAME_TAKEN) {
-      return { account: await findOrphanAccount(email), isLinkedAccount: true };
+      const orphan = await findOrphanAccount(email);
+      await secureUnverifiedAccount(orphan.id, { linkingTenantId: tenantId });
+      return { account: orphan, isLinkedAccount: true };
     }
     throw new Parse.Error(400, err?.message || 'something went wrong');
   }
@@ -149,7 +145,13 @@ export default async function addUser(request) {
       if (timezone) {
         extUser.set('Timezone', timezone);
       }
-      const obtainedAccount = await obtainAccount({ name, email, password, phone });
+      const obtainedAccount = await obtainAccount({
+        name,
+        email,
+        password,
+        phone,
+        tenantId: callerTenantId,
+      });
       if (!obtainedAccount) {
         return undefined;
       }

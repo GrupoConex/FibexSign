@@ -5,7 +5,7 @@ async function signupUser(email, password) {
   user.set('username', email);
   user.set('email', email);
   user.set('password', password);
-  const savedUser = await user.signUp();
+  const savedUser = await user.signUp(null, { useMasterKey: true });
   await Parse.User.logOut();
 
   const tenant = new Parse.Object('partners_Tenant');

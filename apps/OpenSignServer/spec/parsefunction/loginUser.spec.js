@@ -3,6 +3,7 @@ import {
   PASSWORD,
   captureRejection,
   createPlainUser,
+  markEmailVerified,
   resetAuthState,
   silenceConsole,
   uniqueEmail,
@@ -20,6 +21,7 @@ describe('loginuser cloud function', () => {
 
   it('returns the user json with a session token when credentials are valid', async () => {
     const account = await createPlainUser();
+    await markEmailVerified(account.id);
 
     const result = await Parse.Cloud.run('loginuser', {
       email: account.email,

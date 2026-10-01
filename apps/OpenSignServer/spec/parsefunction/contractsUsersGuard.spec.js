@@ -163,7 +163,7 @@ describe('contracts_Users guard', () => {
 
       await resetAuthState();
       const victimLogin = await captureRejection(
-        Parse.User.logIn(victimMember.account.email, PASSWORD)
+        Parse.User.verifyPassword(victimMember.account.email, PASSWORD)
       );
       expect(reset).not.toBeNull();
       expect(added).not.toBeNull();

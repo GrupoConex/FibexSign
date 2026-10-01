@@ -7,6 +7,7 @@ const cloudRun = vi.fn();
 const requestPasswordReset = vi.fn();
 const notifySuccess = vi.fn();
 const notifyError = vi.fn();
+const sendOtp = vi.fn();
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal()),
@@ -33,6 +34,7 @@ vi.mock("parse", () => ({
 vi.mock("../../constant/Utils", async (importOriginal) => ({
   ...(await importOriginal()),
   getAppLogo: vi.fn().mockResolvedValue({ user: "not_exist" }),
+  handleSendOTP: (...args) => sendOtp(...args),
   saveLanguageInLocal: vi.fn(),
   usertimezone: "UTC"
 }));
@@ -52,7 +54,23 @@ const liveMessages = (container) =>
   container.querySelectorAll("[aria-live='polite']");
 
 const submit = () =>
-  userEvent.click(screen.getByRole("button", { name: "next" }));
+  userEvent.click(
+    screen.getByRole("button", { name: /^(next|send-verification-code)$/ })
+  );
+
+const requestCode = () =>
+  userEvent.click(
+    screen.getByRole("button", { name: "send-verification-code" })
+  );
+
+const submitWithOtp = async (code = "123456") => {
+  await requestCode();
+  await userEvent.type(
+    await screen.findByLabelText(/^verification-code/),
+    code
+  );
+  await submit();
+};
 
 const fillValidForm = async () => {
   await userEvent.type(await screen.findByLabelText(/^name/), "Ada");
@@ -70,6 +88,8 @@ describe("AddAdmin inline validation", () => {
     requestPasswordReset.mockReset();
     notifySuccess.mockReset();
     notifyError.mockReset();
+    sendOtp.mockReset();
+    sendOtp.mockResolvedValue(true);
     localStorage.clear();
   });
 
@@ -93,7 +113,10 @@ describe("AddAdmin inline validation", () => {
       "aria-invalid",
       "true"
     );
-    expect(screen.getByRole("checkbox")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("checkbox")).toHaveAttribute(
+      "aria-invalid",
+      "true"
+    );
     expect(screen.getByText("accept-terms-required")).toBeInTheDocument();
     expect(cloudRun).not.toHaveBeenCalled();
   });
@@ -162,7 +185,7 @@ describe("AddAdmin inline validation", () => {
     cloudRun.mockResolvedValue({});
     render(<AddAdmin />);
     await fillValidForm();
-    await submit();
+    await submitWithOtp();
 
     await waitFor(() =>
       expect(cloudRun).toHaveBeenCalledWith(
@@ -191,6 +214,8 @@ describe("AddAdmin backend error handling", () => {
     requestPasswordReset.mockReset();
     notifySuccess.mockReset();
     notifyError.mockReset();
+    sendOtp.mockReset();
+    sendOtp.mockResolvedValue(true);
     localStorage.clear();
   });
 
@@ -202,7 +227,7 @@ describe("AddAdmin backend error handling", () => {
     );
     render(<AddAdmin />);
     await fillValidForm();
-    await submit();
+    await submitWithOtp();
 
     await waitFor(() =>
       expect(notifyError).toHaveBeenCalledWith("already-exists-this-username")
@@ -224,7 +249,7 @@ describe("AddAdmin backend error handling", () => {
     requestPasswordReset.mockResolvedValue({});
     render(<AddAdmin />);
     await fillValidForm();
-    await submit();
+    await submitWithOtp();
 
     await waitFor(() =>
       expect(requestPasswordReset).toHaveBeenCalledWith("ada@example.com")
@@ -239,10 +264,137 @@ describe("AddAdmin backend error handling", () => {
     cloudRun.mockRejectedValue({ code: 500, message: "boom" });
     render(<AddAdmin />);
     await fillValidForm();
-    await submit();
+    await submitWithOtp();
 
     await waitFor(() => expect(notifyError).toHaveBeenCalledWith("boom"));
     expect(await screen.findByLabelText(/^name/)).toBeInTheDocument();
     expect(requestPasswordReset).not.toHaveBeenCalled();
+  });
+});
+
+describe("AddAdmin email ownership step", () => {
+  beforeEach(() => {
+    cloudRun.mockReset();
+    requestPasswordReset.mockReset();
+    notifySuccess.mockReset();
+    notifyError.mockReset();
+    sendOtp.mockReset();
+    sendOtp.mockResolvedValue(true);
+    localStorage.clear();
+  });
+
+  it("requests the code for the typed email and does not call addadmin yet", async () => {
+    render(<AddAdmin />);
+    await fillValidForm();
+    await requestCode();
+
+    await waitFor(() =>
+      expect(sendOtp).toHaveBeenCalledWith("ada@example.com")
+    );
+    expect(cloudRun).not.toHaveBeenCalled();
+    expect(
+      await screen.findByLabelText(/^verification-code/)
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "next" })).toBeInTheDocument();
+  });
+
+  it("does not show the code step when the code could not be sent", async () => {
+    sendOtp.mockResolvedValue(false);
+    render(<AddAdmin />);
+    await fillValidForm();
+    await requestCode();
+
+    await waitFor(() => expect(sendOtp).toHaveBeenCalled());
+    expect(screen.queryByLabelText(/^verification-code/)).toBeNull();
+  });
+
+  it("sends userDetails together with the otp", async () => {
+    cloudRun.mockResolvedValue({});
+    render(<AddAdmin />);
+    await fillValidForm();
+    await submitWithOtp("654321");
+
+    await waitFor(() =>
+      expect(cloudRun).toHaveBeenCalledWith("addadmin", {
+        userDetails: expect.objectContaining({
+          email: "ada@example.com",
+          password: "Abcdef1!",
+          role: "contracts_Admin"
+        }),
+        otp: "654321"
+      })
+    );
+  });
+
+  it("blocks the request and announces an error when the code is not 6 digits", async () => {
+    render(<AddAdmin />);
+    await fillValidForm();
+    await submitWithOtp("12");
+
+    expect(cloudRun).not.toHaveBeenCalled();
+    const otp = screen.getByLabelText(/^verification-code/);
+    expect(otp).toHaveAttribute("aria-invalid", "true");
+    expect(otp).toHaveAttribute("aria-describedby", "otp-error");
+    expect(screen.getByText("verification-code-invalid")).toHaveAttribute(
+      "aria-live",
+      "polite"
+    );
+  });
+
+  it("shows the invalid code message and stays on the step for error 142", async () => {
+    cloudRun.mockRejectedValue({ code: 142, message: "OTP is invalid." });
+    render(<AddAdmin />);
+    await fillValidForm();
+    await submitWithOtp();
+
+    expect(
+      await screen.findByText("verification-code-invalid")
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/^verification-code/)).toHaveValue("123456");
+    expect(screen.getByRole("button", { name: "next" })).toBeInTheDocument();
+    expect(notifyError).not.toHaveBeenCalledWith("OTP is invalid.");
+  });
+
+  it("shows the lock message for error 155", async () => {
+    cloudRun.mockRejectedValue({
+      code: 155,
+      message: "Too many OTP attempts."
+    });
+    render(<AddAdmin />);
+    await fillValidForm();
+    await submitWithOtp();
+
+    expect(
+      await screen.findByText("otp-too-many-attempts")
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/^verification-code/)).toBeInTheDocument();
+  });
+
+  it("resends the code to the same email", async () => {
+    render(<AddAdmin />);
+    await fillValidForm();
+    await requestCode();
+    await screen.findByLabelText(/^verification-code/);
+    sendOtp.mockClear();
+
+    await userEvent.click(screen.getByRole("button", { name: "resend" }));
+
+    await waitFor(() =>
+      expect(sendOtp).toHaveBeenCalledWith("ada@example.com")
+    );
+  });
+
+  it("discards the code step when the email is edited", async () => {
+    render(<AddAdmin />);
+    await fillValidForm();
+    await requestCode();
+    await screen.findByLabelText(/^verification-code/);
+
+    await userEvent.type(screen.getByLabelText(/^email/), "x");
+
+    expect(screen.queryByLabelText(/^verification-code/)).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "send-verification-code" })
+    ).toBeInTheDocument();
   });
 });

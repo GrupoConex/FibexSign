@@ -67,6 +67,72 @@ describe('server hardening: rate limiting', () => {
     await resetAuthRateLimiterStoreForTesting();
   });
 
+  ['get', 'post'].forEach(method => {
+    it(`returns 429 once the auth rate limit is exceeded on HTTP ${method.toUpperCase()} /verifyPassword`, async () => {
+      const configuredMax = Number(process.env.AUTH_RATE_LIMIT_MAX) || 20;
+      const headers = {
+        'X-Parse-Application-Id': process.env.APP_ID,
+        'X-Parse-Javascript-Key': 'test',
+      };
+      const credentials = { username: 'nobody@example.com', password: 'wrong-password' };
+      const responses = [];
+
+      for (let i = 0; i < configuredMax + 1; i++) {
+        responses.push(
+          await axios
+            .request({
+              method,
+              url: `${TEST_SERVER_ROOT}/test/verifyPassword`,
+              headers,
+              [method === 'get' ? 'params' : 'data']: credentials,
+              validateStatus: () => true,
+            })
+            .catch(err => err.response)
+        );
+      }
+
+      expect(responses.slice(0, configuredMax).every(response => response.status !== 429)).toBe(
+        true
+      );
+      expect(responses[configuredMax].status).toBe(429);
+
+      await resetAuthRateLimiterStoreForTesting();
+    });
+  });
+
+  it('does not count the internal verifyPassword calls of verifyloginotp against the HTTP verifyPassword bucket', async () => {
+    const configuredMax = Number(process.env.AUTH_RATE_LIMIT_MAX) || 20;
+    const verifyLoginOtpUrl = `${TEST_SERVER_ROOT}/test/functions/verifyloginotp`;
+    const headers = {
+      'X-Parse-Application-Id': process.env.APP_ID,
+      'X-Parse-Javascript-Key': 'test',
+    };
+
+    for (let i = 0; i < configuredMax; i++) {
+      const response = await postLoginUser(verifyLoginOtpUrl);
+      expect(response.status).not.toBe(429);
+    }
+    const overLimit = await postLoginUser(verifyLoginOtpUrl);
+    const directVerify = await axios.post(
+      `${TEST_SERVER_ROOT}/test/verifyPassword`,
+      { username: 'nobody@example.com', password: 'wrong-password' },
+      { headers, validateStatus: () => true }
+    );
+
+    expect(overLimit.status).toBe(429);
+    expect(directVerify.status).not.toBe(429);
+
+    await resetAuthRateLimiterStoreForTesting();
+  });
+
+  it('rate-limits the verifyPassword endpoint with the strict auth limiter', () => {
+    ['/parse/verifyPassword', '/parse/VERIFYPASSWORD/', '/parse/verifypassword//'].forEach(
+      requestPath => {
+        expect(isStrictAuthPath(requestPath)).toBe(true);
+      }
+    );
+  });
+
   it('does not leave the loginuser bucket poisoned for later specs', async () => {
     const response = await postLoginUser();
 

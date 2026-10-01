@@ -163,3 +163,27 @@ export async function verifyAndConsumeOtp({ email, otp }, now = Date.now()) {
   }
   return consumeRow(row);
 }
+
+export const OTP_INVALID_MESSAGE = 'OTP is invalid.';
+export const OTP_LOCKED_MESSAGE = 'Too many OTP attempts. Please try again later.';
+
+const buildInvalidOtpError = () =>
+  new Parse.Error(Parse.Error.VALIDATION_ERROR, OTP_INVALID_MESSAGE);
+
+const buildLockedOtpError = () =>
+  new Parse.Error(Parse.Error.REQUEST_LIMIT_EXCEEDED, OTP_LOCKED_MESSAGE);
+
+const isOtpCandidate = otp => typeof otp === 'string' && otp.trim().length > 0;
+
+export async function consumeOtpOrThrow({ email, otp }, buildInvalidError = buildInvalidOtpError) {
+  if (!isOtpCandidate(otp)) {
+    throw buildInvalidError();
+  }
+  const status = await verifyAndConsumeOtp({ email, otp });
+  if (status === OtpStatus.LOCKED) {
+    throw buildLockedOtpError();
+  }
+  if (status !== OtpStatus.VALID) {
+    throw buildInvalidError();
+  }
+}

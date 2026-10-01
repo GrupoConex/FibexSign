@@ -1,3 +1,4 @@
+import { revokeUntrustedSessions, unlinkAuthProviders } from './shared/accountTakeoverGuard.js';
 import { OtpStatus, normalizeEmail, verifyAndConsumeOtp } from './shared/otpPolicy.js';
 
 const INVALID_OTP_MESSAGE = 'OTP is invalid.';
@@ -11,8 +12,9 @@ function buildBadRequestError(message) {
 
 async function markEmailVerified(currentUser) {
   const userQuery = new Parse.Query(Parse.User);
-  const user = await userQuery.get(currentUser.id, { sessionToken: currentUser.getSessionToken() });
+  const user = await userQuery.get(currentUser.id, { useMasterKey: true });
   user.set('emailVerified', true);
+  unlinkAuthProviders(user);
   return user.save(null, { useMasterKey: true });
 }
 
@@ -37,6 +39,7 @@ export default async function VerifyEmail(request) {
       return { message: 'Email is already verified.' };
     }
     if (await markEmailVerified(request.user)) {
+      await revokeUntrustedSessions(request.user.id, request.user.getSessionToken());
       return { message: 'Email is verified.' };
     }
     throw buildBadRequestError('Something went wrong, please try again later!');

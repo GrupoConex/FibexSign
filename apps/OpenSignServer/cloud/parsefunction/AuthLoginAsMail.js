@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { cloudServerUrl, serverAppId } from '../../Utils.js';
+import { secureUnverifiedAccount } from './shared/accountTakeoverGuard.js';
 import { OtpStatus, normalizeEmail, verifyAndConsumeOtp } from './shared/otpPolicy.js';
 
 const GENERIC_INVALID_OTP_MESSAGE = 'Invalid Otp';
@@ -26,11 +27,20 @@ async function requestLoginAs(userId) {
   }
 }
 
-async function fetchSession(email) {
+async function findAccount(email) {
   const userQuery = new Parse.Query(Parse.User);
   userQuery.equalTo('email', email);
   const user = await userQuery.first({ useMasterKey: true });
-  const session = user && (await requestLoginAs(user.id));
+  if (!user) {
+    throw buildUserNotFoundError();
+  }
+  return user;
+}
+
+async function fetchSession(email) {
+  const user = await findAccount(email);
+  await secureUnverifiedAccount(user.id);
+  const session = await requestLoginAs(user.id);
   if (!session) {
     throw buildUserNotFoundError();
   }
