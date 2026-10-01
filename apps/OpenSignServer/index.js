@@ -147,7 +147,9 @@ export const config = {
   masterKeyIps,
   serverURL: cloudServerUrl, // Don't forget to change to https if needed
   verifyUserEmails: false,
-  publicServerURL: process.env.SERVER_URL || cloudServerUrl,
+  publicServerURL: process.env.PUBLIC_URL
+    ? `${process.env.PUBLIC_URL.replace(/\/$/, '')}${process.env.PARSE_MOUNT || '/app'}`
+    : cloudServerUrl,
   // Your apps name. This will appear in the subject and body of the emails that are sent.
   appName: appName,
   allowClientClassCreation: false,
@@ -239,8 +241,11 @@ function getUserIP(request) {
 app.use(async function (req, res, next) {
   const isFilePath = req.path?.includes('/files/') || false;
   if (isFilePath && req.method.toLowerCase() === 'get') {
-    const serverUrl = new URL(process.env.SERVER_URL);
-    const origin = serverUrl.pathname === '/api/app' ? serverUrl.origin + '/api' : serverUrl.origin;
+    const publicServerUrl = new URL(config.publicServerURL);
+    const origin =
+      publicServerUrl.pathname === '/api/app'
+        ? publicServerUrl.origin + '/api'
+        : publicServerUrl.origin;
     const fileUrl = origin + req.originalUrl;
     const params = fileUrl?.split('?')?.[1];
     if (params) {
