@@ -49,6 +49,13 @@ async function updateUserExceptAdmin(data) {
   }
 }
 
+function pointerTo(className, reference, missingMessage) {
+  if (!reference?.objectId) {
+    throw new Parse.Error(400, missingMessage);
+  }
+  return { __type: 'Pointer', className, objectId: reference.objectId };
+}
+
 // `UpdateExistUserAsAdmin` is used to create admin from exist user records and transfer to org of admin
 export default async function UpdateExistUserAsAdmin(request) {
   const email = request.params.email;
@@ -74,16 +81,8 @@ export default async function UpdateExistUserAsAdmin(request) {
       console.log('extRes ', extRes);
       if (extRes) {
         const _extRes = JSON.parse(JSON.stringify(extRes));
-        const tenantId = {
-          __type: 'Pointer',
-          className: 'partners_Tenant',
-          objectId: _extRes.TenantId.objectId,
-        };
-        const createdBy = {
-          __type: 'Pointer',
-          className: '_User',
-          objectId: _extRes.UserId.objectId,
-        };
+        const tenantId = pointerTo('partners_Tenant', _extRes.TenantId, 'User has no tenant.');
+        const createdBy = pointerTo('_User', _extRes.UserId, 'User has no linked account.');
         const org = new Parse.Object('contracts_Organizations');
         org.set('Name', _extRes.Company);
         org.set('IsActive', true);

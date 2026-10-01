@@ -1,7 +1,6 @@
 import nodeCrypto from 'node:crypto';
 import { syncBuiltinESMExports } from 'node:module';
 import updateExistUserAsAdmin from '../../cloud/parsefunction/UpdateExistUserAsAdmin.js';
-import { knownDefect } from '../utils/known-defect.js';
 import {
   captureConsoleError,
   captureRejection,
@@ -218,24 +217,33 @@ describe('updateuserasadmin cloud function', () => {
     expect(await findOrganizationOf(extUser.id)).toBeUndefined();
   });
 
-  it(
-    'does not expose a raw type error when the extended user has no tenant',
-    knownDefect(
-      'DEF-05',
-      'UpdateExistUserAsAdmin leaks a TypeError message when the extended user has no tenant instead of a domain error',
-      async check => {
-        const account = await createPlainUser(uniqueEmail('no-tenant-message'));
-        await createExtUser({ account, role: 'contracts_User' });
+  it('rejects with a domain error and writes nothing when the extended user has no tenant', async () => {
+    const account = await createPlainUser(uniqueEmail('no-tenant-message'));
+    const extUser = await createExtUser({ account, role: 'contracts_User' });
 
-        const error = await captureRejection(promote(account.email));
+    const error = await captureRejection(promote(account.email));
 
-        check(
-          !String(error.message).startsWith('Cannot read properties'),
-          'message must be a domain error, not a TypeError'
-        );
-      }
-    )
-  );
+    expect(error.code).toBe(400);
+    expect(error.message).toBe('User has no tenant.');
+    expect(await findOrganizationOf(extUser.id)).toBeUndefined();
+  });
+
+  it('rejects with a domain error and writes nothing when the extended user has no linked user', async () => {
+    const tenant = await createTenant('Orphan Tenant');
+    const email = uniqueEmail('no-user');
+    const extUser = new Parse.Object('contracts_Users');
+    extUser.set('Email', email);
+    extUser.set('UserRole', 'contracts_User');
+    extUser.set('TenantId', tenant);
+    await extUser.save(null, { useMasterKey: true });
+
+    const error = await captureRejection(promote(email));
+
+    expect(error.code).toBe(400);
+    expect(error.message).toBe('User has no linked account.');
+    expect(await findOrganizationOf(extUser.id)).toBeUndefined();
+    expect(await loadRole(extUser.id)).toBe('contracts_User');
+  });
 
   it('falls back to code 400 and a generic message when the failure has no details', async () => {
     const lookup = rejectFindFor('contracts_Users', {});
