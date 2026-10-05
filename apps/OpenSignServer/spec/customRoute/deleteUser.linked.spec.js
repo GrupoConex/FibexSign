@@ -1,7 +1,5 @@
 import axios from 'axios';
 import {
-  PASSWORD,
-  captureRejection,
   cloudRunAs,
   createCaller,
   createPlainUser,
@@ -77,9 +75,6 @@ describe('deleteuser route and linked accounts', () => {
     expect(response.data.message).toBe('User not found.');
     expect(await userStillExists(guest.id)).toBeTrue();
     expect(await findFirstByUserId('contracts_Users', guest.id)).toBeDefined();
-    await resetAuthState();
-    const login = await captureRejection(Parse.User.logIn(guest.email, PASSWORD));
-    expect(login).toBeNull();
   });
 
   it('does not let an org admin delete a guest account it linked', async () => {

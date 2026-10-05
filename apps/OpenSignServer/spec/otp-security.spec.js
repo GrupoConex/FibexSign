@@ -12,7 +12,7 @@ async function createTestUser(email) {
   user.set('username', email);
   user.set('email', email);
   user.set('password', 'Str0ngPassw0rd!');
-  await user.signUp();
+  await user.signUp(null, { useMasterKey: true });
   await Parse.User.logOut();
   return user;
 }

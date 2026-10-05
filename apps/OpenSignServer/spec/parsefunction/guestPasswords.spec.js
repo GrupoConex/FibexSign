@@ -68,7 +68,7 @@ describe('guest signer account passwords', () => {
     await expectGuestHasNoEmailPassword(email);
   });
 
-  it('savecontact keeps an existing account password untouched when it links it', async () => {
+  it('savecontact rotates the password of an unverified pre-existing account when it links it', async () => {
     const caller = await createCaller('contracts_Admin');
     const existing = await createPlainUser(uniqueEmail('guest-existing'));
 
@@ -78,9 +78,7 @@ describe('guest signer account passwords', () => {
       caller.account.sessionToken
     );
 
-    await resetAuthState();
-    const login = await Parse.User.logIn(existing.email, PASSWORD);
-    expect(login.id).toBe(existing.id);
+    expect(await loginFails(existing.email, PASSWORD)).toBeTrue();
   });
 
   it('editcontact creates the replacement guest account without the email as password', async () => {

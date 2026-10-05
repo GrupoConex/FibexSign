@@ -17,6 +17,7 @@ import { fetchAppInfo } from "../redux/reducers/infoReducer";
 import { showTenant } from "../redux/reducers/ShowTenant";
 import {
   getAppLogo,
+  handleSendOTP,
   saveLanguageInLocal,
   usertimezone
 } from "../constant/Utils";
@@ -25,6 +26,13 @@ import { useTranslation } from "react-i18next";
 import SelectLanguage from "../components/pdf/SelectLanguage";
 import AuthLayout from "../components/auth/AuthLayout";
 import Icon from "../primitives/Icon";
+import OtpCodeField from "../components/auth/OtpCodeField";
+import {
+  isEmailNotVerifiedError,
+  isOtpFormatValid,
+  isOtpInvalidError,
+  isOtpResendLimitError
+} from "../utils/otpPolicy";
 import { useIsDarkTheme } from "../hook/useIsDarkTheme";
 import logoPositivo from "../assets/images/Fibex-logo-positivo.svg";
 import logoNegativo from "../assets/images/Fibex-logo-negativo.svg";
@@ -44,7 +52,7 @@ function Login() {
     password: "",
     passwordVisible: false,
     loading: false,
-    thirdpartyLoader: false,
+    thirdpartyLoader: false
   });
   const [userDetails, setUserDetails] = useState({
     Company: "",
@@ -55,10 +63,14 @@ function Login() {
   const [errMsg, setErrMsg] = useState();
   const [errors, setErrors] = useState({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isOtpRequired, setIsOtpRequired] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpErrorKey, setOtpErrorKey] = useState("");
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isOtpSendFailed, setIsOtpSendFailed] = useState(false);
   const isDarkTheme = useIsDarkTheme();
   const defaultLogo = isDarkTheme ? logoNegativo : logoPositivo;
-  const currentLogo =
-    image && image !== appInfo.applogo ? image : defaultLogo;
+  const currentLogo = image && image !== appInfo.applogo ? image : defaultLogo;
   useEffect(() => {
     handleUserExist();
     // eslint-disable-next-line
@@ -67,7 +79,6 @@ function Login() {
   const handleUserExist = async () => {
     checkUserExt();
   };
-
 
   const setLocalVar = (user) => {
     localStorage.setItem("accesstoken", user.sessionToken);
@@ -84,9 +95,7 @@ function Login() {
     const app = await getAppLogo();
     if (app?.error === "invalid_json") {
       setErrMsg(t("server-down", { appName: appName }));
-    } else if (
-      app?.user === "not_exist"
-    ) {
+    } else if (app?.user === "not_exist") {
       navigate("/addadmin");
     }
     if (app?.logo) {
@@ -122,10 +131,26 @@ function Login() {
     revalidateField(name, value);
   };
 
-  const handleLogin = async (
-  ) => {
-    const email = state?.email
-    const password = state?.password
+  const notifyLoginError = (error) => {
+    if (error?.code === 1001) {
+      notify.error(t("action-prohibited"));
+    } else if (error?.code === Parse.Error.OBJECT_NOT_FOUND) {
+      notify.error(t("invalid-username-password-region"));
+    } else if (error?.status === 429 || error?.code === 429) {
+      notify.error(t("too-many-login-attempts"));
+    } else if (
+      error?.code === Parse.Error.CONNECTION_FAILED ||
+      error?.code === Parse.Error.INTERNAL_SERVER_ERROR
+    ) {
+      notify.error(t("server-error"));
+    } else {
+      notify.error(t("something-went-wrong-mssg"));
+    }
+  };
+
+  const handleLogin = async () => {
+    const email = state?.email;
+    const password = state?.password;
 
     if (!email || !password) {
       return;
@@ -139,42 +164,114 @@ function Login() {
         setState({ ...state, loading: false });
         return;
       }
-      // Get extended user data (including 2FA status) using cloud function
-      try {
-        await Parse.User.become(_user.sessionToken);
-        setLocalVar(_user);
-        await continueLoginFlow();
-      } catch (error) {
-        console.error("Error checking 2FA status:", error);
-        notify.error(t("something-went-wrong-mssg"));
-        setState((prev) => ({ ...prev, loading: false }));
-      }
+      await completeLogin(_user);
     } catch (error) {
       console.error("Error while logging in user", error);
-      if (error?.code === 1001) {
-        notify.error(t("action-prohibited"));
-      } else if (error?.code === Parse.Error.OBJECT_NOT_FOUND) {
-        notify.error(t("invalid-username-password-region"));
-      } else if (error?.status === 429 || error?.code === 429) {
-        notify.error(t("too-many-login-attempts"));
-      } else if (
-        error?.code === Parse.Error.CONNECTION_FAILED ||
-        error?.code === Parse.Error.INTERNAL_SERVER_ERROR
-      ) {
-        notify.error(t("server-error"));
+      if (isEmailNotVerifiedError(error)) {
+        await startOtpStep(email);
+        return;
+      }
+      notifyLoginError(error);
+      setState((prev) => ({ ...prev, loading: false }));
+    }
+  };
+  const completeLogin = async (_user) => {
+    try {
+      await Parse.User.become(_user.sessionToken);
+      setLocalVar(_user);
+      await continueLoginFlow();
+      setState((prev) => ({ ...prev, password: "" }));
+    } catch (error) {
+      console.error("Error checking 2FA status:", error);
+      notify.error(t("something-went-wrong-mssg"));
+      setState((prev) => ({ ...prev, loading: false }));
+    }
+  };
+
+  const startOtpStep = async (email) => {
+    setOtp("");
+    setOtpErrorKey("");
+    setIsOtpRequired(true);
+    setState((prev) => ({ ...prev, loading: false }));
+    await sendOtpCode(email);
+  };
+
+  const sendOtpCode = async (email) => {
+    setIsSendingOtp(true);
+    const isSent = await handleSendOTP(email);
+    setIsSendingOtp(false);
+    setIsOtpSendFailed(!isSent);
+  };
+
+  const leaveOtpStep = () => {
+    setIsOtpRequired(false);
+    setIsOtpSendFailed(false);
+    setState((prev) => ({ ...prev, password: "" }));
+    setOtp("");
+    setOtpErrorKey("");
+  };
+
+  const handleOtpChange = (value) => {
+    setOtp(value);
+    if (otpErrorKey) setOtpErrorKey("");
+  };
+
+  const resendOtp = async () => {
+    await sendOtpCode(state.email);
+  };
+
+  const getOtpErrorKey = (error) => {
+    if (isOtpResendLimitError(error)) return "otp-too-many-attempts";
+    if (isOtpInvalidError(error)) return "verification-code-invalid";
+    if (error?.code === Parse.Error.OBJECT_NOT_FOUND) {
+      return "invalid-credentials-or-otp";
+    }
+    return "";
+  };
+
+  const handleVerifyOtp = async (event) => {
+    event.preventDefault();
+    if (!isOtpFormatValid(otp)) {
+      setOtpErrorKey(
+        otp ? "verification-code-invalid" : "verification-code-required"
+      );
+      document.getElementById("otp")?.focus();
+      return;
+    }
+    setState((prev) => ({ ...prev, loading: true }));
+    try {
+      const _user = await Parse.Cloud.run("verifyloginotp", {
+        email: state.email,
+        password: state.password,
+        otp
+      });
+      if (!_user) {
+        setState((prev) => ({ ...prev, loading: false }));
+        return;
+      }
+      await completeLogin(_user);
+    } catch (error) {
+      console.error("Error while verifying login otp", error);
+      const errorKey = getOtpErrorKey(error);
+      if (errorKey) {
+        setOtpErrorKey(errorKey);
       } else {
-        notify.error(t("something-went-wrong-mssg"));
+        notifyLoginError(error);
       }
       setState((prev) => ({ ...prev, loading: false }));
     }
   };
+
   const handleLoginBtn = async (event) => {
     event.preventDefault();
     const validation = validateLoginForm(state);
     setHasSubmitted(true);
     setErrors(validation);
     if (hasErrors(validation)) {
-      const firstInvalidId = getFirstInvalidFieldId(validation, LOGIN_FIELD_IDS);
+      const firstInvalidId = getFirstInvalidFieldId(
+        validation,
+        LOGIN_FIELD_IDS
+      );
       document.getElementById(firstInvalidId)?.focus();
       return;
     }
@@ -232,7 +329,7 @@ function Login() {
               localStorage.setItem("PageLanding", menu.pageId);
               localStorage.setItem("defaultmenuid", menu.menuId);
               localStorage.setItem("pageType", menu.pageType);
-                navigate(redirectUrl);
+              navigate(redirectUrl);
             } else {
               notify.error(t("role-not-found"));
               logOutUser();
@@ -292,7 +389,7 @@ function Login() {
             localStorage.setItem("PageLanding", menu.pageId);
             localStorage.setItem("defaultmenuid", menu.menuId);
             localStorage.setItem("pageType", menu.pageType);
-              navigate(redirectUrl);
+            navigate(redirectUrl);
           } else {
             setState({ ...state, loading: false });
             logOutUser();
@@ -437,8 +534,8 @@ function Login() {
             localStorage.setItem("PageLanding", menu.pageId);
             localStorage.setItem("defaultmenuid", menu.menuId);
             localStorage.setItem("pageType", menu.pageType);
-              setState({ ...state, loading: false });
-              navigate(redirectUrl);
+            setState({ ...state, loading: false });
+            navigate(redirectUrl);
           } else {
             setState({ ...state, loading: false });
             setIsModal(true);
@@ -449,9 +546,9 @@ function Login() {
           logOutUser();
         }
       } else {
-          notify.error(t("user-not-found"));
-          setState((prev) => ({ ...prev, loading: false }));
-          logOutUser();
+        notify.error(t("user-not-found"));
+        setState((prev) => ({ ...prev, loading: false }));
+        logOutUser();
       }
     } catch (error) {
       console.error("Error during login flow", error);
@@ -487,104 +584,170 @@ function Login() {
                   alt="applogo"
                 />
               )}
-              <form
-                onSubmit={handleLoginBtn}
-                noValidate
-                aria-label="Login Form"
-                className="space-y-5"
-              >
-                <div>
-                  <h1
-                    id="loginHeading"
-                    className="text-2xl font-bold tracking-tight text-base-content"
-                  >
-                    {t("welcome")}
-                  </h1>
-                  <p className="text-sm text-base-content/80 font-medium mt-1">
-                    {t("Login-to-your-account")}
-                  </p>
-                </div>
-                <div className="space-y-4">
+              {isOtpRequired ? (
+                <form
+                  onSubmit={handleVerifyOtp}
+                  noValidate
+                  aria-label={t("verify-email-1")}
+                  className="space-y-5"
+                >
                   <div>
-                    <label className="block text-xs font-semibold mb-1 text-base-content" htmlFor="email">
-                      {t("email")}
-                    </label>
-                    <input
-                      id="email"
-                      type="email"
-                      className={`op-input op-input-bordered w-full text-sm${errors.email ? " op-input-error" : ""}`}
-                      name="email"
-                      autoComplete="username"
-                      value={state.email}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      aria-invalid={Boolean(errors.email)}
-                      aria-describedby={errors.email ? "email-error" : undefined}
-                      required
-                    />
-                    <FieldError
-                      id="email-error"
-                      message={errors.email && t(errors.email)}
-                    />
+                    <h1 className="text-2xl font-bold tracking-tight text-base-content">
+                      {t("verify-email-1")}
+                    </h1>
+                    <p className="text-sm text-base-content/80 font-medium mt-1">
+                      {t("login-email-verification-required", {
+                        email: state.email
+                      })}
+                    </p>
                   </div>
+                  {isOtpSendFailed && (
+                    <p
+                      aria-live="polite"
+                      className="text-xs text-base-content/80"
+                    >
+                      {t("otp-send-failed-hint")}
+                    </p>
+                  )}
+                  <OtpCodeField
+                    value={otp}
+                    onChange={handleOtpChange}
+                    errorKey={otpErrorKey}
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    className="op-btn op-btn-primary w-full"
+                    disabled={state.loading}
+                  >
+                    {state.loading ? t("loading") : t("verify")}
+                  </button>
+                  <div className="flex justify-between">
+                    <button
+                      type="button"
+                      className="op-btn op-btn-ghost op-btn-sm"
+                      onClick={resendOtp}
+                      disabled={state.loading || isSendingOtp}
+                    >
+                      {t("resend")}
+                    </button>
+                    <button
+                      type="button"
+                      className="op-btn op-btn-ghost op-btn-sm"
+                      onClick={leaveOtpStep}
+                    >
+                      {t("back-to-login")}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <form
+                  onSubmit={handleLoginBtn}
+                  noValidate
+                  aria-label="Login Form"
+                  className="space-y-5"
+                >
                   <div>
-                    <label className="block text-xs font-semibold mb-1 text-base-content" htmlFor="password">
-                      {t("password")}
-                    </label>
-                    <div className="relative">
+                    <h1
+                      id="loginHeading"
+                      className="text-2xl font-bold tracking-tight text-base-content"
+                    >
+                      {t("welcome")}
+                    </h1>
+                    <p className="text-sm text-base-content/80 font-medium mt-1">
+                      {t("Login-to-your-account")}
+                    </p>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label
+                        className="block text-xs font-semibold mb-1 text-base-content"
+                        htmlFor="email"
+                      >
+                        {t("email")}
+                      </label>
                       <input
-                        id="password"
-                        type={state.passwordVisible ? "text" : "password"}
-                        className={`op-input op-input-bordered w-full text-sm pr-9${errors.password ? " op-input-error" : ""}`}
-                        name="password"
-                        value={state.password}
-                        autoComplete="current-password"
+                        id="email"
+                        type="email"
+                        className={`op-input op-input-bordered w-full text-sm${errors.email ? " op-input-error" : ""}`}
+                        name="email"
+                        autoComplete="username"
+                        value={state.email}
                         onChange={handleChange}
                         onBlur={handleBlur}
-                        aria-invalid={Boolean(errors.password)}
+                        aria-invalid={Boolean(errors.email)}
                         aria-describedby={
-                          errors.password ? "password-error" : undefined
+                          errors.email ? "email-error" : undefined
                         }
                         required
                       />
-                      <button
-                        type="button"
-                        className="absolute cursor-pointer top-1/2 right-3 -translate-y-1/2 text-base-content/60 hover:text-base-content focus:outline-none p-1 rounded-md transition-colors"
-                        onClick={togglePasswordVisibility}
-                        aria-label={
-                          state.passwordVisible
-                            ? t("hide-password")
-                            : t("show-password")
-                        }
-                      >
-                        <Icon
-                          name={state.passwordVisible ? "eye-off" : "eye"}
-                          size={16}
-                        />
-                      </button>
+                      <FieldError
+                        id="email-error"
+                        message={errors.email && t(errors.email)}
+                      />
                     </div>
-                    <FieldError
-                      id="password-error"
-                      message={errors.password && t(errors.password)}
-                    />
+                    <div>
+                      <label
+                        className="block text-xs font-semibold mb-1 text-base-content"
+                        htmlFor="password"
+                      >
+                        {t("password")}
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="password"
+                          type={state.passwordVisible ? "text" : "password"}
+                          className={`op-input op-input-bordered w-full text-sm pr-9${errors.password ? " op-input-error" : ""}`}
+                          name="password"
+                          value={state.password}
+                          autoComplete="current-password"
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          aria-invalid={Boolean(errors.password)}
+                          aria-describedby={
+                            errors.password ? "password-error" : undefined
+                          }
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="absolute cursor-pointer top-1/2 right-3 -translate-y-1/2 text-base-content/60 hover:text-base-content focus:outline-none p-1 rounded-md transition-colors"
+                          onClick={togglePasswordVisibility}
+                          aria-label={
+                            state.passwordVisible
+                              ? t("hide-password")
+                              : t("show-password")
+                          }
+                        >
+                          <Icon
+                            name={state.passwordVisible ? "eye-off" : "eye"}
+                            size={16}
+                          />
+                        </button>
+                      </div>
+                      <FieldError
+                        id="password-error"
+                        message={errors.password && t(errors.password)}
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <NavLink
+                        to="/forgetpassword"
+                        className="text-xs font-semibold op-link op-link-primary hover:underline underline-offset-2 focus:outline-none"
+                      >
+                        {t("forgot-password")}?
+                      </NavLink>
+                    </div>
                   </div>
-                  <div className="flex justify-end">
-                    <NavLink
-                      to="/forgetpassword"
-                      className="text-xs font-semibold op-link op-link-primary hover:underline underline-offset-2 focus:outline-none"
-                    >
-                      {t("forgot-password")}?
-                    </NavLink>
-                  </div>
-                </div>
-                <button
-                  type="submit"
-                  className="op-btn op-btn-primary w-full"
-                  disabled={state.loading}
-                >
-                  {state.loading ? t("loading") : t("login")}
-                </button>
-              </form>
+                  <button
+                    type="submit"
+                    className="op-btn op-btn-primary w-full"
+                    disabled={state.loading}
+                  >
+                    {state.loading ? t("loading") : t("login")}
+                  </button>
+                </form>
+              )}
               <div className="mt-8 pt-6 border-t border-base-200/80 flex justify-center">
                 <SelectLanguage />
               </div>

@@ -21,12 +21,8 @@ const NEW_PASSWORD = 'Brand-New-Passw0rd!';
 const resetAs = (caller, params) =>
   captureRejection(cloudRunAs('resetpassword', params, caller.account.sessionToken));
 
-const canLogIn = async (email, password) => {
-  await resetAuthState();
-  const error = await captureRejection(Parse.User.logIn(email, password));
-  await resetAuthState();
-  return error === null;
-};
+const canLogIn = async (email, password) =>
+  (await captureRejection(Parse.User.verifyPassword(email, password))) === null;
 
 describe('resetpassword cloud function', () => {
   let consoleError;
@@ -290,7 +286,7 @@ describe('resetpassword cloud function', () => {
       expect(linked.linkedExistingAccount).toBeTrue();
       expect(error.code).toBe(Parse.Error.OBJECT_NOT_FOUND);
       expect(error.message).toBe('User not found or not allowed.');
-      expect(await canLogIn(guest.email, PASSWORD)).toBeTrue();
+      expect(await canLogIn(guest.email, PASSWORD)).toBeFalse();
       expect(await canLogIn(guest.email, NEW_PASSWORD)).toBeFalse();
     });
 
@@ -302,7 +298,7 @@ describe('resetpassword cloud function', () => {
       const error = await resetAs(orgAdmin, { userId: guest.id, password: NEW_PASSWORD });
 
       expect(error.message).toBe('User not found or not allowed.');
-      expect(await canLogIn(guest.email, PASSWORD)).toBeTrue();
+      expect(await canLogIn(guest.email, NEW_PASSWORD)).toBeFalse();
     });
 
     it('still resets members that the tenant created itself', async () => {

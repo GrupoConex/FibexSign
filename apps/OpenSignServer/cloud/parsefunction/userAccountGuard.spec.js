@@ -27,7 +27,12 @@ const captureRejection = async promise => {
 
 describe('userAccountGuard', () => {
   it('protects the identity fields of an account', () => {
-    expect([...PROTECTED_USER_FIELDS].sort()).toEqual(['email', 'normalizedEmail', 'username']);
+    expect([...PROTECTED_USER_FIELDS].sort()).toEqual([
+      'credentialsSecuredAt',
+      'email',
+      'normalizedEmail',
+      'username',
+    ]);
   });
 
   it('never blocks the master key', async () => {
@@ -36,10 +41,19 @@ describe('userAccountGuard', () => {
     expect(await captureRejection(guardUserAccountSave(request))).toBeNull();
   });
 
-  it('never blocks the creation of an account', async () => {
-    const request = { master: false, original: undefined, object: buildUser(baseFields()) };
+  it('allows the server to create an account with the master key', async () => {
+    const request = { master: true, original: undefined, object: buildUser(baseFields()) };
 
     expect(await captureRejection(guardUserAccountSave(request))).toBeNull();
+  });
+
+  it('refuses the creation of an account that does not come from the master key', async () => {
+    const request = { master: false, original: undefined, object: buildUser(baseFields()) };
+
+    const error = await captureRejection(guardUserAccountSave(request));
+
+    expect(error.code).toBe(Parse.Error.OPERATION_FORBIDDEN);
+    expect(error.message).toBe('Accounts can only be created by the server.');
   });
 
   it('allows updates that leave the identity fields untouched', async () => {

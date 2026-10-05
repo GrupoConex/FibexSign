@@ -1,4 +1,5 @@
-import { generateGuestPassword } from './shared/createUserAccount.js';
+import { generateGuestPassword } from './shared/guestPassword.js';
+import { createAccountAsServer, secureUnverifiedAccount } from './shared/accountTakeoverGuard.js';
 // `saveRoleContact` is used to save user in contracts_Guest role and create contact
 const saveRoleContact = async contact => {
   const contactQuery = new Parse.Object('contracts_Contactbook');
@@ -57,6 +58,7 @@ export default async function linkContactToDoc(req) {
         throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'Document not found.');
       }
       const _docRes = JSON.parse(JSON.stringify(docRes));
+      const linkingTenantId = _docRes.ExtUserPtr?.TenantId?.objectId;
       const Placeholders = _docRes?.Placeholders || [];
       const index = Placeholders?.findIndex(x => x.email && x.email === email);
       if (index !== -1) {
@@ -73,6 +75,11 @@ export default async function linkContactToDoc(req) {
         contactCls.notEqualTo('IsDeleted', true);
         const existContact = await contactCls.first({ useMasterKey: true });
         if (existContact) {
+          const contactAccountId = existContact.get('UserId')?.id;
+          if (!contactAccountId) {
+            throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'User not found.');
+          }
+          await secureUnverifiedAccount(contactAccountId, { linkingTenantId });
           //update contact in placeholder, signers and update ACl in provide document
           const updateDoc = new Parse.Object('contracts_Document');
           updateDoc.id = docId;
@@ -100,8 +107,8 @@ export default async function linkContactToDoc(req) {
           };
           updateDoc.set('Placeholders', Placeholders);
           const Acl = docRes.getACL();
-          Acl.setReadAccess(existContact.get('UserId').id, true);
-          Acl.setWriteAccess(existContact.get('UserId').id, true);
+          Acl.setReadAccess(contactAccountId, true);
+          Acl.setWriteAccess(contactAccountId, true);
           updateDoc.setACL(Acl);
           //   const parseData = JSON.parse(JSON.stringify(res));
           const resDoc = await updateDoc.save(null, { useMasterKey: true });
@@ -115,6 +122,7 @@ export default async function linkContactToDoc(req) {
           const extUser = await extUserQuery.first({ useMasterKey: true });
           if (extUser) {
             const _extUser = JSON.parse(JSON.stringify(extUser));
+            await secureUnverifiedAccount(_extUser.UserId.objectId, { linkingTenantId });
             const contact = {
               UserId: _extUser.UserId,
               Name: _extUser.Name,
@@ -169,6 +177,7 @@ export default async function linkContactToDoc(req) {
               userQuery.equalTo('email', email);
               const userRes = await userQuery.first({ useMasterKey: true });
               if (userRes) {
+                await secureUnverifiedAccount(userRes.id, { linkingTenantId });
                 const contact = {
                   UserId: { __type: 'Pointer', className: '_User', objectId: userRes.id },
                   Name: name,
@@ -218,16 +227,12 @@ export default async function linkContactToDoc(req) {
                 }
               } else {
                 // create new user in _User class on the basis of details provide by user
-                const _users = Parse.Object.extend('User');
-                const _user = new _users();
-                _user.set('name', name);
-                _user.set('username', email);
-                _user.set('email', email);
-                _user.set('password', generateGuestPassword());
-                if (phone) {
-                  _user.set('phone', phone);
-                }
-                const newUserRes = await _user.save();
+                const newUserRes = await createAccountAsServer({
+                  name,
+                  email,
+                  password: generateGuestPassword(),
+                  phone,
+                });
                 const contact = {
                   UserId: { __type: 'Pointer', className: '_User', objectId: newUserRes.id },
                   Name: name,

@@ -61,11 +61,89 @@ export async function createPlainUser(email = uniqueEmail('plain'), password = P
   return { id: response.data.objectId, email, sessionToken: response.data.sessionToken };
 }
 
+const SESSION_HEADERS = sessionToken => ({
+  'X-Parse-Application-Id': process.env.APP_ID,
+  'X-Parse-Javascript-Key': 'test',
+  'X-Parse-Session-Token': sessionToken,
+});
+
+export async function isSessionValid(sessionToken) {
+  const response = await axios.get(`${process.env.SERVER_URL}/users/me`, {
+    headers: SESSION_HEADERS(sessionToken),
+    validateStatus: () => true,
+  });
+  return response.status === 200;
+}
+
+export async function canReadDocument(sessionToken, documentId) {
+  const response = await axios.get(
+    `${process.env.SERVER_URL}/classes/contracts_Document/${documentId}`,
+    { headers: SESSION_HEADERS(sessionToken), validateStatus: () => true }
+  );
+  return response.status === 200 && response.data.objectId === documentId;
+}
+
+export async function openPasswordSession(email, password = PASSWORD) {
+  const response = await axios.post(
+    `${process.env.SERVER_URL}/login`,
+    { username: email, password },
+    { headers: SESSION_HEADERS('') }
+  );
+  return response.data.sessionToken;
+}
+
+export async function createMasterKeySession(userId) {
+  const response = await axios.post(`${process.env.SERVER_URL}/loginAs`, null, {
+    headers: REST_HEADERS,
+    params: { userId },
+  });
+  return response.data.sessionToken;
+}
+
+export async function createAuthDataAccount(authId = uniqueEmail('anon')) {
+  const response = await axios.post(
+    `${process.env.SERVER_URL}/users`,
+    { authData: { anonymous: { id: authId } } },
+    { headers: REST_HEADERS }
+  );
+  return { id: response.data.objectId, sessionToken: response.data.sessionToken };
+}
+
+export async function loginRejected(email, password) {
+  const error = await captureRejection(Parse.User.verifyPassword(email, password));
+  return error !== null;
+}
+
+export async function markEmailVerified(userId) {
+  const user = await new Parse.Query(Parse.User).get(userId, MASTER);
+  user.set('emailVerified', true);
+  return user.save(null, MASTER);
+}
+
+export async function openPasswordSessionBypassingGate(userId, email, password = PASSWORD) {
+  await markEmailVerified(userId);
+  const sessionToken = await openPasswordSession(email, password);
+  const user = await new Parse.Query(Parse.User).get(userId, MASTER);
+  user.set('emailVerified', false);
+  await user.save(null, MASTER);
+  return sessionToken;
+}
+
 export async function createTenant(name = 'Tenant') {
   const tenant = new Parse.Object('partners_Tenant');
   tenant.set('TenantName', name);
   tenant.set('IsActive', true);
   return tenant.save(null, MASTER);
+}
+
+export async function createTenantOwner(prefix = 'owner') {
+  const account = await createPlainUser(uniqueEmail(prefix));
+  const tenant = new Parse.Object('partners_Tenant');
+  tenant.set('TenantName', 'Owned Tenant');
+  tenant.set('IsActive', true);
+  tenant.set('UserId', pointer('_User', account.id));
+  await tenant.save(null, MASTER);
+  return { account, tenant };
 }
 
 export async function createOrganization(tenant, name = 'Org') {
@@ -135,6 +213,13 @@ export const findOtpRecord = email => {
   return query.first(MASTER);
 };
 
+async function purgeOtpRecord(email) {
+  const existing = await findOtpRecord(email);
+  if (existing) {
+    await existing.destroy(MASTER);
+  }
+}
+
 export async function createOtpRecord(email, fields = {}) {
   const { otp = TEST_OTP, ...storedFields } = fields;
   const record = new Parse.Object('defaultdata_Otp');
@@ -145,6 +230,20 @@ export async function createOtpRecord(email, fields = {}) {
   Object.entries(storedFields).forEach(([key, value]) => record.set(key, value));
   return record.save(null, MASTER);
 }
+
+const toAccountEmail = email => email.toLowerCase().replace(/\s/g, '');
+
+export async function buildSignupParams(userDetails, otpFields = {}) {
+  const email = userDetails?.email;
+  if (typeof email === 'string') {
+    await purgeOtpRecord(toAccountEmail(email));
+    await createOtpRecord(toAccountEmail(email), otpFields);
+  }
+  return { userDetails, otp: otpFields.otp ?? TEST_OTP };
+}
+
+export const runSignup = async (functionName, userDetails) =>
+  Parse.Cloud.run(functionName, await buildSignupParams(userDetails));
 
 export async function purgeAllExtUsers() {
   let batch = await new Parse.Query('contracts_Users').limit(1000).find(MASTER);

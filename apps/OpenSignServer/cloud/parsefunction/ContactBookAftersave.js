@@ -1,4 +1,9 @@
-import { generateGuestPassword } from './shared/createUserAccount.js';
+import { generateGuestPassword } from './shared/guestPassword.js';
+import {
+  createAccountAsServer,
+  findTenantIdOfUser,
+  secureUnverifiedAccount,
+} from './shared/accountTakeoverGuard.js';
 async function ContactbookAftersave(request) {
   /* In beforesave or aftersave if you want to check if an object is being inserted or updated 
     you can check as follows */
@@ -26,16 +31,12 @@ async function ContactbookAftersave(request) {
       const Email = object.get('Email');
       const Phone = object.get('Phone');
       try {
-        const _users = Parse.Object.extend('User');
-        const _user = new _users();
-        _user.set('name', Name);
-        _user.set('username', Email);
-        _user.set('email', Email);
-        _user.set('password', generateGuestPassword());
-        if (Email) {
-          _user.set('phone', Phone);
-        }
-        const user = await _user.save();
+        const user = await createAccountAsServer({
+          name: Name,
+          email: Email,
+          password: generateGuestPassword(),
+          phone: Phone,
+        });
         if (user) {
           object.set('UserId', user);
           const acl = object.getACL() || new Parse.ACL();
@@ -49,8 +50,13 @@ async function ContactbookAftersave(request) {
         // console.log('err ', err);
         if (err.code === 202) {
           const userQuery = new Parse.Query(Parse.User);
-          userQuery.equalTo('email', Email);
+          userQuery.equalTo('email', Email?.toLowerCase()?.replace(/\s/g, ''));
           const userRes = await userQuery.first({ useMasterKey: true });
+          if (!userRes) {
+            throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'User not found.');
+          }
+          const linkingTenantId = request.user && (await findTenantIdOfUser(request.user.id));
+          await secureUnverifiedAccount(userRes.id, { linkingTenantId });
           object.set('UserId', {
             __type: 'Pointer',
             className: '_User',

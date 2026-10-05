@@ -4,6 +4,7 @@ import { appInfo } from "../constant/appinfo";
 import { useNavigate } from "react-router";
 import {
   getAppLogo,
+  handleSendOTP,
   saveLanguageInLocal,
   usertimezone
 } from "../constant/Utils";
@@ -22,6 +23,12 @@ import FieldError from "../components/auth/FieldError";
 import { notify } from "../utils";
 import AuthLayout from "../components/auth/AuthLayout";
 import Icon from "../primitives/Icon";
+import OtpCodeField from "../components/auth/OtpCodeField";
+import {
+  isOtpFormatValid,
+  isOtpInvalidError,
+  isOtpResendLimitError
+} from "../utils/otpPolicy";
 
 const ADMIN_FIELD_IDS = {
   name: "name",
@@ -48,6 +55,10 @@ const AddAdmin = () => {
   const [isAuthorize, setIsAuthorize] = useState(false);
   const [errors, setErrors] = useState({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpErrorKey, setOtpErrorKey] = useState("");
   const { lengthValid, caseDigitValid, specialCharValid } =
     getPasswordRuleStatus(password);
   const [errMsg, setErrMsg] = useState("");
@@ -129,6 +140,33 @@ const AddAdmin = () => {
     if (hasSubmitted) revalidateField(field, {});
   };
 
+  const resetOtpStep = () => {
+    setIsOtpSent(false);
+    setOtp("");
+    setOtpErrorKey("");
+  };
+
+  const handleEmailChange = (value) => {
+    if (isOtpSent) resetOtpStep();
+    updateField("email", setEmail, value);
+  };
+
+  const sendVerificationCode = async () => {
+    setIsSendingOtp(true);
+    const isSent = await handleSendOTP(email);
+    setIsSendingOtp(false);
+    if (isSent) {
+      setOtp("");
+      setOtpErrorKey("");
+      setIsOtpSent(true);
+    }
+  };
+
+  const handleOtpChange = (value) => {
+    setOtp(value);
+    if (otpErrorKey) setOtpErrorKey("");
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     const validation = validateAddAdminForm(formValues);
@@ -140,6 +178,17 @@ const AddAdmin = () => {
         ADMIN_FIELD_IDS
       );
       document.getElementById(firstInvalidId)?.focus();
+      return;
+    }
+    if (!isOtpSent) {
+      await sendVerificationCode();
+      return;
+    }
+    if (!isOtpFormatValid(otp)) {
+      setOtpErrorKey(
+        otp ? "verification-code-invalid" : "verification-code-required"
+      );
+      document.getElementById("otp")?.focus();
       return;
     }
     await registerAdmin();
@@ -188,7 +237,8 @@ const AddAdmin = () => {
           password: password,
           role: "contracts_Admin",
           timezone: usertimezone
-        }
+        },
+        otp
       };
       const usersignup = await Parse.Cloud.run("addadmin", params);
       if (usersignup?.sessionToken) {
@@ -198,6 +248,12 @@ const AddAdmin = () => {
       console.log("err ", error);
       if (error.code === 202) {
         await handleExistingUser();
+      } else if (isOtpInvalidError(error)) {
+        setOtpErrorKey("verification-code-invalid");
+        setState({ loading: false });
+      } else if (isOtpResendLimitError(error)) {
+        setOtpErrorKey("otp-too-many-attempts");
+        setState({ loading: false });
       } else {
         notify.error(error.message);
         setState({ loading: false });
@@ -293,30 +349,36 @@ const AddAdmin = () => {
                 </h1>
                 <div className="space-y-4 text-sm">
                   <div>
-                    <label className="block text-xs mb-1 text-base-content" htmlFor="name">
-                      {t("name")}{" "}
-                      <span className="text-error text-xs">*</span>
+                    <label
+                      className="block text-xs mb-1 text-base-content"
+                      htmlFor="name"
+                    >
+                      {t("name")} <span className="text-error text-xs">*</span>
                     </label>
                     <input
                       id="name"
                       type="text"
                       className={`op-input op-input-bordered w-full text-sm${errors.name ? " op-input-error" : ""}`}
                       value={name}
-                      onChange={(e) => updateField("name", setName, e.target.value)}
+                      onChange={(e) =>
+                        updateField("name", setName, e.target.value)
+                      }
                       onBlur={validateOnBlur("name")}
                       aria-invalid={Boolean(errors.name)}
                       aria-describedby={errors.name ? "name-error" : undefined}
                       required
                     />
-                      <FieldError
-                        id="name-error"
-                        message={errors.name && t(errors.name)}
-                      />
+                    <FieldError
+                      id="name-error"
+                      message={errors.name && t(errors.name)}
+                    />
                   </div>
                   <div>
-                    <label className="block text-xs mb-1 text-base-content" htmlFor="email">
-                      {t("email")}{" "}
-                      <span className="text-error text-xs">*</span>
+                    <label
+                      className="block text-xs mb-1 text-base-content"
+                      htmlFor="email"
+                    >
+                      {t("email")} <span className="text-error text-xs">*</span>
                     </label>
                     <input
                       id="email"
@@ -324,44 +386,54 @@ const AddAdmin = () => {
                       className={`op-input op-input-bordered w-full text-sm${errors.email ? " op-input-error" : ""}`}
                       value={email}
                       onChange={(e) =>
-                        updateField(
-                          "email",
-                          setEmail,
+                        handleEmailChange(
                           e.target.value?.toLowerCase()?.replace(/\s/g, "")
-                        )}
+                        )
+                      }
                       onBlur={validateOnBlur("email")}
                       aria-invalid={Boolean(errors.email)}
-                      aria-describedby={errors.email ? "email-error" : undefined}
+                      aria-describedby={
+                        errors.email ? "email-error" : undefined
+                      }
                       required
                     />
-                      <FieldError
-                        id="email-error"
-                        message={errors.email && t(errors.email)}
-                      />
+                    <FieldError
+                      id="email-error"
+                      message={errors.email && t(errors.email)}
+                    />
                   </div>
                   <div>
-                    <label className="block text-xs mb-1 text-base-content" htmlFor="phone">
-                      {t("phone")}{" "}
-                      <span className="text-error text-xs">*</span>
+                    <label
+                      className="block text-xs mb-1 text-base-content"
+                      htmlFor="phone"
+                    >
+                      {t("phone")} <span className="text-error text-xs">*</span>
                     </label>
                     <input
                       id="phone"
                       type="tel"
                       className={`op-input op-input-bordered w-full text-sm${errors.phone ? " op-input-error" : ""}`}
                       value={phone}
-                      onChange={(e) => updateField("phone", setPhone, e.target.value)}
+                      onChange={(e) =>
+                        updateField("phone", setPhone, e.target.value)
+                      }
                       onBlur={validateOnBlur("phone")}
                       aria-invalid={Boolean(errors.phone)}
-                      aria-describedby={errors.phone ? "phone-error" : undefined}
+                      aria-describedby={
+                        errors.phone ? "phone-error" : undefined
+                      }
                       required
                     />
-                      <FieldError
-                        id="phone-error"
-                        message={errors.phone && t(errors.phone)}
-                      />
+                    <FieldError
+                      id="phone-error"
+                      message={errors.phone && t(errors.phone)}
+                    />
                   </div>
                   <div>
-                    <label className="block text-xs mb-1 text-base-content" htmlFor="company">
+                    <label
+                      className="block text-xs mb-1 text-base-content"
+                      htmlFor="company"
+                    >
                       {t("company")}{" "}
                       <span className="text-error text-xs">*</span>
                     </label>
@@ -370,19 +442,26 @@ const AddAdmin = () => {
                       type="text"
                       className={`op-input op-input-bordered w-full text-sm${errors.company ? " op-input-error" : ""}`}
                       value={company}
-                      onChange={(e) => updateField("company", setCompany, e.target.value)}
+                      onChange={(e) =>
+                        updateField("company", setCompany, e.target.value)
+                      }
                       onBlur={validateOnBlur("company")}
                       aria-invalid={Boolean(errors.company)}
-                      aria-describedby={errors.company ? "company-error" : undefined}
+                      aria-describedby={
+                        errors.company ? "company-error" : undefined
+                      }
                       required
                     />
-                      <FieldError
-                        id="company-error"
-                        message={errors.company && t(errors.company)}
-                      />
+                    <FieldError
+                      id="company-error"
+                      message={errors.company && t(errors.company)}
+                    />
                   </div>
                   <div>
-                    <label className="block text-xs mb-1 text-base-content" htmlFor="jobTitle">
+                    <label
+                      className="block text-xs mb-1 text-base-content"
+                      htmlFor="jobTitle"
+                    >
                       {t("job-title")}{" "}
                       <span className="text-error text-xs">*</span>
                     </label>
@@ -391,16 +470,20 @@ const AddAdmin = () => {
                       type="text"
                       className={`op-input op-input-bordered w-full text-sm${errors.jobTitle ? " op-input-error" : ""}`}
                       value={jobTitle}
-                      onChange={(e) => updateField("jobTitle", setJobTitle, e.target.value)}
+                      onChange={(e) =>
+                        updateField("jobTitle", setJobTitle, e.target.value)
+                      }
                       onBlur={validateOnBlur("jobTitle")}
                       aria-invalid={Boolean(errors.jobTitle)}
-                      aria-describedby={errors.jobTitle ? "jobTitle-error" : undefined}
+                      aria-describedby={
+                        errors.jobTitle ? "jobTitle-error" : undefined
+                      }
                       required
                     />
-                      <FieldError
-                        id="jobTitle-error"
-                        message={errors.jobTitle && t(errors.jobTitle)}
-                      />
+                    <FieldError
+                      id="jobTitle-error"
+                      message={errors.jobTitle && t(errors.jobTitle)}
+                    />
                   </div>
                   <div>
                     <label
@@ -422,7 +505,9 @@ const AddAdmin = () => {
                         }
                         onBlur={validateOnBlur("password")}
                         aria-invalid={Boolean(errors.password)}
-                        aria-describedby={errors.password ? "password-error" : undefined}
+                        aria-describedby={
+                          errors.password ? "password-error" : undefined
+                        }
                         required
                       />
                       <button
@@ -430,9 +515,7 @@ const AddAdmin = () => {
                         className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-base-content/60 hover:text-base-content"
                         onClick={togglePasswordVisibility}
                         aria-label={
-                          showPassword
-                            ? t("hide-password")
-                            : t("show-password")
+                          showPassword ? t("hide-password") : t("show-password")
                         }
                       >
                         <Icon
@@ -517,13 +600,36 @@ const AddAdmin = () => {
                       message={errors.isAuthorize && t(errors.isAuthorize)}
                     />
                   </div>
+                  {isOtpSent && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-base-content/80">
+                        {t("otp-sent-to-email", { email })}
+                      </p>
+                      <OtpCodeField
+                        value={otp}
+                        onChange={handleOtpChange}
+                        errorKey={otpErrorKey}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        className="op-btn op-btn-ghost op-btn-sm"
+                        onClick={sendVerificationCode}
+                        disabled={isSendingOtp}
+                      >
+                        {t("resend")}
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <button
                   type="submit"
                   className="op-btn op-btn-primary w-full"
-                  disabled={state.loading}
+                  disabled={state.loading || isSendingOtp}
                 >
-                  {state.loading ? t("loading") : t("next")}
+                  {state.loading || isSendingOtp
+                    ? t("loading")
+                    : t(isOtpSent ? "next" : "send-verification-code")}
                 </button>
               </form>
             </AuthLayout>

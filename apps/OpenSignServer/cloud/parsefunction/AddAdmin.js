@@ -61,7 +61,7 @@ const ALLOWED_ADMIN_SIGNUP_ROLES = Object.freeze(['contracts_Admin']);
 export default async function AddAdmin(request) {
   const userDetails = request.params.userDetails;
   assertValidUserDetails(userDetails, ALLOWED_ADMIN_SIGNUP_ROLES);
-  const user = await createUserAccount(userDetails);
+  const user = await createUserAccount(userDetails, request.params.otp);
 
   try {
     const extQuery = new Parse.Query('contracts_Users');

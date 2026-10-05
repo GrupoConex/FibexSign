@@ -15,6 +15,7 @@ import {
   pointer,
   purgeAllExtUsers,
   interceptQuery,
+  markEmailVerified,
   rejectFindFor,
   rejectFirstFor,
   rejectSaveFor,
@@ -124,6 +125,7 @@ describe('auth fixtures', () => {
 
   it('clears the sdk current user when resetting auth state', async () => {
     const account = await createPlainUser();
+    await markEmailVerified(account.id);
     await Parse.User.logIn(account.email, 'Str0ngPassw0rd!');
     expect(Parse.User.current()).toBeTruthy();
 
