@@ -44,6 +44,38 @@ describe('createBatchDocs signing request mail', () => {
     expect(JSON.parse(fetchSpy.calls.first().args[1].body).to).toBe('signer@x.com');
   });
 
+  it('invites only the first signer and viewers when sending in order', async () => {
+    const document = {
+      ...buildDocument(),
+      SendinOrder: true,
+      Placeholders: [
+        { email: 'prefill@x.com', Role: 'prefill' },
+        { email: 'viewer@x.com', Role: 'Viewer', SignerRole: 'viewer' },
+        { email: 'first@x.com', Role: 'Signer 1' },
+        { email: 'second@x.com', Role: 'Signer 2' },
+      ],
+    };
+
+    await sendMail(document, 'https://app.test');
+
+    const recipients = fetchSpy.calls.allArgs().map(args => JSON.parse(args[1].body).to);
+    expect(recipients).toEqual(['viewer@x.com', 'first@x.com']);
+  });
+
+  it('builds the invitation from the tenant request template', async () => {
+    const document = buildDocument();
+    document.ExtUserPtr.TenantId = {
+      RequestSubject: 'Hello {{receiver_email}}',
+      RequestBody: '<p>Sign {{document_title}}</p>',
+    };
+
+    await sendMail(document, 'https://app.test');
+
+    const body = JSON.parse(fetchSpy.calls.first().args[1].body);
+    expect(body.subject).toBe('Hello Signer@x.com');
+    expect(body.html).toContain('<p>Sign Contract</p>');
+  });
+
   it('keeps going and logs when a delivery fails', async () => {
     fetchSpy.and.resolveTo({ status: 502 });
 

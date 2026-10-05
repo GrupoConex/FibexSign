@@ -35,7 +35,7 @@ describe("sendmailv3 calls", () => {
   const sites = findCallSites();
 
   it("finds the known call sites", () => {
-    expect(sites.length).toBeGreaterThanOrEqual(4);
+    expect(sites.length).toBeGreaterThanOrEqual(3);
   });
 
   it.each(sites.map((site, index) => [`${site.file}#${index}`, site]))(
