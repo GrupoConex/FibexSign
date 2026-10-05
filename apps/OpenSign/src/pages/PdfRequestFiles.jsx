@@ -850,7 +850,7 @@ function PdfRequestFiles(
                           "Content-Type": "application/json",
                           "X-Parse-Application-Id":
                             localStorage.getItem("parseAppId"),
-                          sessionToken: localStorage.getItem("accesstoken")
+                          "X-Parse-Session-Token": localStorage.getItem("accesstoken")
                         };
                         const objectId = user?.objectId;
                         const hostUrl = window.location.origin;
