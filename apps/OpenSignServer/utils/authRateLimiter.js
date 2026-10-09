@@ -15,7 +15,11 @@ export const STRICT_AUTH_PATH_SUFFIXES = [
   '/functions/verifyloginotp',
 ];
 
-export const OPERATIONAL_PATH_SUFFIXES = ['/functions/getUserDetails', '/functions/declinedoc'];
+export const OPERATIONAL_PATH_SUFFIXES = [
+  '/functions/getUserDetails',
+  '/functions/declinedoc',
+  '/functions/sendmailv3',
+];
 
 const RATE_LIMIT_MESSAGE = 'Too many requests, please try again later.';
 const DEFAULT_WINDOW_MS = 5 * 60 * 1000;

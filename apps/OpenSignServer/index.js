@@ -14,7 +14,12 @@ import FSFilesAdapter from '@parse/fs-files-adapter';
 import { app as customRoute } from './cloud/customRoute/customApp.js';
 import { exec } from 'child_process';
 import { createTransport } from 'nodemailer';
-import { appName, cloudServerUrl, serverAppId, smtpenable, smtpsecure, useLocal } from './Utils.js';
+import {
+  buildMailTransportState,
+  buildMailAdapterSender,
+  createMailApiCallback,
+} from './cloud/parsefunction/shared/mailTransport.js';
+import { appName, cloudServerUrl, serverAppId, smtpenable, useLocal } from './Utils.js';
 import { SSOAuth } from './auth/authadapter.js';
 import runDbMigrations from './migrationdb/index.js';
 import { validateSignedLocalUrl } from './cloud/parsefunction/getSignedUrl.js';
@@ -64,50 +69,14 @@ if (useLocal !== 'true') {
   });
 }
 
-let transporterMail;
-let mailgunClient;
-let mailgunDomain;
-let isMailAdapter = false;
-if (smtpenable) {
-  try {
-    let transporterConfig = {
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT || 465,
-      secure: smtpsecure,
-    };
-
-    // ✅ Add auth only if BOTH username & password exist
-    const smtpUser = process.env.SMTP_USERNAME;
-    const smtpPass = process.env.SMTP_PASS;
-
-    if (smtpUser && smtpPass) {
-      transporterConfig.auth = {
-        user: process.env.SMTP_USERNAME ? process.env.SMTP_USERNAME : process.env.SMTP_USER_EMAIL,
-        pass: smtpPass,
-      };
-    }
-    transporterMail = createTransport(transporterConfig);
-    await transporterMail.verify();
-    isMailAdapter = true;
-  } catch (err) {
-    isMailAdapter = false;
-    console.log(`Please provide valid SMTP credentials: ${err}`);
-  }
-} else if (process.env.MAILGUN_API_KEY) {
-  try {
-    const mailgun = new Mailgun(formData);
-    mailgunClient = mailgun.client({
-      username: 'api',
-      key: process.env.MAILGUN_API_KEY,
-    });
-    mailgunDomain = process.env.MAILGUN_DOMAIN;
-    isMailAdapter = true;
-  } catch (error) {
-    isMailAdapter = false;
-    console.log('Please provide valid Mailgun credentials');
-  }
-}
+const mailState = await buildMailTransportState({
+  env: process.env,
+  createSmtpTransport: createTransport,
+  createMailgunClient: key => new Mailgun(formData).client({ username: 'api', key }),
+});
+const activeMailTransport = mailState.transport;
 const mailsender = smtpenable ? process.env.SMTP_USER_EMAIL : process.env.MAILGUN_SENDER;
+const mailAdapterSender = buildMailAdapterSender(appName, activeMailTransport, mailsender);
 const masterKeyIps = process.env.MASTER_KEY_IPS
   ? process.env.MASTER_KEY_IPS.split(',')
       .map(ip => ip.trim())
@@ -163,38 +132,22 @@ export const config = {
   },
   sessionLength: sessionLengthSeconds,
   rateLimit: buildParseServerRateLimits(),
-  ...(isMailAdapter === true
-    ? {
-        emailAdapter: {
-          module: 'parse-server-api-mail-adapter',
-          options: {
-            // The email address from which emails are sent.
-            sender: appName + ' <' + mailsender + '>',
-            templates: emailAdapterTemplates,
-            apiCallback: async ({ payload, locale }) => {
-              if (mailgunClient) {
-                const mailgunPayload = ApiPayloadConverter.mailgun(payload);
-                await mailgunClient.messages.create(mailgunDomain, mailgunPayload);
-              } else if (transporterMail) await transporterMail.sendMail(payload);
-            },
-          },
-        },
-      }
-    : {
-        emailAdapter: {
-          module: 'parse-server-api-mail-adapter',
-          options: {
-            sender: appName + ' <dev@localhost>',
-            templates: emailAdapterTemplates,
-            apiCallback: async ({ payload }) => {
-              console.log(
-                '[dev email adapter] Email not sent (no SMTP/Mailgun configured):',
-                payload
-              );
-            },
-          },
-        },
+  emailAdapter: {
+    module: 'parse-server-api-mail-adapter',
+    options: {
+      sender: mailAdapterSender,
+      templates: emailAdapterTemplates,
+      apiCallback: createMailApiCallback({
+        transport: activeMailTransport,
+        sendSmtp: payload => mailState.smtpTransporter.sendMail(payload),
+        sendMailgun: payload =>
+          mailState.mailgunClient.messages.create(
+            mailState.mailgunDomain,
+            ApiPayloadConverter.mailgun(payload)
+          ),
       }),
+    },
+  },
   filesAdapter: fsAdapter,
   auth: { google: { clientId: process.env.GOOGLE_CLIENT_ID }, sso: SSOAuth },
   // for fix Adapter prototype don't match expected prototype

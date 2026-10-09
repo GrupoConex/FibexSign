@@ -2,8 +2,13 @@ import formData from 'form-data';
 import Mailgun from 'mailgun.js';
 import { smtpenable, smtpsecure, updateMailCount } from '../../Utils.js';
 import { createTransport } from 'nodemailer';
+import { isCommsMailEnabled } from './shared/commsMailClient.js';
+import { deliverViaComms, toCommsMessage } from './shared/commsMailDelivery.js';
 async function sendMailProvider(req) {
   const extUserId = req.params?.extUserId || '';
+  if (isCommsMailEnabled()) {
+    return deliverViaComms(toCommsMessage(req.params), { extUserId, label: 'sendmailv3' });
+  }
 
   const mailgunApiKey = process.env.MAILGUN_API_KEY;
   let transporterSMTP;
@@ -85,9 +90,16 @@ async function sendMailProvider(req) {
   }
 }
 
-async function sendmailv3(req) {
+export async function deliverMailv3(req) {
   const nonCustomMail = await sendMailProvider(req);
   return nonCustomMail;
+}
+
+async function sendmailv3(req) {
+  if (!req.user && !req.master) {
+    throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'Invalid session token');
+  }
+  return deliverMailv3(req);
 }
 
 export default sendmailv3;

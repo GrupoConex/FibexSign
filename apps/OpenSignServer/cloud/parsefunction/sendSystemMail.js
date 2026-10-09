@@ -2,8 +2,16 @@ import formData from 'form-data';
 import Mailgun from 'mailgun.js';
 import { smtpenable, smtpsecure, updateMailCount } from '../../Utils.js';
 import { createTransport } from 'nodemailer';
+import { isCommsMailEnabled } from './shared/commsMailClient.js';
+import { deliverViaComms, toCommsMessage } from './shared/commsMailDelivery.js';
 async function sendMailProvider(req) {
   const extUserId = req.params?.extUserId || '';
+  if (isCommsMailEnabled()) {
+    return deliverViaComms(
+      { ...toCommsMessage(req.params), cc: undefined },
+      { extUserId, label: 'sendSystemMail' }
+    );
+  }
 
   const mailgunApiKey = process.env.MAILGUN_API_KEY;
   let transporterSMTP;

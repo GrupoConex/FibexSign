@@ -4,6 +4,8 @@ import formData from 'form-data';
 import Mailgun from 'mailgun.js';
 import { smtpenable, smtpsecure, updateMailCount } from '../../Utils.js';
 import { createTransport } from 'nodemailer';
+import { isCommsMailEnabled } from './shared/commsMailClient.js';
+import { deliverViaComms, toCommsMessage } from './shared/commsMailDelivery.js';
 import axios from 'axios';
 
 function safeUnlink(filePath, label = 'file') {
@@ -15,8 +17,21 @@ function safeUnlink(filePath, label = 'file') {
     }
   }
 }
+async function sendViaComms(params, extUserId) {
+  const result = await deliverViaComms(toCommsMessage(params), {
+    extUserId,
+    label: 'sendMailWithAttachment',
+  });
+  if (result.status === 'success' && params.url) {
+    safeUnlink(params.certificatePath || `./exports/certificate.pdf`, 'certificate');
+  }
+  return result;
+}
 async function sendMailProvider(params) {
   const extUserId = params?.extUserId || '';
+  if (isCommsMailEnabled()) {
+    return sendViaComms(params, extUserId);
+  }
 
   const mailgunApiKey = process.env.MAILGUN_API_KEY;
   let transporterSMTP;

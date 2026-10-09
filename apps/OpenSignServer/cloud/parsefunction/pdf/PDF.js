@@ -19,6 +19,11 @@ import { buildDownloadFilename, parseUploadFile } from '../../../utils/fileUtils
 import sendMailWithAttachment from '../sendMailWithAttachment.js';
 import sendSystemMail from '../sendSystemMail.js';
 import {
+  hasSignerActed,
+  notifyNextSigner,
+  resolveSigningBaseUrl,
+} from '../shared/nextSignerNotification.js';
+import {
   COMPLETION_ACTIVITIES,
   findPlaceholderIndex,
   findPendingPriorSigner,
@@ -534,6 +539,17 @@ async function PDF(req) {
           auditActivity
         );
         sendNotifyMail(_resDoc, signUser, mailProvider, publicUrl);
+        const isFirstSignature = !hasSignerActed(_resDoc.AuditTrail, reqUserId);
+        if (updatedDoc?.message === 'success' && isFirstSignature) {
+          await notifyNextSigner({
+            document: _resDoc,
+            signerObjectId: reqUserId,
+            auditTrail: updatedDoc.AuditTrail,
+            isCompleted: updatedDoc.isCompleted,
+            sendNextMail: req.params.sendNextMail,
+            publicUrl: resolveSigningBaseUrl(req.headers),
+          });
+        }
         saveFileUsage(pdfSize, data.imageUrl, _resDoc?.CreatedBy?.objectId);
         if (updatedDoc && updatedDoc.isCompleted) {
           const hashForDoc = documentHash || updatedDoc?.DocumentHash;

@@ -1,9 +1,11 @@
 import axios from 'axios';
-import { cloudServerUrl, mailTemplate, replaceMailVaribles, serverAppId } from '../../Utils.js';
+import { cloudServerUrl, serverAppId } from '../../Utils.js';
 import { setDocumentCount } from '../../utils/CountUtils.js';
 
 import crypto from 'crypto';
 import sendSystemMail from './sendSystemMail.js';
+import { deliverMailv3 } from './sendMailv3.js';
+import { buildSignerInvitationMail, getPlaceholderRole } from './shared/signerInvitationMail.js';
 
 function chunkArray(arr, size) {
   const out = [];
@@ -29,10 +31,6 @@ async function mapWithConcurrency(items, concurrency, fn) {
   }
   await Promise.all(workers);
   return results;
-}
-
-function toBase64(str) {
-  return Buffer.from(str, 'utf8').toString('base64');
 }
 
 function uuid() {
@@ -96,99 +94,39 @@ async function deductcount(docsCount, extUserId) {
     console.log('batchdoc deductcount error: ', err);
   }
 }
-async function sendMail(document, publicUrl) {
-  const baseUrl = new URL(publicUrl);
-  const timeToCompleteDays = document?.TimeToCompleteDays || 15;
-  const ExpireDate = new Date(document.createdAt);
-  ExpireDate.setDate(ExpireDate.getDate() + timeToCompleteDays);
-  const newDate = ExpireDate;
-  const localExpireDate = newDate.toLocaleDateString('en-US', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-  let signerMail = document.Placeholders?.filter(x => x?.Role !== 'prefill');
-  const senderName = document?.SenderName || document.ExtUserPtr.Name;
-  const senderEmail = document?.SenderMail || document.ExtUserPtr.Email;
-  const from =
-    document?.SenderName || document?.ExtUserPtr?.UseNameAsSender === true
-      ? document.ExtUserPtr.Name
-      : senderEmail;
-
-  if (document.SendinOrder) {
-    const getRole = signer => signer?.SignerRole || signer?.signer_role || signer?.role || 'signer';
-    const firstSignerIndex = signerMail.findIndex(signer => getRole(signer) === 'signer');
-    signerMail = signerMail.filter((signer, idx) => {
-      const role = getRole(signer);
-      return role === 'viewer' || idx === firstSignerIndex;
-    });
-    if (signerMail.length === 0 && document?.Placeholders?.length > 0) {
-      signerMail = document.Placeholders.filter(x => x?.Role !== 'prefill').slice(0, 1);
-    }
+const keepOnlyFirstSignerAndViewers = (document, placeholders) => {
+  const firstSignerIndex = placeholders.findIndex(
+    placeholder => getPlaceholderRole(placeholder) === 'signer'
+  );
+  const selected = placeholders.filter(
+    (placeholder, idx) => getPlaceholderRole(placeholder) === 'viewer' || idx === firstSignerIndex
+  );
+  if (selected.length === 0 && document?.Placeholders?.length > 0) {
+    return document.Placeholders.filter(x => x?.Role !== 'prefill').slice(0, 1);
   }
+  return selected;
+};
 
-  for (let i = 0; i < signerMail.length; i++) {
+const withTenantRequestTemplate = document => {
+  const tenant = document?.ExtUserPtr?.TenantId;
+  return {
+    ...document,
+    RequestBody: tenant?.RequestBody || '',
+    RequestSubject: tenant?.RequestSubject || '',
+  };
+};
+
+export async function sendMail(document, publicUrl) {
+  const participants = (document.Placeholders || []).filter(x => x?.Role !== 'prefill');
+  const recipients = document.SendinOrder
+    ? keepOnlyFirstSignerAndViewers(document, participants)
+    : participants;
+  const mailDocument = withTenantRequestTemplate(document);
+
+  for (const placeholder of recipients) {
     try {
-      let url = `${serverUrl}/functions/sendmailv3`;
-      const headers = {
-        'Content-Type': 'application/json',
-        'X-Parse-Application-Id': appId,
-      };
-      const objectId = signerMail[i]?.signerObjId;
-      const hostUrl = baseUrl.origin;
-      let encodeBase64;
-      let existSigner = {};
-      if (objectId) {
-        existSigner = document?.Signers?.find(user => user.objectId === objectId);
-        encodeBase64 = toBase64(`${document.objectId}/${existSigner?.Email}/${objectId}`);
-      } else {
-        encodeBase64 = toBase64(`${document.objectId}/${signerMail[i].email}`);
-      }
-      let signPdf = `${hostUrl}/login/${encodeBase64}`;
-      const orgName = document.ExtUserPtr.Company ? document.ExtUserPtr.Company : '';
-      const senderObj = document?.ExtUserPtr;
-      let mailBody = senderObj?.TenantId?.RequestBody || '';
-      let mailSubject = senderObj?.TenantId?.RequestSubject || '';
-      let replaceVar;
-      if (mailBody && mailSubject) {
-        const replacedRequestBody = mailBody.replace(/"/g, "'");
-        const htmlReqBody =
-          "<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8' /></head><body>" +
-          replacedRequestBody +
-          '</body></html>';
-        const variables = {
-          document_title: document?.Name,
-          note: document?.Note || '',
-          sender_name: senderName,
-          sender_mail: senderEmail,
-          sender_phone: senderObj?.Phone || '',
-          receiver_name: existSigner?.Name || '',
-          receiver_email: existSigner?.Email || signerMail[i].email,
-          receiver_phone: existSigner?.Phone || '',
-          expiry_date: localExpireDate,
-          company_name: orgName,
-          signing_url: signPdf,
-        };
-        replaceVar = replaceMailVaribles(mailSubject, htmlReqBody, variables);
-      }
-      const mailparam = {
-        note: document?.Note || '',
-        senderName: senderName,
-        senderMail: senderEmail,
-        title: document.Name,
-        organization: orgName,
-        localExpireDate: localExpireDate,
-        signingUrl: signPdf,
-      };
-      let params = {
-        extUserId: document.ExtUserPtr.objectId,
-        recipient: existSigner?.Email || signerMail[i].email,
-        subject: replaceVar?.subject ? replaceVar?.subject : mailTemplate(mailparam).subject,
-        from: from,
-        replyto: senderEmail || '',
-        html: replaceVar?.body ? replaceVar?.body : mailTemplate(mailparam).body,
-      };
-      await axios.post(url, params, { headers: headers });
+      const params = buildSignerInvitationMail({ document: mailDocument, placeholder, publicUrl });
+      await deliverMailv3({ params });
     } catch (error) {
       console.log('batchdoc sendmail error: ', error);
     }

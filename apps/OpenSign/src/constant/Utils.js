@@ -913,7 +913,8 @@ export const signPdfFun = async (
   signerObjectId,
   objectId,
   widgets,
-  activity
+  activity,
+  sendNextMail = true
 ) => {
   let isCustomCompletionMail = false;
   try {
@@ -965,7 +966,8 @@ export const signPdfFun = async (
       userId: signerObjectId,
       isCustomCompletionMail: isCustomCompletionMail,
       signature: suffixbase64,
-      activity: activity || "Signed"
+      activity: activity || "Signed",
+      sendNextMail: sendNextMail !== false
     };
     const resSignPdf = await Parse.Cloud.run("signPdf", params);
     if (resSignPdf) {
@@ -4622,7 +4624,7 @@ export const sendEmailToSigners = async (
       const headers = {
         "Content-Type": "application/json",
         "X-Parse-Application-Id": localStorage.getItem("parseAppId"),
-        sessionToken: localStorage.getItem("accesstoken")
+        "X-Parse-Session-Token": localStorage.getItem("accesstoken")
       };
       const objectId = signerMail[i].objectId;
       const hostUrl = window.location.origin;
