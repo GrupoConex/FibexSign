@@ -239,7 +239,13 @@ app.get('/', function (req, res) {
 });
 
 if (!process.env.TESTING) {
-  await runDbMigrations();
+  await runDbMigrations().catch(error => {
+    console.error(
+      'FATAL: required database migration failed, refusing to start the server:',
+      error
+    );
+    process.exit(1);
+  });
   const port = process.env.PORT || 8080;
   const httpServer = http.createServer(app);
   // Set the Keep-Alive and headers timeout to 100 seconds

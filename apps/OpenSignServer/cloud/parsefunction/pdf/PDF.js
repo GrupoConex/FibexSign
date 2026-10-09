@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import axios from 'axios';
 import { PDFDocument } from 'pdf-lib';
 import {
@@ -385,8 +385,10 @@ async function processPdf(_resDoc, PdfBuffer, reason) {
  */
 async function PDF(req) {
   const docId = req.params.docId;
-  const randomNumber = Math.floor(Math.random() * 5000);
-  const pfxname = `keystore_${randomNumber}.pfx`;
+  const uniqueSuffix = randomUUID();
+  const pfxname = `keystore_${uniqueSuffix}.pfx`;
+  let signedFilePath;
+  let certificateMailStarted = false;
   try {
     const userIP = req.headers['x-real-ip']; // client IPaddress
     const reqUserId = req.params.userId;
@@ -462,7 +464,7 @@ async function PDF(req) {
       }
       const pfx = { name: pfxname, passphrase: passphrase };
       const P12Buffer = Buffer.from(pfxFile, 'base64');
-      fs.writeFileSync(pfxname, P12Buffer);
+      fs.writeFileSync(pfxname, P12Buffer, { mode: 0o600 });
       const UserPtr = { __type: 'Pointer', className: className, objectId: signUser.objectId };
       const obj = { UserPtr: UserPtr, SignedUrl: '', Activity: auditActivity, ipAddress: userIP };
       let updateAuditTrail;
@@ -491,9 +493,9 @@ async function PDF(req) {
       // below regex is used to replace all word with "_" except A to Z, a to z, numbers
       const docName = _resDoc?.Name?.replace(/[^a-zA-Z0-9._-]/g, '_')?.toLowerCase();
       const filename = docName?.length > 100 ? docName?.slice(0, 100) : docName;
-      const name = `${filename}_${randomNumber}.pdf`;
+      const name = `${filename}_${uniqueSuffix}.pdf`;
       let filePath = `./exports/${name}`;
-      let signedFilePath = `./exports/signed_${name}`;
+      signedFilePath = `./exports/signed_${name}`;
       let pdfSize = PdfBuffer.length;
       let documentHash;
       if (isCompleted) {
@@ -557,12 +559,14 @@ async function PDF(req) {
           if (hashForDoc) {
             doc.DocumentHash = hashForDoc;
           }
-          sendMailsaveCertifcate(doc, pfx, isCustomMail, mailProvider, `signed_${name}`);
-        } else {
-          unlinkFile(pfxname);
+          certificateMailStarted = true;
+          runCertificateMail({
+            send: () =>
+              sendMailsaveCertifcate(doc, pfx, isCustomMail, mailProvider, `signed_${name}`),
+            pfxPath: pfxname,
+            documentId: doc.objectId,
+          });
         }
-        // below code is used to remove exported signed pdf file from exports folder
-        unlinkFile(signedFilePath);
         // console.log(`New Signed PDF created called: ${filePath}`);
         if (updatedDoc.message === 'success') {
           return { status: 'success', data: data.imageUrl };
@@ -585,8 +589,20 @@ async function PDF(req) {
     } catch (err) {
       console.log('err in saving debugginglog', err);
     }
-    unlinkFile(pfxname);
     throw err;
+  } finally {
+    unlinkFile(signedFilePath);
+    if (!certificateMailStarted) unlinkFile(pfxname);
   }
 }
+export async function runCertificateMail({ send, pfxPath, documentId }) {
+  try {
+    await send();
+  } catch (err) {
+    console.error(`Certificate mail failed for document ${documentId}`, err);
+  } finally {
+    unlinkFile(pfxPath);
+  }
+}
+
 export default PDF;

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { google } from 'googleapis';
 import fs from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import https from 'https';
 const clientId = process.env.GOOGLE_CLIENT_ID;
 const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -183,6 +184,14 @@ const makeEmail = async (
   const encodedMail = Buffer.from(str).toString('base64').replace(/\+/g, '-').replace(/\//g, '_');
   return encodedMail;
 };
+const removeTemporaryFile = path => {
+  try {
+    fs.rmSync(path, { force: true });
+  } catch (err) {
+    console.log('sendMailGmailProvider unlink pdf error');
+  }
+};
+
 export default async function sendMailGmailProvider(_extRes, template) {
   const {
     sender,
@@ -204,13 +213,12 @@ export default async function sendMailGmailProvider(_extRes, template) {
     // generate access token
     const access_token = await refreshAccessToken(refresh_token);
 
+    const testPdf = `test_${randomUUID()}.pdf`;
     try {
       // Construct email message
       const displayName = sender || _extRes.Email || 'me';
       const from = await getGmail(access_token, displayName);
       const to = receiver;
-      const randomNumber = Math.floor(Math.random() * 5000);
-      const testPdf = `test_${randomNumber}.pdf`;
       const email = await makeEmail(
         to,
         from,
@@ -241,18 +249,13 @@ export default async function sendMailGmailProvider(_extRes, template) {
           console.log('Err in unlink certificate sendmailgmail provider');
         }
       }
-      if (fs.existsSync(testPdf)) {
-        try {
-          fs.unlinkSync(testPdf);
-        } catch (err) {
-          console.log('sendMailGmailProvider unlink pdf error');
-        }
-      }
       return { code: 200, message: 'Email sent successfully' };
     } catch (error) {
       const message = error?.response?.data || error?.message || 'Unknown error';
       console.error('Error sending email:', message);
       return { code: 500, message: 'Failed to send email ' + error };
+    } finally {
+      removeTemporaryFile(testPdf);
     }
   }
 }

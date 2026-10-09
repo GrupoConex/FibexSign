@@ -1,26 +1,22 @@
 import { appName } from '../../../Utils.js';
 import sendSystemMail from '../../parsefunction/sendSystemMail.js';
+import { OTP_LENGTH, OTP_TTL_MS, buildOtpKey } from '../../parsefunction/shared/otpPolicy.js';
 
-// Constants (adjust to your preference)
-export const OTP_LENGTH = 6;
-export const OTP_EXPIRES_MIN = 10; // OTP validity in minutes
-export const RESEND_COOLDOWN_SEC = 30; // Cooldown between OTP sends
-export const MAX_ATTEMPTS = 5; // Max allowed wrong attempts
+export { OTP_LENGTH };
+export const OTP_EXPIRES_MIN = OTP_TTL_MS / 60000;
+export const RESEND_COOLDOWN_SEC = 30;
 
-export function generateOtp(len = OTP_LENGTH) {
-  // 6-digit numeric OTP (000000–999999, padded)
-  const n = Math.floor(Math.random() * Math.pow(10, len));
-  return String(n).padStart(len, '0');
-}
+const DELIVERED_STATUS = 'success';
 
-export async function sendDeleteOtpEmail(extUser, otp) {
-  const _extUser = extUser && JSON.parse(JSON.stringify(extUser));
-  const params = {
-    extUserId: extUser.id,
-    from: appName,
-    recipient: extUser?.get('Email'),
-    subject: 'OTP for Deletion account request',
-    html: `
+export const DELETE_ACCOUNT_PURPOSE = 'delete-account';
+
+export const deleteOtpKey = email => buildOtpKey({ email, purpose: DELETE_ACCOUNT_PURPOSE });
+
+export const isMailDelivered = delivery => delivery?.status === DELIVERED_STATUS;
+
+export const msUntil = (nowMs, futureMs) => Math.max(0, futureMs - nowMs);
+
+const buildDeleteOtpHtml = otp => `
 <html lang="en">
   <body style="margin:0;padding:0;background:#f6f7fb;font-family:Arial,Helvetica,sans-serif;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7fb;">
@@ -37,7 +33,6 @@ export async function sendDeleteOtpEmail(extUser, otp) {
                 <p style="margin:8px 0 0 0;font-size:13px;color:#475569;">
                   This code expires in <strong>${OTP_EXPIRES_MIN}</strong> minutes.
                 </p>
-
                 <hr style="border:none;border-top:1px solid #e9ecf1;margin:18px 0;">
                 <p style="margin:0;font-size:12px;color:#64748b;">
                   If you didn’t request this code, you can ignore this email.
@@ -45,7 +40,6 @@ export async function sendDeleteOtpEmail(extUser, otp) {
               </td>
             </tr>
           </table>
-
           <div style="font-size:11px;color:#94a3b8;margin-top:12px;">
             &copy; ${new Date().getFullYear()} ${appName}. All rights reserved.
           </div>
@@ -54,11 +48,15 @@ export async function sendDeleteOtpEmail(extUser, otp) {
     </table>
   </body>
 </html>
-`,
-  };
-  return sendSystemMail({ params });
-}
+`;
 
-export function msUntil(nowMs, futureMs) {
-  return Math.max(0, (futureMs || 0) - nowMs);
-}
+export const sendDeleteOtpEmail = (extUser, otp) =>
+  sendSystemMail({
+    params: {
+      extUserId: extUser.id,
+      from: appName,
+      recipient: extUser.get('Email'),
+      subject: 'OTP for Deletion account request',
+      html: buildDeleteOtpHtml(otp),
+    },
+  });
