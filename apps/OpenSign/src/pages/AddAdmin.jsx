@@ -24,6 +24,8 @@ import { notify } from "../utils";
 import AuthLayout from "../components/auth/AuthLayout";
 import Icon from "../primitives/Icon";
 import OtpCodeField from "../components/auth/OtpCodeField";
+import OtpResendButton from "../components/auth/OtpResendButton";
+import { useOtpResendCooldown } from "../hook/useOtpResendCooldown";
 import {
   isOtpFormatValid,
   isOtpInvalidError,
@@ -56,7 +58,7 @@ const AddAdmin = () => {
   const [errors, setErrors] = useState({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isOtpSent, setIsOtpSent] = useState(false);
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [otpNoticeKey, setOtpNoticeKey] = useState("");
   const [otp, setOtp] = useState("");
   const [otpErrorKey, setOtpErrorKey] = useState("");
   const { lengthValid, caseDigitValid, specialCharValid } =
@@ -141,6 +143,8 @@ const AddAdmin = () => {
   };
 
   const resetOtpStep = () => {
+    resetOtpCooldown();
+    setOtpNoticeKey("");
     setIsOtpSent(false);
     setOtp("");
     setOtpErrorKey("");
@@ -148,19 +152,37 @@ const AddAdmin = () => {
 
   const handleEmailChange = (value) => {
     if (isOtpSent) resetOtpStep();
+    else resetOtpCooldown();
     updateField("email", setEmail, value);
   };
 
-  const sendVerificationCode = async () => {
-    setIsSendingOtp(true);
-    const isSent = await handleSendOTP(email);
-    setIsSendingOtp(false);
-    if (isSent) {
-      setOtp("");
-      setOtpErrorKey("");
-      setIsOtpSent(true);
+  const deliverOtp = async ({ isStale }) => {
+    setOtpNoticeKey("");
+    try {
+      const isSent = await handleSendOTP(email);
+      if (isStale()) return false;
+      if (isSent) {
+        setOtp("");
+        setOtpErrorKey("");
+        setIsOtpSent(true);
+        setOtpNoticeKey(
+          isOtpSent ? "otp-resent-to-email" : "otp-sent-to-email"
+        );
+      }
+      return isSent;
+    } catch (error) {
+      if (!isStale()) notify.error(t("something-went-wrong-mssg"));
+      return false;
     }
   };
+
+  const {
+    send: sendVerificationCode,
+    reset: resetOtpCooldown,
+    isSending: isSendingOtp,
+    isResendDisabled,
+    secondsLeft: resendSecondsLeft
+  } = useOtpResendCooldown(deliverOtp);
 
   const handleOtpChange = (value) => {
     setOtp(value);
@@ -600,25 +622,29 @@ const AddAdmin = () => {
                       message={errors.isAuthorize && t(errors.isAuthorize)}
                     />
                   </div>
+                  <p
+                    role="status"
+                    aria-live="polite"
+                    className="text-xs text-base-content/80 empty:sr-only"
+                  >
+                    {otpNoticeKey ? t(otpNoticeKey, { email }) : null}
+                  </p>
                   {isOtpSent && (
                     <div className="space-y-2">
-                      <p className="text-xs text-base-content/80">
-                        {t("otp-sent-to-email", { email })}
-                      </p>
                       <OtpCodeField
                         value={otp}
                         onChange={handleOtpChange}
                         errorKey={otpErrorKey}
                         autoFocus
                       />
-                      <button
-                        type="button"
+                      <OtpResendButton
                         className="op-btn op-btn-ghost op-btn-sm"
                         onClick={sendVerificationCode}
-                        disabled={isSendingOtp}
-                      >
-                        {t("resend")}
-                      </button>
+                        isDisabled={isResendDisabled}
+                        isSending={isSendingOtp}
+                        secondsLeft={resendSecondsLeft}
+                        returnFocusTo={() => document.getElementById("otp")}
+                      />
                     </div>
                   )}
                 </div>

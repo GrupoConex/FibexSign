@@ -14,6 +14,8 @@ import { getSecureUrl, handleSendOTP } from "../constant/Utils";
 import { OTP_INPUT_PATTERN, OTP_LENGTH } from "../utils/otpPolicy";
 import ModalUi from "../primitives/ModalUi";
 import Loader from "../primitives/Loader";
+import OtpResendButton from "../components/auth/OtpResendButton";
+import { useOtpResendCooldown } from "../hook/useOtpResendCooldown";
 import { useTranslation } from "react-i18next";
 import { ShieldCheck, Camera } from "lucide-react";
 import PersonalInfoCard from "../components/profile/PersonalInfoCard";
@@ -102,6 +104,22 @@ function UserProfile() {
   const [isDelLoader, setIsDelLoader] = useState(false);
   const avatarInputRef = useRef(null);
   const otpInputRef = useRef(null);
+  const deliverOtp = async () => {
+    try {
+      const isOtpSent = await handleSendOTP(Parse.User.current()?.getEmail());
+      if (isOtpSent) notify.success(t("otp-sent-alert"));
+      return isOtpSent;
+    } catch (error) {
+      notify.error(t("something-went-wrong-mssg"));
+      return false;
+    }
+  };
+  const {
+    send: sendOtpCode,
+    isSending,
+    isResendDisabled,
+    secondsLeft: resendSecondsLeft
+  } = useOtpResendCooldown(deliverOtp);
   const deleteCancelBtnRef = useRef(null);
   const uploadGenerationRef = useRef(0);
 
@@ -321,7 +339,7 @@ function UserProfile() {
 
   const handleVerifyBtn = async () => {
     setIsVerifyModal(true);
-    await handleSendOTP(Parse.User.current().getEmail());
+    await sendOtpCode();
   };
   const handleCloseVerifyModal = async () => {
     setIsVerifyModal(false);
@@ -347,15 +365,6 @@ function UserProfile() {
       notify.error(error.message);
     } finally {
       setOtpLoader(false);
-    }
-  };
-  const handleResend = async (e) => {
-    e.preventDefault();
-    setOtpLoader(true);
-    const isOtpSent = await handleSendOTP(Parse.User.current().getEmail());
-    setOtpLoader(false);
-    if (isOtpSent) {
-      notify.success(t("otp-sent-alert"));
     }
   };
 
@@ -658,13 +667,14 @@ function UserProfile() {
                     <button type="submit" className="op-btn op-btn-primary">
                       {t("verify")}
                     </button>
-                    <button
-                      type="button"
+                    <OtpResendButton
                       className="op-btn op-btn-secondary"
-                      onClick={(e) => handleResend(e)}
-                    >
-                      {t("resend")}
-                    </button>
+                      onClick={sendOtpCode}
+                      isDisabled={isResendDisabled}
+                      isSending={isSending}
+                      secondsLeft={resendSecondsLeft}
+                      returnFocusTo={() => otpInputRef.current}
+                    />
                   </div>
                 </form>
               )}

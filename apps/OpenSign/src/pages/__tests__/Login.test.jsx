@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import Login from "../Login";
@@ -7,12 +7,13 @@ import Login from "../Login";
 const cloudRun = vi.fn();
 const notifyError = vi.fn();
 const notifyWarning = vi.fn();
+const notifySuccess = vi.fn();
 const sendOtp = vi.fn();
 
 vi.mock("../../utils", async (importOriginal) => ({
   ...(await importOriginal()),
   notify: {
-    success: vi.fn(),
+    success: (...args) => notifySuccess(...args),
     error: (...args) => notifyError(...args),
     warning: (...args) => notifyWarning(...args),
     info: vi.fn(),
@@ -23,7 +24,8 @@ vi.mock("../../utils", async (importOriginal) => ({
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal()),
   useTranslation: () => ({
-    t: (key) => key,
+    t: (key, options) =>
+      options?.seconds === undefined ? key : `${key}:${options.seconds}`,
     i18n: { language: "en", changeLanguage: () => Promise.resolve() }
   })
 }));
@@ -300,6 +302,8 @@ describe("Login additional information submission", () => {
   });
 });
 
+const OTP_COOLDOWN_MS = 60000;
+
 describe("Login email verification step", () => {
   const VERIFIED_USER = { sessionToken: "session-token", email: "a@b.co" };
 
@@ -330,8 +334,19 @@ describe("Login email verification step", () => {
     notifyError.mockReset();
     sendOtp.mockReset();
     sendOtp.mockResolvedValue(true);
+    notifySuccess.mockReset();
     localStorage.clear();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
   });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const endCooldown = () =>
+    act(() => {
+      vi.advanceTimersByTime(OTP_COOLDOWN_MS);
+    });
 
   it("switches to the otp step and sends the code when the server answers 205", async () => {
     requireVerification();
@@ -431,10 +446,242 @@ describe("Login email verification step", () => {
     requireVerification();
     await reachOtpStep();
     sendOtp.mockClear();
+    endCooldown();
 
     await userEvent.click(screen.getByRole("button", { name: "resend" }));
 
     await waitFor(() => expect(sendOtp).toHaveBeenCalledWith("a@b.co"));
+  });
+
+  it("confirms the first send in a persistent polite status region without a toast", async () => {
+    requireVerification();
+
+    await reachOtpStep();
+
+    const status = await screen.findByRole("status");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveTextContent("otp-sent-to-email");
+    expect(notifySuccess).not.toHaveBeenCalled();
+  });
+
+  it("keeps the status region in the accessibility tree when it is empty", async () => {
+    sendOtp.mockResolvedValue(false);
+    requireVerification();
+
+    await reachOtpStep();
+
+    const status = screen.getByRole("status");
+    expect(status).toHaveClass("empty:sr-only");
+    expect(status).not.toHaveClass("empty:hidden");
+  });
+
+  it("empties the notice while resending and then announces the resent text", async () => {
+    requireVerification();
+    await reachOtpStep();
+    endCooldown();
+    let finishResend;
+    sendOtp.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishResend = resolve;
+      })
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "resend" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toBeEmptyDOMElement()
+    );
+    await act(async () => {
+      finishResend(true);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("otp-resent-to-email");
+  });
+
+  it("keeps the notice empty when a resend is rejected", async () => {
+    requireVerification();
+    await reachOtpStep();
+    endCooldown();
+    sendOtp.mockResolvedValue(false);
+
+    await userEvent.click(screen.getByRole("button", { name: "resend" }));
+
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+  });
+
+  it("uses the first send text again after going back and re-entering", async () => {
+    requireVerification();
+    await reachOtpStep();
+    await userEvent.click(
+      screen.getByRole("button", { name: "back-to-login" })
+    );
+    await userEvent.type(await screen.findByLabelText("password"), "secret");
+    await submit();
+
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("otp-sent-to-email")
+    );
+  });
+
+  it("keeps an empty status region when the first send is rejected", async () => {
+    sendOtp.mockResolvedValue(false);
+    requireVerification();
+
+    await reachOtpStep();
+
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+  });
+
+  it("exposes the full cooldown to screen readers once", async () => {
+    requireVerification();
+
+    await reachOtpStep();
+
+    expect(
+      await screen.findByText("resend-available-in-seconds:60")
+    ).toHaveClass("sr-only");
+  });
+
+  it("returns the focus to the code input after a resend", async () => {
+    requireVerification();
+    await reachOtpStep();
+    endCooldown();
+
+    await userEvent.click(screen.getByRole("button", { name: "resend" }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(/^verification-code/)).toHaveFocus()
+    );
+  });
+
+  it("sends again after going back and re-entering while the first send is in flight", async () => {
+    let finishFirst;
+    sendOtp.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishFirst = resolve;
+      })
+    );
+    requireVerification();
+    await reachOtpStep();
+    await userEvent.click(
+      screen.getByRole("button", { name: "back-to-login" })
+    );
+    await userEvent.type(await screen.findByLabelText("password"), "secret");
+    await submit();
+    await screen.findByLabelText(/^verification-code/);
+
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "otp-sent-to-email"
+    );
+    await act(async () => {
+      finishFirst(true);
+    });
+    expect(
+      screen.getByRole("button", { name: "resend-in-seconds:60" })
+    ).toBeDisabled();
+  });
+
+  it("does not apply a stale send result after going back", async () => {
+    let finishFirst;
+    sendOtp.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishFirst = resolve;
+      })
+    );
+    requireVerification();
+    await reachOtpStep();
+    await userEvent.click(
+      screen.getByRole("button", { name: "back-to-login" })
+    );
+
+    await act(async () => {
+      finishFirst(true);
+    });
+
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByText("otp-sent-to-email")).toBeNull();
+  });
+
+  it("starts the cooldown after the first send and disables resend with a countdown", async () => {
+    requireVerification();
+
+    await reachOtpStep();
+
+    const resend = await screen.findByRole("button", {
+      name: "resend-in-seconds:60"
+    });
+    expect(resend).toBeDisabled();
+  });
+
+  it("counts down and re-enables resend when the cooldown ends", async () => {
+    requireVerification();
+    await reachOtpStep();
+
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(
+      await screen.findByRole("button", { name: "resend-in-seconds:55" })
+    ).toBeDisabled();
+    endCooldown();
+
+    expect(screen.getByRole("button", { name: "resend" })).toBeEnabled();
+  });
+
+  it("confirms every resend and restarts the cooldown", async () => {
+    requireVerification();
+    await reachOtpStep();
+    notifySuccess.mockClear();
+    endCooldown();
+
+    await userEvent.click(screen.getByRole("button", { name: "resend" }));
+
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(2));
+    expect(notifySuccess).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole("button", { name: "resend-in-seconds:60" })
+    ).toBeDisabled();
+  });
+
+  it("does not start a cooldown nor confirm when the first send is rejected", async () => {
+    sendOtp.mockResolvedValue(false);
+    requireVerification();
+
+    await reachOtpStep();
+
+    expect(screen.getByRole("button", { name: "resend" })).toBeEnabled();
+    expect(notifySuccess).not.toHaveBeenCalled();
+    expect(screen.getByText("otp-send-failed-hint")).toBeInTheDocument();
+    expect(screen.queryByText("otp-sent-to-email")).toBeNull();
+  });
+
+  it("does not start a cooldown when a resend is rejected", async () => {
+    requireVerification();
+    await reachOtpStep();
+    endCooldown();
+    sendOtp.mockResolvedValue(false);
+    notifySuccess.mockClear();
+
+    await userEvent.click(screen.getByRole("button", { name: "resend" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("otp-send-failed-hint")).toBeInTheDocument()
+    );
+    expect(screen.getByRole("button", { name: "resend" })).toBeEnabled();
+    expect(notifySuccess).not.toHaveBeenCalled();
+  });
+
+  it("sends only once on a double click", async () => {
+    requireVerification();
+    await reachOtpStep();
+    endCooldown();
+    sendOtp.mockClear();
+    const resend = screen.getByRole("button", { name: "resend" });
+
+    await userEvent.dblClick(resend);
+
+    expect(sendOtp).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the step open with a resend option when the first send is rejected", async () => {
@@ -497,6 +744,7 @@ describe("Login email verification step", () => {
     requireVerification();
     await reachOtpStep();
     let finishSend;
+    endCooldown();
     sendOtp.mockClear();
     sendOtp.mockReturnValue(
       new Promise((resolve) => {
@@ -511,7 +759,10 @@ describe("Login email verification step", () => {
     expect(sendOtp).toHaveBeenCalledTimes(1);
     expect(resend).toBeDisabled();
     finishSend(true);
-    await waitFor(() => expect(resend).not.toBeDisabled());
+    await waitFor(() =>
+      expect(resend).toHaveTextContent("resend-in-seconds:60")
+    );
+    expect(resend).toBeDisabled();
   });
 
   it("maps a 429 during verification like the normal login", async () => {

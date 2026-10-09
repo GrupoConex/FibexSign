@@ -17,7 +17,11 @@ const SPANISH_TEXTS = {
     "Debes verificar tu correo. Ingresa el código que enviamos a {{email}}.",
   "invalid-credentials-or-otp": "Credenciales o código inválidos.",
   "otp-send-failed-hint":
-    "No pudimos enviar el código. Pulsa Reenviar para intentarlo de nuevo."
+    "No pudimos enviar el código. Pulsa Reenviar para intentarlo de nuevo.",
+  "resend-in-seconds": "Reenviar en {{seconds}} s",
+  "otp-resent-to-email": "Te reenviamos un código nuevo a {{email}}.",
+  "resend-available-in-seconds":
+    "Podrás reenviar el código en {{seconds}} segundos"
 };
 const KEYS = Object.keys(SPANISH_TEXTS);
 
