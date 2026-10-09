@@ -8,15 +8,11 @@ services:
       - "8080:8080"
     depends_on:
       - mongo
-      - mailhog
     env_file: .env
     environment:
       - NODE_ENV=production
       - SERVER_URL=${HOST_URL:-https://localhost:3001}/api/app
       - PUBLIC_URL=${HOST_URL:-https://localhost:3001}
-      - SMTP_ENABLE=true
-      - SMTP_HOST=mailhog
-      - SMTP_PORT=1025
     networks:
       - app-network
   mongo:
@@ -30,6 +26,7 @@ services:
       - app-network
   mailhog:
     image: mailhog/mailhog:latest
+    profiles: ["dev"]
     container_name: mailhog-container
     ports:
       - "8025:8025"

@@ -8,13 +8,13 @@ El `Makefile` de la raíz es quien copia el archivo a los lugares donde cada pro
 
 ```make
 build:
-	cp .env.local_dev .env
+	sed 's/^SMTP_HOST=.*/SMTP_HOST=mailhog/' .env.local_dev > .env
 	cd apps/OpenSign && cp ../../.env.local_dev .env && npm install && npm run build
-	HOST_URL=${HOST_URL} docker compose up --build --force-recreate
+	HOST_URL=${HOST_URL} docker compose --profile dev up --build --force-recreate
 
 run:
-	cp .env.local_dev .env
-	docker compose up -d
+	sed 's/^SMTP_HOST=.*/SMTP_HOST=mailhog/' .env.local_dev > .env
+	docker compose --profile dev up -d
 ```
 
 Esto deja:
@@ -85,6 +85,8 @@ Esto deja:
 | `SMTP_PORT` | Backend | No | `465` | Si no está seteado, `index.js` usa `465`. Además, `smtpsecure` (`Utils.js`) se calcula como `true` salvo que `SMTP_PORT` esté seteado y sea distinto de `'465'` — es decir, TLS implícito por defecto. |
 | `SMTP_USER_EMAIL` | Backend | Condicional | — | Usado como remitente (`mailsender`) y como usuario de auth SMTP si `SMTP_USERNAME` (ver sección de variables ausentes) no está definida. |
 | `SMTP_PASS` | Backend | Condicional | — | Password SMTP. Solo se agrega bloque `auth` al transporter si **tanto** usuario como password están presentes. |
+
+`docker-compose.yml` no sobreescribe ninguna variable `SMTP_*`. Para usar MailHog en local con Docker, setear en el `.env` `SMTP_ENABLE=true`, `SMTP_HOST=mailhog`, `SMTP_PORT=1025`, dejar vacías `COMMS_BASE_URL`/`COMMS_API_KEY` y levantar con `docker compose --profile dev up` (ver [`./deployment-guide.md`](./deployment-guide.md#mailhog-local-perfil-dev)).
 
 ### Reglas de autorización de `sendmailv3`
 

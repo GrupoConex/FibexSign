@@ -9,7 +9,7 @@ Monorepo **pnpm workspaces + Turborepo**, con dos aplicaciones:
 - **`apps/OpenSign`** (paquete npm `open_sign`, frontend) — React 19 + Vite, Redux Toolkit, MUI + Radix Themes + DaisyUI + Tailwind (clases temáticas `op-*`), i18next (7 locales: `de`, `en`, `es`, `fr`, `hi`, `it`, `kr`), `pdf-lib` + `react-pdf` + `pkijs` para manejo de PDF/certificados en cliente, `parse` (Parse JS SDK) para hablar con el backend, íconos vía `lucide-react`, tests con Vitest.
 - **`apps/OpenSignServer`** (paquete npm `open_sign_server`, backend, ESM) — Express 5 + Parse Server 8 sobre MongoDB, adaptadores de storage S3/DigitalOcean Spaces o filesystem local, envío de mail vía Mailgun o SMTP, firma de documentos con certificado PFX/P12 (`@signpdf/*`), tests con Jasmine + `mongodb-runner`.
 - **Orquestación**: Turborepo (`turbo.json`) coordina las tareas `dev`, `build` y `lint` de ambos paquetes.
-- **Infraestructura local**: Docker Compose (`server`, `mongo`, `client`, `caddy` como reverse proxy TLS).
+- **Infraestructura local**: Docker Compose (`server`, `mongo`, `client`, `caddy` como reverse proxy TLS; `mailhog` opcional con el perfil `dev`, ver [docs/deployment-guide.md](docs/deployment-guide.md#mailhog-local-perfil-dev)).
 
 ## Requisitos de entorno
 
@@ -38,7 +38,7 @@ cp .env.local_dev apps/OpenSign/.env
 pnpm dev
 ```
 
-`pnpm dev` requiere MongoDB accesible en la URI configurada (`MONGODB_URI` / `DATABASE_URI`). Para levantar Mongo con Docker sin construir las imágenes de la app, ver el target `run` del `Makefile` (`docker compose up -d`); para un build completo del stack (frontend nativo + `docker compose up --build`), ver el target `build` del `Makefile`.
+`pnpm dev` requiere MongoDB accesible en la URI configurada (`MONGODB_URI` / `DATABASE_URI`). Para levantar Mongo con Docker sin construir las imágenes de la app, ver el target `run` del `Makefile` (`docker compose --profile dev up -d`, incluye MailHog); para un build completo del stack (frontend nativo + `docker compose --profile dev up --build`), ver el target `build` del `Makefile`.
 
 ## Comandos esenciales
 
