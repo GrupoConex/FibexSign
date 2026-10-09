@@ -41,6 +41,7 @@ import {
   base64ToArrayBuffer
 } from "../constant/Utils";
 import { useParams } from "react-router";
+import { useOtpResendCooldown } from "../hook/useOtpResendCooldown";
 import Tour from "../primitives/Tour";
 import Signedby from "../components/pdf/Signedby";
 import Header from "../components/pdf/PdfHeader";
@@ -83,6 +84,22 @@ import { appInfo } from "../constant/appinfo";
 //For signYourself inProgress section signer can add sign and complete doc sign.
 function SignYourSelf() {
   const { t } = useTranslation();
+  const deliverOtp = async () => {
+    try {
+      const isOtpSent = await handleSendOTP(Parse.User.current()?.getEmail());
+      if (isOtpSent) notify.success(t("otp-sent-alert"));
+      return isOtpSent;
+    } catch (error) {
+      notify.error(t("something-went-wrong-mssg"));
+      return false;
+    }
+  };
+  const {
+    send: sendOtpCode,
+    isSending,
+    isResendDisabled,
+    secondsLeft: resendSecondsLeft
+  } = useOtpResendCooldown(deliverOtp);
   const { docId } = useParams();
   const dispatch = useDispatch();
   const windowSize = useWindowSize();
@@ -511,16 +528,6 @@ function SignYourSelf() {
     setCurrWidgetsDetails({ ...dropObj, pageNumber: pageNumber });
   };
 
-  //`handleResend` function is used to resend otp for email verification
-  const handleResend = async (e) => {
-    e.preventDefault();
-    setOtpLoader(true);
-    const isOtpSent = await handleSendOTP(Parse.User.current().getEmail());
-    setOtpLoader(false);
-    if (isOtpSent) {
-      notify.success(t("otp-sent-alert"));
-    }
-  };
   //`handleVerifyEmail` function is used to verify email with otp
   const handleVerifyEmail = async (e) => {
     e.preventDefault();
@@ -549,7 +556,7 @@ function SignYourSelf() {
   //`handleVerifyBtn` function is used to send otp on user mail
   const handleVerifyBtn = async () => {
     setIsVerifyModal(true);
-    await handleSendOTP(Parse.User.current().getEmail());
+    await sendOtpCode();
   };
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -1341,7 +1348,10 @@ function SignYourSelf() {
                 otp={otp}
                 otpLoader={otpLoader}
                 handleVerifyBtn={handleVerifyBtn}
-                handleResend={handleResend}
+                handleResend={sendOtpCode}
+                isSending={isSending}
+                isResendDisabled={isResendDisabled}
+                resendSecondsLeft={resendSecondsLeft}
               />
             )}
             {/* this component used for UI interaction and show their functionality */}

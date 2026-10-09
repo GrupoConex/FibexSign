@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Parse from "parse";
 import { useDispatch } from "react-redux";
 import axios from "axios";
@@ -34,6 +34,8 @@ import {
   isOtpResendLimitError
 } from "../utils/otpPolicy";
 import { useIsDarkTheme } from "../hook/useIsDarkTheme";
+import { useOtpResendCooldown } from "../hook/useOtpResendCooldown";
+import OtpResendButton from "../components/auth/OtpResendButton";
 import logoPositivo from "../assets/images/Fibex-logo-positivo.svg";
 import logoNegativo from "../assets/images/Fibex-logo-negativo.svg";
 
@@ -66,8 +68,9 @@ function Login() {
   const [isOtpRequired, setIsOtpRequired] = useState(false);
   const [otp, setOtp] = useState("");
   const [otpErrorKey, setOtpErrorKey] = useState("");
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isOtpSendFailed, setIsOtpSendFailed] = useState(false);
+  const [otpNotice, setOtpNotice] = useState(null);
+  const hasSentOtpRef = useRef(false);
   const isDarkTheme = useIsDarkTheme();
   const defaultLogo = isDarkTheme ? logoNegativo : logoPositivo;
   const currentLogo = image && image !== appInfo.applogo ? image : defaultLogo;
@@ -196,16 +199,44 @@ function Login() {
     await sendOtpCode(email);
   };
 
-  const sendOtpCode = async (email) => {
-    setIsSendingOtp(true);
-    const isSent = await handleSendOTP(email);
-    setIsSendingOtp(false);
-    setIsOtpSendFailed(!isSent);
+  const deliverOtp = async ({ isStale }, email) => {
+    setOtpNotice(null);
+    try {
+      const isSent = await handleSendOTP(email);
+      if (isStale()) return false;
+      setIsOtpSendFailed(!isSent);
+      if (isSent) {
+        setOtpNotice({
+          key: hasSentOtpRef.current
+            ? "otp-resent-to-email"
+            : "otp-sent-to-email",
+          email
+        });
+        hasSentOtpRef.current = true;
+      }
+      return isSent;
+    } catch (error) {
+      if (isStale()) return false;
+      setIsOtpSendFailed(true);
+      notify.error(t("something-went-wrong-mssg"));
+      return false;
+    }
   };
+
+  const {
+    send: sendOtpCode,
+    reset: resetOtpCooldown,
+    isSending: isSendingOtp,
+    isResendDisabled,
+    secondsLeft: resendSecondsLeft
+  } = useOtpResendCooldown(deliverOtp);
 
   const leaveOtpStep = () => {
     setIsOtpRequired(false);
     setIsOtpSendFailed(false);
+    setOtpNotice(null);
+    hasSentOtpRef.current = false;
+    resetOtpCooldown();
     setState((prev) => ({ ...prev, password: "" }));
     setOtp("");
     setOtpErrorKey("");
@@ -609,6 +640,15 @@ function Login() {
                       {t("otp-send-failed-hint")}
                     </p>
                   )}
+                  <p
+                    role="status"
+                    aria-live="polite"
+                    className="text-xs text-base-content/80 empty:sr-only"
+                  >
+                    {otpNotice && !isOtpSendFailed
+                      ? t(otpNotice.key, { email: otpNotice.email })
+                      : null}
+                  </p>
                   <OtpCodeField
                     value={otp}
                     onChange={handleOtpChange}
@@ -623,14 +663,14 @@ function Login() {
                     {state.loading ? t("loading") : t("verify")}
                   </button>
                   <div className="flex justify-between">
-                    <button
-                      type="button"
+                    <OtpResendButton
                       className="op-btn op-btn-ghost op-btn-sm"
                       onClick={resendOtp}
-                      disabled={state.loading || isSendingOtp}
-                    >
-                      {t("resend")}
-                    </button>
+                      isDisabled={state.loading || isResendDisabled}
+                      isSending={isSendingOtp}
+                      secondsLeft={resendSecondsLeft}
+                      returnFocusTo={() => document.getElementById("otp")}
+                    />
                     <button
                       type="button"
                       className="op-btn op-btn-ghost op-btn-sm"

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import UserProfile from "../UserProfile";
@@ -14,7 +14,8 @@ vi.mock("react-i18next", async (importOriginal) => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key) => key,
+      t: (key, options) =>
+        options?.seconds === undefined ? key : `${key}:${options.seconds}`,
       i18n: { language: "en", changeLanguage: () => Promise.resolve() }
     })
   };
@@ -58,7 +59,8 @@ const cloudRunMock = vi.fn();
 const emailVerifiedState = { current: false };
 
 const mockUserRecord = {
-  get: (key) => (key === "emailVerified" ? emailVerifiedState.current : undefined),
+  get: (key) =>
+    key === "emailVerified" ? emailVerifiedState.current : undefined,
   set: vi.fn(),
   save: (...args) => parseObjectSaveMock(...args)
 };
@@ -285,9 +287,19 @@ describe("UserProfile email OTP verification flow", () => {
 });
 
 describe("UserProfile OTP input and resend", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
   afterEach(() => {
     handleSendOTPMock.mockReset();
+    vi.useRealTimers();
   });
+
+  const endCooldown = () =>
+    act(() => {
+      vi.advanceTimersByTime(60000);
+    });
 
   const openOtpModal = async (user) => {
     await waitFor(() =>
@@ -310,11 +322,12 @@ describe("UserProfile OTP input and resend", () => {
   });
 
   it("confirms the resend only when the code was actually sent", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     handleSendOTPMock.mockResolvedValue(true);
     renderProfile();
     await openOtpModal(user);
     notifySuccess.mockClear();
+    endCooldown();
 
     await user.click(screen.getByText("resend"));
 
@@ -335,6 +348,122 @@ describe("UserProfile OTP input and resend", () => {
 
     await waitFor(() => expect(handleSendOTPMock).toHaveBeenCalledTimes(1));
     expect(notifySuccess).not.toHaveBeenCalledWith("otp-sent-alert");
+    expect(
+      screen.getByRole("button", { name: "resend", hidden: true })
+    ).toBeEnabled();
+  });
+
+  it("shows the generic error and starts no cooldown when sending throws", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    handleSendOTPMock.mockRejectedValue(new Error("boom"));
+    renderProfile();
+
+    await openOtpModal(user);
+
+    await waitFor(() =>
+      expect(notifyError).toHaveBeenCalledWith("something-went-wrong-mssg")
+    );
+    expect(
+      await screen.findByRole("button", { name: "resend", hidden: true })
+    ).toBeEnabled();
+  });
+
+  it("shows the loading label on resend while the code is being sent", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    handleSendOTPMock.mockReturnValue(new Promise(() => {}));
+    renderProfile();
+
+    await openOtpModal(user);
+
+    expect(
+      await screen.findByRole("button", { name: "loading", hidden: true })
+    ).toBeDisabled();
+  });
+
+  it("returns the focus to the code input after a resend", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    handleSendOTPMock.mockResolvedValue(true);
+    renderProfile();
+    const otpInput = await openOtpModal(user);
+    endCooldown();
+
+    await user.click(
+      await screen.findByRole("button", { name: "resend", hidden: true })
+    );
+
+    await waitFor(() => expect(otpInput).toHaveFocus());
+  });
+
+  it("keeps the countdown and sends nothing when reopening the modal during the cooldown", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    handleSendOTPMock.mockResolvedValue(true);
+    renderProfile();
+    await openOtpModal(user);
+    await screen.findByRole("button", {
+      name: "resend-in-seconds:60",
+      hidden: true
+    });
+    await user.click(screen.getByRole("button", { name: "✕", hidden: true }));
+    handleSendOTPMock.mockClear();
+
+    await user.click(screen.getByTestId("verify-email-button"));
+
+    expect(
+      await screen.findByRole("button", {
+        name: "resend-in-seconds:60",
+        hidden: true
+      })
+    ).toBeDisabled();
+    expect(handleSendOTPMock).not.toHaveBeenCalled();
+  });
+
+  it("confirms the initial send and starts the cooldown with a countdown", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    handleSendOTPMock.mockResolvedValue(true);
+    renderProfile();
+
+    await openOtpModal(user);
+
+    await waitFor(() =>
+      expect(notifySuccess).toHaveBeenCalledWith("otp-sent-alert")
+    );
+    const resend = await screen.findByRole("button", {
+      name: "resend-in-seconds:60",
+      hidden: true
+    });
+    expect(resend).toBeDisabled();
+  });
+
+  it("re-enables resend when the cooldown ends", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    handleSendOTPMock.mockResolvedValue(true);
+    renderProfile();
+    await openOtpModal(user);
+    await screen.findByRole("button", {
+      name: "resend-in-seconds:60",
+      hidden: true
+    });
+
+    endCooldown();
+
+    expect(
+      await screen.findByRole("button", { name: "resend", hidden: true })
+    ).toBeEnabled();
+  });
+
+  it("sends only once on a double click of resend", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    handleSendOTPMock.mockResolvedValue(true);
+    renderProfile();
+    await openOtpModal(user);
+    endCooldown();
+    handleSendOTPMock.mockClear();
+
+    await user.dblClick(
+      await screen.findByRole("button", { name: "resend", hidden: true })
+    );
+
+    expect(handleSendOTPMock).toHaveBeenCalledTimes(1);
   });
 });
 

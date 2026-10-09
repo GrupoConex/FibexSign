@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AddAdmin from "../AddAdmin";
 
@@ -12,7 +12,8 @@ const sendOtp = vi.fn();
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal()),
   useTranslation: () => ({
-    t: (key) => key,
+    t: (key, options) =>
+      options?.seconds === undefined ? key : `${key}:${options.seconds}`,
     i18n: { language: "en", changeLanguage: () => Promise.resolve() }
   })
 }));
@@ -51,7 +52,7 @@ vi.mock("../../utils", () => ({
 }));
 
 const liveMessages = (container) =>
-  container.querySelectorAll("[aria-live='polite']");
+  container.querySelectorAll("[aria-live='polite']:not([role='status'])");
 
 const submit = () =>
   userEvent.click(
@@ -281,7 +282,17 @@ describe("AddAdmin email ownership step", () => {
     sendOtp.mockReset();
     sendOtp.mockResolvedValue(true);
     localStorage.clear();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
   });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const endCooldown = () =>
+    act(() => {
+      vi.advanceTimersByTime(60000);
+    });
 
   it("requests the code for the typed email and does not call addadmin yet", async () => {
     render(<AddAdmin />);
@@ -376,12 +387,175 @@ describe("AddAdmin email ownership step", () => {
     await requestCode();
     await screen.findByLabelText(/^verification-code/);
     sendOtp.mockClear();
+    endCooldown();
 
     await userEvent.click(screen.getByRole("button", { name: "resend" }));
 
     await waitFor(() =>
       expect(sendOtp).toHaveBeenCalledWith("ada@example.com")
     );
+  });
+
+  it("confirms the first send in a persistent polite status region without a toast", async () => {
+    render(<AddAdmin />);
+    await fillValidForm();
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+    await requestCode();
+
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("otp-sent-to-email")
+    );
+    expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite");
+    expect(notifySuccess).not.toHaveBeenCalled();
+  });
+
+  it("keeps the status region in the accessibility tree when it is empty", async () => {
+    render(<AddAdmin />);
+    await fillValidForm();
+
+    const status = screen.getByRole("status");
+    expect(status).toHaveClass("empty:sr-only");
+    expect(status).not.toHaveClass("empty:hidden");
+  });
+
+  it("empties the notice while resending and then announces the resent text", async () => {
+    render(<AddAdmin />);
+    await fillValidForm();
+    await requestCode();
+    await screen.findByLabelText(/^verification-code/);
+    endCooldown();
+    let finishResend;
+    sendOtp.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishResend = resolve;
+      })
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "resend" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toBeEmptyDOMElement()
+    );
+    await act(async () => {
+      finishResend(true);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("otp-resent-to-email");
+  });
+
+  it("returns the focus to the code input after a resend", async () => {
+    render(<AddAdmin />);
+    await fillValidForm();
+    await requestCode();
+    await screen.findByLabelText(/^verification-code/);
+    endCooldown();
+
+    await userEvent.click(screen.getByRole("button", { name: "resend" }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(/^verification-code/)).toHaveFocus()
+    );
+  });
+
+  it("does not mark the new email as sent when it changes while a send is in flight", async () => {
+    let finishFirst;
+    sendOtp.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishFirst = resolve;
+      })
+    );
+    render(<AddAdmin />);
+    await fillValidForm();
+    await requestCode();
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(1));
+    await userEvent.type(screen.getByLabelText(/^email/), "x");
+
+    await act(async () => {
+      finishFirst(true);
+    });
+
+    expect(screen.queryByLabelText(/^verification-code/)).toBeNull();
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+    expect(screen.queryByText(/resend-in-seconds/)).toBeNull();
+    await requestCode();
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(2));
+    expect(sendOtp).toHaveBeenLastCalledWith("ada@example.comx");
+  });
+
+  it("disables resend with a countdown after a send and keeps next enabled", async () => {
+    render(<AddAdmin />);
+    await fillValidForm();
+    await requestCode();
+
+    const resend = await screen.findByRole("button", {
+      name: "resend-in-seconds:60"
+    });
+    expect(resend).toBeDisabled();
+    expect(screen.getByRole("button", { name: "next" })).toBeEnabled();
+    act(() => {
+      vi.advanceTimersByTime(7000);
+    });
+    expect(
+      await screen.findByRole("button", { name: "resend-in-seconds:53" })
+    ).toBeDisabled();
+  });
+
+  it("confirms each resend and restarts the cooldown", async () => {
+    render(<AddAdmin />);
+    await fillValidForm();
+    await requestCode();
+    await screen.findByLabelText(/^verification-code/);
+    endCooldown();
+    notifySuccess.mockClear();
+
+    await userEvent.click(screen.getByRole("button", { name: "resend" }));
+
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(2));
+    expect(notifySuccess).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole("button", { name: "resend-in-seconds:60" })
+    ).toBeDisabled();
+  });
+
+  it("does not start a cooldown nor confirm when the send fails", async () => {
+    sendOtp.mockResolvedValue(false);
+    render(<AddAdmin />);
+    await fillValidForm();
+
+    await requestCode();
+
+    await waitFor(() => expect(sendOtp).toHaveBeenCalledTimes(1));
+    expect(notifySuccess).not.toHaveBeenCalled();
+    expect(screen.queryByText(/resend-in-seconds/)).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "send-verification-code" })
+    ).toBeEnabled();
+  });
+
+  it("sends only once on a double click of resend", async () => {
+    render(<AddAdmin />);
+    await fillValidForm();
+    await requestCode();
+    await screen.findByLabelText(/^verification-code/);
+    endCooldown();
+    sendOtp.mockClear();
+
+    await userEvent.dblClick(screen.getByRole("button", { name: "resend" }));
+
+    expect(sendOtp).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets a new email request a code right away after editing", async () => {
+    render(<AddAdmin />);
+    await fillValidForm();
+    await requestCode();
+    await screen.findByLabelText(/^verification-code/);
+
+    await userEvent.type(screen.getByLabelText(/^email/), "x");
+
+    expect(screen.queryByText(/resend-in-seconds/)).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "send-verification-code" })
+    ).toBeEnabled();
   });
 
   it("discards the code step when the email is edited", async () => {

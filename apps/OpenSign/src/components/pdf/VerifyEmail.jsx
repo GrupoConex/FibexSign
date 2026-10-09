@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useRef } from "react";
 import Loader from "../../primitives/Loader";
 import { useTranslation } from "react-i18next";
 import { OTP_INPUT_PATTERN, OTP_LENGTH } from "../../utils/otpPolicy";
+import OtpResendButton from "../auth/OtpResendButton";
 
 function VerifyEmail(props) {
   const { t } = useTranslation();
+  const otpInputRef = useRef(null);
   return (
     <dialog className="op-modal op-modal-open absolute z-[1999]">
       <div className="md:w-[40%] w-[80%] op-modal-box p-0 overflow-y-auto hide-scrollbar text-sm">
@@ -21,6 +23,7 @@ function VerifyEmail(props) {
             <div className="px-6 py-3 text-base-content">
               <label className="mb-2">{t("enter-otp")}</label>
               <input
+                ref={otpInputRef}
                 onInvalid={(e) =>
                   e.target.setCustomValidity(t("input-required"))
                 }
@@ -40,12 +43,14 @@ function VerifyEmail(props) {
               <button type="submit" className="op-btn op-btn-primary">
                 {t("verify")}
               </button>
-              <button
+              <OtpResendButton
                 className="op-btn op-btn-secondary ml-2"
-                onClick={(e) => props.handleResend(e)}
-              >
-                {t("resend")}
-              </button>
+                onClick={props.handleResend}
+                isDisabled={props.isResendDisabled}
+                isSending={props.isSending}
+                secondsLeft={props.resendSecondsLeft}
+                returnFocusTo={() => otpInputRef.current}
+              />
             </div>
           </form>
         ) : props.otpLoader ? (

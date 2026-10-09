@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
 import axios from "axios";
 import {
@@ -15,6 +15,8 @@ import SelectLanguage from "../components/pdf/SelectLanguage";
 import LoaderWithMsg from "../primitives/LoaderWithMsg";
 import ModalUi from "../primitives/ModalUi";
 import Loader from "../primitives/Loader";
+import OtpResendButton from "../components/auth/OtpResendButton";
+import { useOtpResendCooldown } from "../hook/useOtpResendCooldown";
 import { notify } from "../utils";
 import {
   OTP_INPUT_PATTERN,
@@ -34,6 +36,8 @@ function GuestLogin() {
   );
   const [OTP, setOTP] = useState("");
   const [EnterOTP, setEnterOtp] = useState(false);
+  const [otpNoticeKey, setOtpNoticeKey] = useState("");
+  const otpInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [isLoading, setIsLoading] = useState({
     isLoad: true,
@@ -136,6 +140,8 @@ function GuestLogin() {
 
   //send email OTP function
   const SendOtp = async () => {
+    const isResend = otpNoticeKey !== "";
+    setOtpNoticeKey("");
     setLoading(true);
     setEmail(email?.toLowerCase()?.replace(/\s/g, ""));
     try {
@@ -147,7 +153,9 @@ function GuestLogin() {
       if (Otp) {
         setLoading(false);
         setEnterOtp(true);
+        setOtpNoticeKey(isResend ? "otp-resent-to-email" : "otp-sent-to-email");
       }
+      return Boolean(Otp);
     } catch (error) {
       notify.error(
         t(
@@ -157,12 +165,24 @@ function GuestLogin() {
         )
       );
       setLoading(false);
+      return false;
     }
   };
 
-  const handleSendOTPBtn = async (e) => {
+  const {
+    send: sendOtpCode,
+    isSending,
+    isResendDisabled,
+    secondsLeft: resendSecondsLeft
+  } = useOtpResendCooldown(SendOtp);
+
+  const handleRequestCode = (e) => {
     e.preventDefault();
-    await SendOtp();
+    if (resendSecondsLeft > 0) {
+      setEnterOtp(true);
+      return;
+    }
+    sendOtpCode();
   };
 
   //verify OTP send on via email
@@ -248,7 +268,7 @@ function GuestLogin() {
         );
         if (!IsEnableOTP) {
           setEnterOtp(true);
-          await SendOtp();
+          await sendOtpCode();
         }
       } catch (err) {
         setLoading(false);
@@ -279,6 +299,13 @@ function GuestLogin() {
           title={t("otp-verification")}
           handleClose={() => setEnterOtp(false)}
         >
+          <p
+            role="status"
+            aria-live="polite"
+            className="px-6 pt-3 text-xs text-base-content/80 empty:sr-only"
+          >
+            {otpNoticeKey ? t(otpNoticeKey, { email }) : null}
+          </p>
           {loading ? (
             <div className="h-[150px] flex justify-center items-center">
               <Loader />
@@ -288,6 +315,8 @@ function GuestLogin() {
               <div className="px-6 py-3 text-base-content">
                 <label className="mb-2">{t("enter-otp")}</label>
                 <input
+                  ref={otpInputRef}
+                  autoFocus
                   onInvalid={(e) =>
                     e.target.setCustomValidity(t("input-required"))
                   }
@@ -307,12 +336,14 @@ function GuestLogin() {
                 <button type="submit" className="op-btn op-btn-primary">
                   {t("verify")}
                 </button>
-                <button
+                <OtpResendButton
                   className="op-btn op-btn-secondary ml-2"
-                  onClick={(e) => handleSendOTPBtn(e)}
-                >
-                  {t("resend")}
-                </button>
+                  onClick={sendOtpCode}
+                  isDisabled={isResendDisabled}
+                  isSending={isSending}
+                  secondsLeft={resendSecondsLeft}
+                  returnFocusTo={() => otpInputRef.current}
+                />
               </div>
             </form>
           )}
@@ -351,10 +382,7 @@ function GuestLogin() {
                 <div className="mt-3">
                   <button
                     className="op-btn op-btn-primary flex items-center"
-                    onClick={(e) => {
-                      e.preventDefault();
-                        SendOtp();
-                    }}
+                    onClick={handleRequestCode}
                     disabled={loading}
                   >
                         <i className="fa-light fa-message-sms mr-2"></i>
