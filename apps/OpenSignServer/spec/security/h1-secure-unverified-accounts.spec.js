@@ -13,6 +13,7 @@ import {
   openPasswordSession,
   openPasswordSessionBypassingGate,
   pointer,
+  purgeAllAccounts,
   resetAuthState,
   silenceConsole,
 } from '../utils/auth-fixtures.js';
@@ -35,6 +36,10 @@ const registerContact = async account => {
 };
 
 describe('secure-unverified-accounts against the live Parse server', () => {
+  beforeAll(async () => {
+    await purgeAllAccounts();
+  });
+
   beforeEach(async () => {
     silenceConsole();
     await resetAuthState();
