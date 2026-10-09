@@ -16,7 +16,30 @@ describe('runDbMigrations', () => {
       'createDocumentIndex',
       'createNormalizedEmailUnique',
       'runOtpTableMigration',
+      'lockOtpClassClp',
     ]);
+  });
+
+  it('rejects when the OTP class lock fails so the server never starts open', async () => {
+    const consoleError = captureConsoleError();
+    const failure = new Error('mongo unavailable');
+    const lockStep = DB_MIGRATION_STEPS.find(step => step.name === 'lockOtpClassClp');
+    const calls = [];
+    const steps = [
+      { ...lockStep, run: async () => Promise.reject(failure) },
+      buildStep('after', calls),
+    ];
+
+    await expectAsync(runDbMigrations(steps)).toBeRejectedWith(failure);
+
+    expect(calls).toEqual([]);
+    expect(consoleError.calls.mostRecent().args[0]).toContain('lockOtpClassClp');
+  });
+
+  it('keeps index steps non fatal while only the OTP class lock is fatal', () => {
+    const fatalNames = DB_MIGRATION_STEPS.filter(step => step.fatal).map(step => step.name);
+
+    expect(fatalNames).toEqual(['lockOtpClassClp']);
   });
 
   it('runs every step one after another in the declared order', async () => {

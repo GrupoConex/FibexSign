@@ -15,6 +15,8 @@ export const STRICT_AUTH_PATH_SUFFIXES = [
   '/functions/verifyloginotp',
 ];
 
+const DELETE_ACCOUNT_PATH = /^((?:\/api)?\/delete-account)\/[^/]+(\/otp)?$/;
+
 export const OPERATIONAL_PATH_SUFFIXES = [
   '/functions/getUserDetails',
   '/functions/declinedoc',
@@ -67,7 +69,11 @@ const matchesAnySuffix = (requestPath, suffixes) => {
 };
 
 export const isStrictAuthPath = requestPath =>
-  matchesAnySuffix(requestPath, STRICT_AUTH_PATH_SUFFIXES);
+  matchesAnySuffix(requestPath, STRICT_AUTH_PATH_SUFFIXES) ||
+  DELETE_ACCOUNT_PATH.test(normalizeRequestPath(requestPath));
+
+const toRateLimitPath = requestPath =>
+  normalizeRequestPath(requestPath).replace(DELETE_ACCOUNT_PATH, '$1$2');
 
 export const isAuthRateLimitedPath = requestPath =>
   isStrictAuthPath(requestPath) || matchesAnySuffix(requestPath, OPERATIONAL_PATH_SUFFIXES);
@@ -153,7 +159,7 @@ function buildLimiter({ windowMs, max, store }) {
     standardHeaders: true,
     legacyHeaders: false,
     store,
-    keyGenerator: request => `${ipKeyGenerator(request.ip)}:${normalizeRequestPath(request.path)}`,
+    keyGenerator: request => `${ipKeyGenerator(request.ip)}:${toRateLimitPath(request.path)}`,
     message: { error: RATE_LIMIT_MESSAGE },
   });
 }

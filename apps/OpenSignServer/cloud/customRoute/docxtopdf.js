@@ -3,6 +3,7 @@ import multer from 'multer';
 import libre from 'libreoffice-convert';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { randomUUID } from 'node:crypto';
 import { cloudServerUrl, getSecureUrl, serverAppId } from '../../Utils.js';
 
 const execAsync = promisify(exec);
@@ -104,13 +105,6 @@ export const upload = multer({
   },
 });
 
-function generatePdfName(length) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
-  return result;
-}
-
 export default async function docxtopdf(req, res) {
   const serverUrl = cloudServerUrl;
   const parseAppKey = { 'X-Parse-Application-Id': serverAppId };
@@ -147,7 +141,7 @@ export default async function docxtopdf(req, res) {
     }
 
     // ---- DOCX -> PDF conversion with concurrency control and timeout ----
-    const fileName = `${generatePdfName(16)}.pdf`;
+    const fileName = `${randomUUID()}.pdf`;
 
     // Adjust timeout based on file size
     const timeoutMs = uploadedSizeBytes > 10 * 1024 * 1024 ? 120_000 : 90_000;

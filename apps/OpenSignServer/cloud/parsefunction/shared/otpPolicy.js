@@ -19,9 +19,19 @@ const MASTER = { useMasterKey: true };
 const OTP_PATTERN = new RegExp(`^\\d{${OTP_LENGTH}}$`);
 const OTP_LOWER_BOUND = 10 ** (OTP_LENGTH - 1);
 const OTP_UPPER_BOUND = 10 ** OTP_LENGTH;
+const OTP_ADDRESS_PATTERN = /^[^\s@:]+@[^\s@:]+$/;
+const INVALID_ADDRESS_MESSAGE = 'Invalid email address.';
 
 export const normalizeEmail = email =>
   typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+export const buildOtpKey = ({ email, purpose } = {}) => {
+  const address = normalizeEmail(email);
+  if (!OTP_ADDRESS_PATTERN.test(address)) {
+    return '';
+  }
+  return purpose ? `${purpose}:${address}` : address;
+};
 
 export const generateOtp = () => randomInt(OTP_LOWER_BOUND, OTP_UPPER_BOUND);
 
@@ -113,8 +123,12 @@ async function claimSend(row) {
   return row.get('SendCount');
 }
 
-export async function issueOtp({ email, tenantId }, now = Date.now()) {
-  const row = await findOrCreateOtpRow(normalizeEmail(email), tenantId, now);
+export async function issueOtp({ email, tenantId, purpose }, now = Date.now()) {
+  const key = buildOtpKey({ email, purpose });
+  if (!key) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, INVALID_ADDRESS_MESSAGE);
+  }
+  const row = await findOrCreateOtpRow(key, tenantId, now);
   await rollSendWindowIfExpired(row, now);
   if ((await claimSend(row)) > OTP_RESEND_LIMIT) {
     return { allowed: false };
@@ -143,8 +157,8 @@ async function consumeRow(row) {
   return row.get('ConsumeCount') === 1 ? OtpStatus.VALID : OtpStatus.INVALID;
 }
 
-export async function verifyAndConsumeOtp({ email, otp }, now = Date.now()) {
-  const row = await findOtpRow(normalizeEmail(email));
+export async function verifyAndConsumeOtp({ email, otp, purpose }, now = Date.now()) {
+  const row = await findOtpRow(buildOtpKey({ email, purpose }));
   if (!row) {
     return OtpStatus.NOT_FOUND;
   }

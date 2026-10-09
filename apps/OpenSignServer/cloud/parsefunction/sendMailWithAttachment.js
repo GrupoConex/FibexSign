@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import https from 'https';
 import formData from 'form-data';
 import Mailgun from 'mailgun.js';
@@ -64,8 +65,7 @@ async function sendMailProvider(params) {
       }
     }
     if (params.url) {
-      const randomNumber = Math.floor(Math.random() * 5000);
-      const testPdf = `test_${randomNumber}.pdf`;
+      const testPdf = `test_${randomUUID()}.pdf`;
       try {
         let Pdf = fs.createWriteStream(testPdf);
         const writeToLocalDisk = () => {

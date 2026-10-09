@@ -3,26 +3,21 @@ import fs from 'node:fs/promises';
 import pLimit from 'p-limit';
 import { serverAppId } from '../../../Utils.js';
 
-// === Configuration ===
+const MASTER = { useMasterKey: true };
 const serverHost = new URL(process.env.SERVER_URL).hostname;
 const LOCAL_HOSTS = ['localhost', '127.0.0.1', serverHost];
 const CONCURRENCY_LIMIT = 5;
+const BATCH_SIZE = 500;
+const LOCAL_FILES_ROOT = './files/files';
+const DOCUMENT_FILE_FIELDS = ['URL', 'SignedUrl', 'certificateUrl'];
+const DATA_FILE_FIELDS = ['FileUrl'];
+const AWS_HOST_MARKER = 'amazonaws.com';
 
-// === S3 Client Setup ===
-function createS3Client({ region, accessKeyId, secretAccessKey, endpoint = null }) {
-  const config = {
-    region,
-    credentials: {
-      accessKeyId,
-      secretAccessKey,
-    },
-  };
-
-  // Only set custom endpoint if not using AWS
-  if (endpoint && !endpoint.includes('amazonaws.com')) {
+export function createS3Client({ region, accessKeyId, secretAccessKey, endpoint = null }) {
+  const config = { region, credentials: { accessKeyId, secretAccessKey } };
+  if (endpoint && !endpoint.includes(AWS_HOST_MARKER)) {
     config.endpoint = `https://${endpoint}`;
   }
-
   return new S3Client(config);
 }
 
@@ -33,160 +28,94 @@ const s3 = createS3Client({
   secretAccessKey: process.env.DO_SECRET_ACCESS_KEY,
 });
 
-// === Helpers ===
-function getS3ParamsFromUrl(fileUrl) {
-  try {
-    const url = new URL(fileUrl);
-    const Bucket = url.hostname.split('.')[0];
-    const Key = decodeURIComponent(url.pathname.slice(1));
-    return { Bucket, Key };
-  } catch {
-    return null;
-  }
-}
+const parseS3Location = fileUrl => {
+  const url = new URL(fileUrl);
+  return { Bucket: url.hostname.split('.')[0], Key: decodeURIComponent(url.pathname.slice(1)) };
+};
 
 async function deleteS3File(fileUrl) {
-  const params = getS3ParamsFromUrl(fileUrl);
-  if (!params) return;
-
   try {
-    await s3.send(new DeleteObjectCommand(params));
-    // console.log(`✅ Deleted from S3: ${params.Key}`);
+    await s3.send(new DeleteObjectCommand(parseS3Location(fileUrl)));
   } catch (err) {
-    console.error(`❌ S3 delete failed: ${params.Key}:`, err.message);
+    console.error(`S3 delete failed: ${fileUrl}:`, err.message);
   }
 }
 
 async function deleteLocalFile(fileUrl) {
   try {
-    const url = new URL(fileUrl);
-    const filePath = decodeURIComponent(url.pathname);
-    if (!filePath.includes('/files/')) return;
-
-    const localPath = url?.pathname?.split(`/files/${serverAppId}/`)?.pop();
-
-    if (localPath) {
-      await fs.unlink(`./files/files/${localPath}`);
-    }
-    // console.log(`🗑️ Deleted local file: ${localPath}`);
+    const { pathname } = new URL(fileUrl);
+    if (!decodeURIComponent(pathname).includes('/files/')) return;
+    const relativePath = pathname.split(`/files/${serverAppId}/`).pop();
+    await fs.unlink(`${LOCAL_FILES_ROOT}/${relativePath}`);
   } catch (err) {
     if (err.code === 'ENOENT') {
-      console.warn('⚠️ Local file not found:', fileUrl);
+      console.warn('Local file not found:', fileUrl);
     } else {
-      console.error('❌ Local delete failed:', err.message);
+      console.error('Local delete failed:', err.message);
     }
   }
 }
 
-async function deleteFileByUrl(fileUrl) {
-  if (!fileUrl) return;
+export async function deleteFileByUrl(fileUrl) {
+  let hostname;
   try {
-    const url = new URL(fileUrl);
-    if (LOCAL_HOSTS.includes(url.hostname)) {
-      return deleteLocalFile(fileUrl);
-    } else {
-      return deleteS3File(fileUrl);
-    }
+    hostname = new URL(fileUrl).hostname;
   } catch {
-    console.warn('⚠️ Invalid URL, skipping:', fileUrl);
+    console.warn('Invalid URL, skipping:', fileUrl);
+    return;
+  }
+  if (LOCAL_HOSTS.includes(hostname)) {
+    await deleteLocalFile(fileUrl);
+  } else {
+    await deleteS3File(fileUrl);
   }
 }
 
-// === Main Batch Deletion Function ===
-export async function deleteInBatches(className, userPointer) {
-  let hasMore = true;
-  const limit = 1000;
+const collectFileUrls = (objects, fileFields) =>
+  objects.flatMap(object => fileFields.map(field => object.get(field)).filter(Boolean));
+
+const deleteFilesConcurrently = async fileUrls => {
   const limiter = pLimit(CONCURRENCY_LIMIT);
+  await Promise.all(fileUrls.map(fileUrl => limiter(() => deleteFileByUrl(fileUrl))));
+};
 
-  while (hasMore) {
-    const query = new Parse.Query(className);
-    query.equalTo('CreatedBy', userPointer);
-    query.limit(limit);
-    query.ascending('objectId');
+const findBatch = ({ className, ownerField, ownerPointer }) => {
+  const query = new Parse.Query(className);
+  query.equalTo(ownerField, ownerPointer);
+  query.limit(BATCH_SIZE);
+  query.ascending('objectId');
+  return query.find(MASTER);
+};
 
-    const results = await query.find({ useMasterKey: true });
-
-    // Step 1: Concurrent file deletions with controlled concurrency
-    const fileDeletePromises = [];
-
-    for (const obj of results) {
-      const urls = ['URL', 'SignedUrl', 'certificateUrl']
-        .map(field => obj.get(field))
-        .filter(Boolean);
-
-      for (const fileUrl of urls) {
-        fileDeletePromises.push(limiter(() => deleteFileByUrl(fileUrl)));
-      }
-    }
-
-    await Promise.all(fileDeletePromises);
-
-    // Step 2: Delete Parse objects
-    if (results.length > 0) {
-      await Parse.Object.destroyAll(results, { useMasterKey: true });
-      console.log(`🧹 Deleted ${results.length} Parse objects from ${className}`);
-    }
-
-    hasMore = results.length === limit;
+async function purgeInBatches(source) {
+  let batch = await findBatch(source);
+  while (batch.length > 0) {
+    await deleteFilesConcurrently(collectFileUrls(batch, source.fileFields));
+    await Parse.Object.destroyAll(batch, MASTER);
+    batch = await findBatch(source);
   }
-
-  console.log(`✅ Finished deletion from ${className} for user: ${userPointer.objectId}`);
 }
 
-export async function deleteDataFiles(className, userPointer) {
-  let hasMore = true;
-  const limit = 1000;
-  const limiter = pLimit(CONCURRENCY_LIMIT);
+export const deleteInBatches = (className, userPointer) =>
+  purgeInBatches({
+    className,
+    ownerField: 'CreatedBy',
+    ownerPointer: userPointer,
+    fileFields: DOCUMENT_FILE_FIELDS,
+  });
 
-  while (hasMore) {
-    const query = new Parse.Query(className);
-    query.equalTo('UserId', userPointer);
-    query.limit(limit);
-    query.ascending('objectId');
+export const deleteDataFiles = (className, userPointer) =>
+  purgeInBatches({
+    className,
+    ownerField: 'UserId',
+    ownerPointer: userPointer,
+    fileFields: DATA_FILE_FIELDS,
+  });
 
-    const results = await query.find({ useMasterKey: true });
-
-    // Step 1: Concurrent file deletions with controlled concurrency
-    const fileDeletePromises = [];
-
-    for (const obj of results) {
-      const urls = ['FileUrl'].map(field => obj.get(field)).filter(Boolean);
-      for (const fileUrl of urls) {
-        fileDeletePromises.push(limiter(() => deleteFileByUrl(fileUrl)));
-      }
-    }
-
-    await Promise.all(fileDeletePromises);
-
-    // Step 2: Delete Parse objects
-    if (results.length > 0) {
-      await Parse.Object.destroyAll(results, { useMasterKey: true });
-      console.log(`🧹 Deleted ${results.length} Parse objects from ${className}`);
-    }
-
-    hasMore = results.length === limit;
-  }
-
-  console.log(`✅ Finished deletion from ${className} for user: ${userPointer.objectId}`);
-}
-
-export async function deleteContactsInBatch(className, userPointer) {
-  let hasMore = true;
-  const limit = 1000;
-
-  while (hasMore) {
-    const query = new Parse.Query(className);
-    query.equalTo('CreatedBy', userPointer);
-    query.limit(limit);
-    query.ascending('objectId');
-    const results = await query.find({ useMasterKey: true });
-    if (results?.length > 0) {
-      await Parse.Object.destroyAll(results, { useMasterKey: true });
-      console.log(`🧹 Deleted ${results.length} Parse objects from ${className}`);
-    }
-
-    hasMore = results.length === limit;
-  }
-
-  console.log(`✅ Finished deletion from ${className} for user: ${userPointer.objectId}`);
-}
+export const deleteContactsInBatch = (className, userPointer) =>
+  purgeInBatches({
+    className,
+    ownerField: 'CreatedBy',
+    ownerPointer: userPointer,
+    fileFields: [],
+  });
