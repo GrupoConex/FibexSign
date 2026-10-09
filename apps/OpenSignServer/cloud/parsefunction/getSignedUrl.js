@@ -4,11 +4,6 @@ import { useLocal } from '../../Utils.js';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { isAuthenticated } from '../../utils/AuthUtils.js';
-import {
-  parseTrustedLocalFileUrl,
-  isTrustedS3Url,
-  reportUntrustedStorageHost,
-} from './shared/storageUrlPolicy.js';
 dotenv.config({ quiet: true });
 
 function extractKeyFromUrl(url) {
@@ -47,68 +42,80 @@ function makeS3Client() {
   });
 }
 
-const PRESIGN_EXPIRES_IN_SECONDS = 160;
-
-async function presignBucketObject(url) {
-  const client = makeS3Client();
-  const command = new GetObjectCommand({
-    Bucket: process.env.DO_SPACE,
-    Key: extractKeyFromUrl(url),
-  });
-  return presign(client, command, { expiresIn: PRESIGN_EXPIRES_IN_SECONDS });
-}
-
 export default async function getPresignedUrl(url) {
-  if (isTrustedS3Url(url)) {
-    return presignBucketObject(url);
+  if (url?.includes('/files/')) {
+    return presignedlocalUrl(url);
+  } else {
+    const client = makeS3Client();
+
+    const bucket = process.env.DO_SPACE;
+
+    const key = extractKeyFromUrl(url);
+
+    const command = new GetObjectCommand({ Bucket: bucket, Key: key });
+    // Expires: 160 seconds
+    const expiresIn = 160;
+
+    // presignedGETURL return presignedUrl with expires time
+    const presignedGETURL = await presign(client, command, { expiresIn });
+    return presignedGETURL;
   }
-  return presignedlocalUrl(url);
-}
-
-const presignForCurrentStorage = url =>
-  useLocal === 'true' ? presignedlocalUrl(url) : getPresignedUrl(url);
-
-const findDocumentOrTemplate = ({ docId, templateId }) => {
-  const query = new Parse.Query(docId ? 'contracts_Document' : 'contracts_Template');
-  query.equalTo('objectId', docId || templateId);
-  query.include('ExtUserPtr.TenantId');
-  query.notEqualTo('IsArchive', true);
-  return query.first({ useMasterKey: true });
-};
-
-const assertSessionWhenOtpRequired = async (record, user) => {
-  if (record.get('IsEnableOTP') && !(await isAuthenticated(user))) {
-    throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'User is not authenticated.');
-  }
-};
-
-async function signForDocumentOrTemplate(request, url) {
-  const { docId = '', templateId = '' } = request.params;
-  try {
-    const record = await findDocumentOrTemplate({ docId, templateId });
-    if (!record) return url;
-    await assertSessionWhenOtpRequired(record, request.user);
-    return await presignForCurrentStorage(url);
-  } catch (err) {
-    console.log('Err in presigned url', err);
-    throw err;
-  }
-}
-
-async function signForSession(request, url) {
-  if (!(await isAuthenticated(request?.user))) {
-    throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'User is not authenticated.');
-  }
-  return presignForCurrentStorage(url);
 }
 
 export async function getSignedUrl(request) {
   try {
-    const { docId, templateId, url } = request.params;
+    const docId = request.params.docId || '';
+    const templateId = request.params.templateId || '';
+    const url = request.params.url;
+
     if (docId || templateId) {
-      return await signForDocumentOrTemplate(request, url);
+      try {
+        if (url?.includes('/files/')) {
+          return presignedlocalUrl(url);
+        } else if (useLocal !== 'true') {
+          const query = new Parse.Query(docId ? 'contracts_Document' : 'contracts_Template');
+          query.equalTo('objectId', docId ? docId : templateId);
+          query.include('ExtUserPtr.TenantId');
+          query.notEqualTo('IsArchive', true);
+          const res = await query.first({ useMasterKey: true });
+          if (!res) return url;
+
+          const _resDoc = res?.toJSON();
+          // Ensure user is authenticated if OTP is required
+          if (_resDoc?.IsEnableOTP) {
+            const isAuth = await isAuthenticated(request?.user);
+            if (!isAuth) {
+              throw new Parse.Error(
+                Parse.Error.INVALID_SESSION_TOKEN,
+                'User is not authenticated.'
+              );
+            }
+          }
+
+          const presignedUrl = await getPresignedUrl(url);
+          return presignedUrl;
+        } else {
+          return url;
+        }
+      } catch (err) {
+        console.log('Err in presigned url', err);
+        throw err;
+      }
+    } else {
+      const isAuth = await isAuthenticated(request?.user);
+      if (!isAuth) {
+        throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'User is not authenticated.');
+      } else {
+        if (url?.includes('/files/')) {
+          return presignedlocalUrl(url);
+        } else if (useLocal !== 'true') {
+          const presignedUrl = await getPresignedUrl(url);
+          return presignedUrl;
+        } else {
+          return url;
+        }
+      }
     }
-    return await signForSession(request, url);
   } catch (err) {
     console.log('error in getsignedurl', err);
     const code = err.code || 400;
@@ -140,19 +147,25 @@ export function getSignedLocalUrl(fileUrl, expirationTimeInSeconds) {
 }
 
 export function presignedlocalUrl(signedUrl, expirationTimeInSeconds) {
-  const trustedUrl = parseTrustedLocalFileUrl(signedUrl);
-  if (!trustedUrl) {
-    reportUntrustedStorageHost(signedUrl);
+  if (signedUrl?.includes('/files/')) {
+    const fileUrl = signedUrl.split('?')?.[0];
+    const secretKey = process.env.MASTER_KEY;
+    const exp = expirationTimeInSeconds || 200;
+    try {
+      // Create the payload with the file URL and expiration time
+      const payload = {
+        fileUrl,
+        exp: Math.floor(Date.now() / 1000) + exp, // Expiry time in seconds
+      };
+      // Generate the JWT token
+      const token = jwt.sign(payload, secretKey);
+      // Return the signed URL containing the token
+      return `${fileUrl}?token=${token}`;
+    } catch (err) {
+      throw new Error('Invalid or expired token.');
+    }
+  } else {
     return signedUrl;
-  }
-  const fileUrl = trustedUrl.origin + trustedUrl.pathname;
-  const exp = expirationTimeInSeconds || 200;
-  try {
-    const payload = { fileUrl, exp: Math.floor(Date.now() / 1000) + exp };
-    const token = jwt.sign(payload, process.env.MASTER_KEY);
-    return `${fileUrl}?token=${token}`;
-  } catch (err) {
-    throw new Error('Invalid or expired token.');
   }
 }
 

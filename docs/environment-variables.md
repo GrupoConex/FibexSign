@@ -64,7 +64,6 @@ Esto deja:
 | `DO_ACCESS_KEY_ID` | Backend | Condicional | — | Credencial S3/DO. |
 | `DO_SECRET_ACCESS_KEY` | Backend | Condicional | — | Credencial S3/DO. |
 | `DO_REGION` | Backend | Condicional | `us-west` (valor de ejemplo, no hay fallback en código) | Región S3/DO. |
-| `STORAGE_LEGACY_HOSTS` | Backend | No | vacía | Lista separada por comas de hosts (sin esquema, con puerto si aplica, p. ej. `old-cdn.example,mybucket.s3.amazonaws.com`) que el backend trata como almacenamiento propio al presignar archivos y al validar las URLs de `contracts_Signature`. Sirve para URLs guardadas con un host anterior (CDN viejo, `DO_BASEURL`/`DO_ENDPOINT` o `PUBLIC_URL` cambiados). Las entradas inválidas se ignoran con un `console.warn` al arrancar. Una URL de host no confiable se devuelve sin firmar y se registra una vez por host con `console.warn` (solo el host). |
 
 **Comportamiento de fallback verificado (no documentado en el comentario original):** la construcción de `S3Adapter` está envuelta en `try/catch` en `index.js`. Si falla (credenciales inválidas, config incompleta), el backend **no aborta el arranque**: cae silenciosamente a `FSFilesAdapter` (almacenamiento local en `./files`) y solo deja un `console.log('Please provide AWS credintials in env file! Defaulting to local storage.')`. Esto significa que una mala configuración de storage en producción puede pasar desapercibida y el servidor terminar guardando archivos en disco local en vez del bucket esperado.
 

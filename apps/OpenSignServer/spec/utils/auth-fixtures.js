@@ -13,7 +13,6 @@ const REST_HEADERS = {
   'X-Parse-Master-Key': process.env.MASTER_KEY,
 };
 let sequence = 0;
-const createdAccountIds = new Set();
 
 export const uniqueEmail = prefix => `${prefix}-${Date.now()}-${sequence++}@example.com`;
 
@@ -59,26 +58,7 @@ export async function createPlainUser(email = uniqueEmail('plain'), password = P
     { username: email, email, password },
     { headers: REST_HEADERS }
   );
-  createdAccountIds.add(response.data.objectId);
   return { id: response.data.objectId, email, sessionToken: response.data.sessionToken };
-}
-
-const destroyAllOf = query =>
-  query.eachBatch(batch => Parse.Object.destroyAll(batch, MASTER), { ...MASTER, batchSize: 100 });
-
-export async function purgeCreatedAccounts() {
-  const ids = [...createdAccountIds];
-  createdAccountIds.clear();
-  if (ids.length === 0) return;
-  const users = ids.map(id => Parse.User.createWithoutData(id));
-  await destroyAllOf(new Parse.Query('_Session').containedIn('user', users));
-  await destroyAllOf(new Parse.Query(Parse.User).containedIn('objectId', ids));
-}
-
-export async function purgeAllAccounts() {
-  createdAccountIds.clear();
-  await destroyAllOf(new Parse.Query('_Session'));
-  await destroyAllOf(new Parse.Query(Parse.User));
 }
 
 const SESSION_HEADERS = sessionToken => ({
