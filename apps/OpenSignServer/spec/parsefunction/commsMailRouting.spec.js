@@ -1,8 +1,12 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { resetCommsMailBreaker } from '../../cloud/parsefunction/shared/commsMailClient.js';
-import sendmailv3 from '../../cloud/parsefunction/sendMailv3.js';
+import {
+  CommsLane,
+  resetCommsMailBreaker,
+  sendCommsMail,
+} from '../../cloud/parsefunction/shared/commsMailClient.js';
+import sendmailv3, { deliverMailv3 } from '../../cloud/parsefunction/sendMailv3.js';
 import sendSystemMail from '../../cloud/parsefunction/sendSystemMail.js';
 import sendMailWithAttachment from '../../cloud/parsefunction/sendMailWithAttachment.js';
 
@@ -52,7 +56,7 @@ describe('comms mail routing', () => {
     [
       'sendMailv3',
       sendmailv3,
-      params => ({ params, user: { id: 'user1' } }),
+      params => ({ params, master: true }),
       ['a@x.com', 'c@x.com', 'b@x.com'],
     ],
     ['sendSystemMail', sendSystemMail, params => ({ params }), ['a@x.com', 'b@x.com']],
@@ -169,6 +173,54 @@ describe('comms mail routing', () => {
 
       expect(result).toEqual({ status: 'error' });
       expect(fs.existsSync(certificatePath)).toBe(true);
+    });
+  });
+
+  describe('lanes', () => {
+    const tripBulkLane = () =>
+      sendCommsMail(
+        { to: 'trip@x.com', subject: 'S' },
+        {
+          env: process.env,
+          lane: CommsLane.BULK,
+          fetchImpl: async () => ({ status: 429, json: async () => ({}) }),
+        }
+      ).catch(() => undefined);
+
+    const mailParams = { recipient: 'a@x.com', subject: 'S', html: '<p>h</p>' };
+
+    it('sends the sendmailv3 wrapper through the bulk lane', async () => {
+      await tripBulkLane();
+
+      const result = await sendmailv3({ params: mailParams, master: true });
+
+      expect(result).toEqual({ status: 'error' });
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('sends in-process deliverMailv3 through the system lane', async () => {
+      await tripBulkLane();
+
+      const result = await deliverMailv3({ params: mailParams });
+
+      expect(result).toEqual({ status: 'success' });
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('sends sendSystemMail through the system lane', async () => {
+      await tripBulkLane();
+
+      const result = await sendSystemMail({ params: mailParams });
+
+      expect(result).toEqual({ status: 'success' });
+    });
+
+    it('sends sendMailWithAttachment through the system lane', async () => {
+      await tripBulkLane();
+
+      const result = await sendMailWithAttachment(mailParams);
+
+      expect(result).toEqual({ status: 'success' });
     });
   });
 });

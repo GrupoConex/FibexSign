@@ -1435,6 +1435,7 @@
   "signing-date": "Signing Date",
   "date-widget": "Date Widget",
   "mail-failed": "Something went wrong while sending the email. Please try again.",
+  "mail-rate-limited": "Too many email requests. Please try again in a few minutes.",
   "mail-status-head": "Next step: Sign your document ?",
   "send-to-email": "Send to Email",
   "date-pref-help-sub-title": "Date Widget Preferences let you define the default settings for the Date widget. These defaults are automatically applied whenever you add a new Date widget to a document or template. You can still customize any individual Date widget at any time by clicking the gear icon.",

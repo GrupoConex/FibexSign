@@ -688,6 +688,7 @@ const DocumentsReport = (props) => {
       "X-Parse-Session-Token": localStorage.getItem("accesstoken")
     };
     let params = {
+      docId: doc?.objectId,
       replyto: doc?.SenderMail || doc?.ExtUserPtr?.Email || "",
       extUserId: doc?.ExtUserPtr?.objectId,
       recipient: userDetails?.Email,
@@ -708,7 +709,7 @@ const DocumentsReport = (props) => {
       }
     } catch (err) {
       console.error("sendmail error", err);
-      setResendErrMail(t("something-went-wrong-mssg"));
+      setResendErrMail(t(utils.mailErrorMessageKey(err)));
     } finally {
       setIsNextStep({});
       setUserDetails({});

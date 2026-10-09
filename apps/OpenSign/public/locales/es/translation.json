@@ -1434,6 +1434,7 @@
   "signing-date": "Fecha de firma",
   "date-widget": "Widget de fecha",
   "mail-failed": "Algo salió mal al enviar el correo electrónico. Por favor, inténtelo de nuevo.",
+  "mail-rate-limited": "Demasiadas solicitudes de correo. Inténtelo de nuevo en unos minutos.",
   "mail-status-head": "Siguiente paso: ¿Firmar su documento?",
   "send-to-email": "Enviar por correo electrónico",
   "date-pref-help-sub-title": "Las preferencias del widget de fecha le permiten definir la configuración predeterminada del widget de fecha. Estos valores se aplican automáticamente cada vez que añade un nuevo widget de fecha a un documento o plantilla. Aún puede personalizar cualquier widget de fecha individual en cualquier momento haciendo clic en el icono de engranaje.",

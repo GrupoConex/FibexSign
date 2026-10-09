@@ -1403,6 +1403,7 @@
   "signing-date": "Date de signature",
   "date-widget": "Widget de date",
   "mail-failed": "Une erreur s'est produite lors de l'envoi de l'e-mail. Veuillez réessayer.",
+  "mail-rate-limited": "Trop de demandes d'e-mail. Veuillez réessayer dans quelques minutes.",
   "mail-status-head": "Étape suivante : signer votre document ?",
   "send-to-email": "Envoyer par e-mail",
   "date-pref-help-sub-title": "Les préférences du widget de date vous permettent de définir les paramètres par défaut du widget de date. Ces paramètres sont automatiquement appliqués lorsque vous ajoutez un nouveau widget de date à un document ou à un modèle. Vous pouvez toujours personnaliser chaque widget de date individuellement en cliquant sur l'icône d'engrenage.",

@@ -26,8 +26,21 @@ describe('commsMailDelivery', () => {
       });
 
       expect(result).toEqual({ status: 'success' });
-      expect(sendMail).toHaveBeenCalledWith(MESSAGE);
+      expect(sendMail).toHaveBeenCalledWith(MESSAGE, { lane: 'system' });
       expect(countMail).toHaveBeenCalledOnceWith('ext1');
+    });
+
+    it('sends through the requested lane', async () => {
+      const sendMail = jasmine.createSpy('sendMail').and.resolveTo([]);
+
+      await deliverViaComms(MESSAGE, {
+        label: 'lbl',
+        lane: 'bulk',
+        sendMail,
+        countMail: async () => {},
+      });
+
+      expect(sendMail).toHaveBeenCalledWith(MESSAGE, { lane: 'bulk' });
     });
 
     it('does not count when there is no external user', async () => {

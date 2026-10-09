@@ -19,6 +19,11 @@ import { format, toZonedTime } from "date-fns-tz";
 import i18n from "../i18n";
 import { isOtpResendLimitError } from "../utils/otpPolicy";
 import {
+  summarizeSendOutcomes,
+  toSendFailure,
+  toSendOutcome
+} from "../utils/mailErrors";
+import {
   applyNumberFormulasToPages,
   buildDownloadFilename,
   addPreferenceOpt,
@@ -4595,7 +4600,7 @@ export const sendEmailToSigners = async (
 ) => {
   let htmlReqBody;
   const owner = pdfDetails?.[0]?.ExtUserPtr;
-  let sendMail;
+  const outcomes = [];
   const getDocumentExpDate = pdfDetails?.[0]?.ExpiryDate?.iso;
   const getTemplateExpDate = new Date(pdfDetails[0]?.createdAt);
   getTemplateExpDate.setDate(
@@ -4712,6 +4717,7 @@ export const sendEmailToSigners = async (
       // template instead of the "sign" template).
       const defaultTemplate = mailTemplate(mailparam);
       let params = {
+        docId: pdfDetails?.[0]?.objectId,
         extUserId: owner?.objectId,
         recipient: signerMail[i].Email,
         subject: replaceVar?.subject
@@ -4722,12 +4728,15 @@ export const sendEmailToSigners = async (
         html: replaceVar?.body ? replaceVar?.body : defaultTemplate.body
       };
 
-      sendMail = await axios.post(url, params, { headers: headers });
+      const response = await axios.post(url, params, { headers: headers });
+      outcomes.push(toSendOutcome(response));
     } catch (error) {
       console.log("error", error);
+      outcomes.push(toSendFailure(error));
     }
   }
-  if (sendMail?.data?.result?.status === "success") {
+  const summary = summarizeSendOutcomes(outcomes);
+  if (outcomes.some((outcome) => outcome.ok)) {
     const sessiontoken = localStorage.getItem("accesstoken");
     if (pdfDetails[0]?.objectId && sessiontoken) {
       try {
@@ -4760,10 +4769,8 @@ export const sendEmailToSigners = async (
         console.error("Error while updating doc: ", err);
       }
     }
-    return { status: "success" };
-  } else {
-    return { status: sendMail?.data?.result?.status };
   }
+  return summary;
 };
 /**
  * Converts a JPEG/JPG File/Blob into a PNG File.

@@ -274,7 +274,7 @@ describe('mailTransport', () => {
 
       expect(sendComms).toHaveBeenCalledWith(
         { to: payload.to, subject: payload.subject, text: 't', html: 'h' },
-        { env: COMMS }
+        { env: COMMS, lane: 'critical' }
       );
     });
 

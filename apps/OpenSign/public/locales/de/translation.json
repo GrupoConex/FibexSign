@@ -1405,6 +1405,7 @@
   "signing-date": "Signierdatum",
   "date-widget": "Datums-Widget",
   "mail-failed": "Beim Senden der E-Mail ist etwas schiefgelaufen. Bitte versuchen Sie es erneut.",
+  "mail-rate-limited": "Zu viele E-Mail-Anfragen. Bitte versuchen Sie es in einigen Minuten erneut.",
   "mail-status-head": "Nächster Schritt: Ihr Dokument unterschreiben?",
   "send-to-email": "Per E-Mail senden",
   "date-pref-help-sub-title": "Mit den Datums-Widget-Einstellungen können Sie die Standardkonfiguration für das Datums-Widget festlegen. Diese Standards werden automatisch angewendet, wenn Sie ein neues Datums-Widget zu einem Dokument oder einer Vorlage hinzufügen. Sie können jedes Datums-Widget jederzeit individuell anpassen, indem Sie auf das Zahnradsymbol klicken.",

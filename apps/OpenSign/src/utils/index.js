@@ -6,3 +6,4 @@ export * from "./lazyWithRetry";
 export * from "./upgradeProgress";
 export * from "./widgetUtils";
 export * from "./withSessionValidation";
+export * from "./mailErrors";

@@ -700,6 +700,8 @@ const TemplatesReport = (props) => {
       "X-Parse-Session-Token": localStorage.getItem("accesstoken")
     };
     let params = {
+      docId: doc?.objectId,
+      docClass: "contracts_Template",
       replyto:
         doc?.ExtUserPtr?.Email ||
         "",
@@ -722,7 +724,7 @@ const TemplatesReport = (props) => {
       }
     } catch (err) {
       console.error("sendmail error", err);
-      utils.notify.error(t("something-went-wrong-mssg"));
+      utils.notify.error(t(utils.mailErrorMessageKey(err)));
     } finally {
       setIsNextStep({});
       setUserDetails({});

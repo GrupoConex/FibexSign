@@ -1,4 +1,9 @@
-import { collectRecipients, isCommsMailEnabled, sendCommsMail } from './commsMailClient.js';
+import {
+  CommsLane,
+  collectRecipients,
+  isCommsMailEnabled,
+  sendCommsMail,
+} from './commsMailClient.js';
 
 const DEFAULT_SMTP_PORT = 465;
 const LOCAL_SENDER_ADDRESS = 'dev@localhost';
@@ -43,7 +48,8 @@ export const createMailApiCallback = ({
   sendMailgun,
 }) => {
   const senders = {
-    [MailTransport.COMMS]: payload => sendComms(adapterPayloadToCommsMessage(payload), { env }),
+    [MailTransport.COMMS]: payload =>
+      sendComms(adapterPayloadToCommsMessage(payload), { env, lane: CommsLane.CRITICAL }),
     [MailTransport.SMTP]: payload => sendSmtp(payload),
     [MailTransport.MAILGUN]: payload => sendMailgun(payload),
   };
