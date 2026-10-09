@@ -1,14 +1,20 @@
 import { updateMailCount } from '../../../Utils.js';
-import { CommsMailError, sendCommsMail } from './commsMailClient.js';
+import { CommsLane, CommsMailError, sendCommsMail } from './commsMailClient.js';
 
 const describeFailure = err => (err instanceof CommsMailError ? err.message : 'unexpected_error');
 
 export const deliverViaComms = async (
   message,
-  { extUserId, label, sendMail = sendCommsMail, countMail = updateMailCount }
+  {
+    extUserId,
+    label,
+    lane = CommsLane.SYSTEM,
+    sendMail = sendCommsMail,
+    countMail = updateMailCount,
+  }
 ) => {
   try {
-    await sendMail(message);
+    await sendMail(message, { lane });
     if (extUserId) await countMail(extUserId);
     return { status: 'success' };
   } catch (err) {

@@ -1405,6 +1405,7 @@
   "signing-date": "Data di firma",
   "date-widget": "Widget data",
   "mail-failed": "Si è verificato un errore durante l'invio dell'e-mail. Per favore riprova.",
+  "mail-rate-limited": "Troppe richieste di e-mail. Riprova tra qualche minuto.",
   "mail-status-head": "Passaggio successivo: firmare il tuo documento?",
   "send-to-email": "Invia tramite email",
   "date-pref-help-sub-title": "Le preferenze del widget Data consentono di definire le impostazioni predefinite per il widget Data. Queste impostazioni vengono applicate automaticamente ogni volta che si aggiunge un nuovo widget Data a un documento o a un modello. È comunque possibile personalizzare qualsiasi widget Data in qualsiasi momento facendo clic sull'icona a forma di ingranaggio.",

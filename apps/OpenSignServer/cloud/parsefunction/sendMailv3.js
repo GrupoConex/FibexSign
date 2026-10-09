@@ -2,12 +2,18 @@ import formData from 'form-data';
 import Mailgun from 'mailgun.js';
 import { smtpenable, smtpsecure, updateMailCount } from '../../Utils.js';
 import { createTransport } from 'nodemailer';
-import { isCommsMailEnabled } from './shared/commsMailClient.js';
+import { CommsLane, isCommsMailEnabled } from './shared/commsMailClient.js';
 import { deliverViaComms, toCommsMessage } from './shared/commsMailDelivery.js';
-async function sendMailProvider(req) {
+import { authorizeSendMailv3 } from './shared/sendMailv3Authorization.js';
+import { sanitizeDisplayName } from './shared/mailDisplayName.js';
+async function sendMailProvider(req, lane) {
   const extUserId = req.params?.extUserId || '';
   if (isCommsMailEnabled()) {
-    return deliverViaComms(toCommsMessage(req.params), { extUserId, label: 'sendmailv3' });
+    return deliverViaComms(toCommsMessage(req.params), {
+      extUserId,
+      label: 'sendmailv3',
+      lane,
+    });
   }
 
   const mailgunApiKey = process.env.MAILGUN_API_KEY;
@@ -90,16 +96,25 @@ async function sendMailProvider(req) {
   }
 }
 
-export async function deliverMailv3(req) {
-  const nonCustomMail = await sendMailProvider(req);
+export async function deliverMailv3(req, { lane = CommsLane.SYSTEM } = {}) {
+  const nonCustomMail = await sendMailProvider(req, lane);
   return nonCustomMail;
 }
 
-async function sendmailv3(req) {
-  if (!req.user && !req.master) {
+const BULK_DELIVERY = Object.freeze({ lane: CommsLane.BULK });
+
+const withSanitizedSender = (req, extra = {}) => ({
+  ...req,
+  params: { ...req.params, ...extra, from: sanitizeDisplayName(req.params?.from) },
+});
+
+async function sendmailv3(req, { deliver = deliverMailv3, ...authorization } = {}) {
+  if (req.master) return deliver(withSanitizedSender(req), BULK_DELIVERY);
+  if (!req.user) {
     throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'Invalid session token');
   }
-  return deliverMailv3(req);
+  const { extUserId } = await authorizeSendMailv3(req, authorization);
+  return deliver(withSanitizedSender(req, { extUserId }), BULK_DELIVERY);
 }
 
 export default sendmailv3;
