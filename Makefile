@@ -1,10 +1,10 @@
 build:
 	@echo "Building with HOST_URL=${HOST_URL}"
-	cp .env.local_dev .env
+	sed 's/^SMTP_HOST=.*/SMTP_HOST=mailhog/' .env.local_dev > .env
 	cd apps/OpenSign && cp ../../.env.local_dev .env && npm install && npm run build
-	HOST_URL=${HOST_URL} docker compose up --build --force-recreate
+	HOST_URL=${HOST_URL} docker compose --profile dev up --build --force-recreate
 
 run:
 	@echo "Building with HOST_URL=${HOST_URL}"
-	cp .env.local_dev .env
-	docker compose up -d
+	sed 's/^SMTP_HOST=.*/SMTP_HOST=mailhog/' .env.local_dev > .env
+	docker compose --profile dev up -d

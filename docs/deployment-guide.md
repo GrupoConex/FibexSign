@@ -15,33 +15,48 @@ El `Makefile` de la raíz define dos targets:
 ```makefile
 build:
 	@echo "Building with HOST_URL=${HOST_URL}"
-	cp .env.local_dev .env
+	sed 's/^SMTP_HOST=.*/SMTP_HOST=mailhog/' .env.local_dev > .env
 	cd apps/OpenSign && cp ../../.env.local_dev .env && npm install && npm run build
-	HOST_URL=${HOST_URL} docker compose up --build --force-recreate
+	HOST_URL=${HOST_URL} docker compose --profile dev up --build --force-recreate
 
 run:
 	@echo "Building with HOST_URL=${HOST_URL}"
-	cp .env.local_dev .env
-	docker compose up -d
+	sed 's/^SMTP_HOST=.*/SMTP_HOST=mailhog/' .env.local_dev > .env
+	docker compose --profile dev up -d
 ```
 
-- **`make build`**: copia `.env.local_dev` a `.env` (raíz y `apps/OpenSign`), instala dependencias y buildea el frontend **nativamente** (`npm install && npm run build` dentro de `apps/OpenSign`), y luego levanta todo el stack con `docker compose up --build --force-recreate` (reconstruye las imágenes locales y fuerza recreación de contenedores). Usar cuando cambiaste código y necesitás que Compose reconstruya las imágenes desde el Dockerfile local en vez de usar las imágenes publicadas en Docker Hub.
-- **`make run`**: copia `.env.local_dev` a `.env` y hace `docker compose up -d`, **sin rebuildear** nada. Usa las imágenes ya existentes (localmente cacheadas o las publicadas en Docker Hub: `opensign/opensignserver:main`, `opensign/opensign:main`). Usar para levantar/reiniciar el stack rápido cuando no cambiaste código.
+- **`make build`**: genera el `.env` raíz desde `.env.local_dev` con `SMTP_HOST=mailhog`, copia `.env.local_dev` tal cual a `apps/OpenSign/.env`, instala dependencias y buildea el frontend **nativamente** (`npm install && npm run build` dentro de `apps/OpenSign`), y luego levanta todo el stack, MailHog incluido, con `docker compose --profile dev up --build --force-recreate` (reconstruye las imágenes locales y fuerza recreación de contenedores). Usar cuando cambiaste código y necesitás que Compose reconstruya las imágenes desde el Dockerfile local en vez de usar las imágenes publicadas en Docker Hub.
+- **`make run`**: genera el `.env` raíz desde `.env.local_dev` con `SMTP_HOST=mailhog` y hace `docker compose --profile dev up -d` (MailHog incluido), **sin rebuildear** nada. Usa las imágenes ya existentes (localmente cacheadas o las publicadas en Docker Hub: `opensign/opensignserver:main`, `opensign/opensign:main`). Usar para levantar/reiniciar el stack rápido cuando no cambiaste código.
 
-Ambos targets sobreescriben `.env` con `.env.local_dev` — en un entorno de producción real conviene no usar `make build`/`make run` tal cual, sino preparar el `.env` de producción primero y correr `docker compose up -d` (o `--build` si corresponde) directamente, para no pisarlo con los valores de desarrollo.
+Ambos targets sobreescriben `.env` con los valores de `.env.local_dev` — en un entorno de producción real conviene no usar `make build`/`make run` tal cual, sino preparar el `.env` de producción primero y correr `docker compose up -d` (o `--build` si corresponde) directamente, para no pisarlo con los valores de desarrollo.
 
 ## Servicios de `docker-compose.yml`
 
-El archivo define 4 servicios en la red `app-network` (bridge):
+El archivo define 5 servicios en la red `app-network` (bridge); `mailhog` solo arranca con el perfil `dev`:
 
 | Servicio | Imagen | Puerto host → contenedor | Depende de | Notas |
 |---|---|---|---|---|
 | `server` | `opensign/opensignserver:main` | `8080:8080` | `mongo` | `env_file: .env`; setea `NODE_ENV=production`, `SERVER_URL` y `PUBLIC_URL` derivados de `HOST_URL` (default `https://localhost:3001`); volumen `opensign-files:/usr/src/app/files` para los documentos subidos. |
 | `mongo` | `mongo:latest` | **`27018:27017`** | — | Puerto host **no estándar** (27018, no el 27017 default de Mongo); volumen `data-volume:/data/db` para persistencia. |
 | `client` | `opensign/opensign:main` | `3000:3000` | `server` | `env_file: .env`; es el frontend servido. |
+| `mailhog` | `mailhog/mailhog:latest` | `8025:8025` (UI web), `1025:1025` (SMTP) | — | `profiles: ["dev"]`: no arranca con `docker compose up`, solo con `docker compose --profile dev up` (o nombrándolo explícitamente, por ejemplo `docker compose up -d mongo mailhog`). Solo para desarrollo local. |
 | `caddy` | `caddy:latest` | `3001:3001`, `80:80`, `443:443` (TCP y UDP) | — | Reverse proxy con TLS; monta `./Caddyfile`, y los volúmenes `caddy_data`/`caddy_config` para persistir certificados y estado de Caddy entre reinicios. |
 
 Volúmenes nombrados: `data-volume` (Mongo), `web-root` (declarado pero sin uso visible en los servicios actuales), `caddy_data`, `caddy_config`, `opensign-files`.
+
+El servicio `server` no fija ninguna variable `SMTP_*`: el transporte de email sale exclusivamente del `.env` (precedencia Comms, SMTP, Mailgun; ver [`./environment-variables.md`](./environment-variables.md#email-mailgun-o-smtp)).
+
+### MailHog local (perfil `dev`)
+
+Para capturar los correos en local con MailHog en vez de enviarlos:
+
+1. En el `.env` de la raíz, setear `SMTP_ENABLE=true`, `SMTP_HOST=mailhog`, `SMTP_PORT=1025` y dejar vacías `COMMS_BASE_URL` y `COMMS_API_KEY` (Comms tiene prioridad sobre SMTP).
+2. Levantar el stack con el perfil `dev`: `docker compose --profile dev up` (o `docker compose --profile dev up -d`).
+3. Ver los correos capturados en `http://localhost:8025`.
+
+`make build` y `make run` ya hacen ambos pasos: generan el `.env` raíz desde `.env.local_dev` con `SMTP_HOST=mailhog` y levantan con `--profile dev`, así que MailHog arranca junto al stack. Si el backend corre nativo (`pnpm dev:backend`), `docker compose up -d mongo mailhog` levanta solo Mongo y MailHog, y en ese caso `SMTP_HOST=localhost` (el valor de `.env.local_dev`).
+
+En producción no usar el perfil `dev`: configurar Comms, SMTP real o Mailgun en el `.env`. Con `NODE_ENV=production` (que el `server` fija en Compose), si no hay un transporte válido el envío de mail falla en vez de omitirse.
 
 ## Qué hace el `Caddyfile`
 
