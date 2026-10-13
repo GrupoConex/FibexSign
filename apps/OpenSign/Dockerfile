@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim AS build
+FROM public.ecr.aws/docker/library/node:22-bookworm-slim AS build
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ ENV GENERATE_SOURCEMAP=false
 RUN npm run build \
   && sed -i '/<head>/a\<script src="/env.js"></script>' build/index.html
 
-FROM node:22-bookworm-slim AS runtime
+FROM public.ecr.aws/docker/library/node:22-bookworm-slim AS runtime
 
 WORKDIR /app
 
