@@ -1,6 +1,10 @@
 import { COMPLETION_ACTIVITIES } from '../../../utils/workflowUtils.js';
 import { deliverMailv3 } from '../sendMailv3.js';
-import { buildSignerInvitationMail, getPlaceholderRole } from './signerInvitationMail.js';
+import {
+  buildSignerInvitationMail,
+  getPlaceholderRole,
+  isParticipantPlaceholder,
+} from './signerInvitationMail.js';
 
 const FAILURE_LOG_MESSAGE = 'next signer notification failed';
 const NO_RECIPIENT_LOG_MESSAGE = 'next signer notification skipped: no recipient';
@@ -41,9 +45,7 @@ const isAwaitingSignature = (placeholder, auditTrail) =>
   !hasSignerActed(auditTrail, placeholderContactId(placeholder));
 
 export function findNextSigner(document, signerObjectId, auditTrail) {
-  const participants = (document?.Placeholders || []).filter(
-    placeholder => placeholder?.Role !== 'prefill'
-  );
+  const participants = (document?.Placeholders || []).filter(isParticipantPlaceholder);
   const currentIndex = participants.findIndex(
     placeholder => signerObjectId && placeholderContactId(placeholder) === signerObjectId
   );
@@ -77,7 +79,7 @@ export async function notifyNextSigner({
   }
   try {
     const params = buildSignerInvitationMail({ document, placeholder, publicUrl });
-    if (!params.recipient?.trim()) {
+    if (!params?.recipient?.trim()) {
       console.log(NO_RECIPIENT_LOG_MESSAGE);
       return;
     }

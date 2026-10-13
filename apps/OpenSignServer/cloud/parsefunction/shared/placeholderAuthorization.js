@@ -31,9 +31,15 @@ const signerPtrIdOf = placeholder => {
   return id;
 };
 
-const withVerifiedSignerPointer = placeholder => {
-  const signerPtrId = signerPtrIdOf(placeholder);
-  return signerPtrId ? { ...placeholder, signerPtr: toContactPointer(signerPtrId) } : placeholder;
+const withStoredContact = (placeholder, contactsById) => {
+  const contactId = signerPtrIdOf(placeholder) ?? signerObjIdOf(placeholder);
+  if (!contactId) return placeholder;
+  return {
+    ...placeholder,
+    signerObjId: contactId,
+    signerPtr: toContactPointer(contactId),
+    email: contactsById.get(contactId)?.get('Email') ?? '',
+  };
 };
 
 export const authorizePlaceholders = async ({ userId, placeholders, templateContactIds }) => {
@@ -42,6 +48,7 @@ export const authorizePlaceholders = async ({ userId, placeholders, templateCont
     signerObjIdOf(placeholder),
     signerPtrIdOf(placeholder),
   ]);
-  await authorizeContactIds({ userId, ids, templateContactIds });
-  return placeholders.map(withVerifiedSignerPointer);
+  const contacts = await authorizeContactIds({ userId, ids, templateContactIds });
+  const contactsById = new Map(contacts.map(contact => [contact.id, contact]));
+  return placeholders.map(placeholder => withStoredContact(placeholder, contactsById));
 };

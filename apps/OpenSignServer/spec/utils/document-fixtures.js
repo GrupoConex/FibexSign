@@ -11,6 +11,8 @@ export const TEMPLATE_GONE = "template deleted or you don't have access.";
 
 export const fileUrl = name => `${FILE_HOST}/${name}`;
 
+export const trustedFileUrl = name => `${process.env.SERVER_URL}/files/test/${name}`;
+
 const restHeaders = (extra = {}) => ({
   'X-Parse-Application-Id': process.env.APP_ID,
   'X-Parse-Javascript-Key': JAVASCRIPT_KEY,

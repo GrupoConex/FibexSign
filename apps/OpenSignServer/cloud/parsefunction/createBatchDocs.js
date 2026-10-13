@@ -1,297 +1,160 @@
-import axios from 'axios';
-import { cloudServerUrl, serverAppId } from '../../Utils.js';
+import { generateId } from '../../Utils.js';
 import { setDocumentCount } from '../../utils/CountUtils.js';
+import {
+  contactReferencesOf,
+  parseBatchDocuments,
+  toDraftInput,
+} from './shared/batchDocumentInput.js';
+import { dispatchBatchSigningMails, resolveInvitationBaseUrl } from './shared/batchSigningMail.js';
+import { resolveCallerProfile } from './shared/callerProfile.js';
+import { assertContactClaimsMatch } from './shared/contactClaims.js';
+import { buildAuthorizedDocument, findAccessibleTemplate } from './shared/documentDraft.js';
+import { createUserCallLimiter } from './shared/userCallLimiter.js';
 
-import crypto from 'crypto';
-import sendSystemMail from './sendSystemMail.js';
-import { deliverMailv3 } from './sendMailv3.js';
-import { buildSignerInvitationMail, getPlaceholderRole } from './shared/signerInvitationMail.js';
+const MASTER = { useMasterKey: true };
+const TENANT_CLASS = 'partners_Tenant';
+const BULK_SEND_TYPE = 'bulksend';
+const BULK_SEND_TOKEN_LENGTH = 10;
+const REQUEST_FIELDS = ['RequestBody', 'RequestSubject', 'EmailEditorType'];
+const SENDER_FIELDS = ['SenderName', 'SenderMail'];
+const DEFAULT_USER_LIMIT = 20;
+const MAX_USER_LIMIT = 200;
+const DEFAULT_USER_WINDOW_MS = 10 * 60 * 1000;
 
-function chunkArray(arr, size) {
-  const out = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-}
+const userLimiter = createUserCallLimiter();
 
-async function mapWithConcurrency(items, concurrency, fn) {
-  const results = new Array(items.length);
-  let idx = 0;
+export const resetBatchDocumentsUserLimits = () => userLimiter.reset();
 
-  async function worker() {
-    while (true) {
-      const current = idx++;
-      if (current >= items.length) return;
-      results[current] = await fn(items[current], current);
-    }
-  }
-
-  const workers = [];
-  for (let i = 0; i < Math.min(concurrency, items.length); i++) {
-    workers.push(worker());
-  }
-  await Promise.all(workers);
-  return results;
-}
-
-function uuid() {
-  return crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
-}
-
-const serverUrl = cloudServerUrl; //process.env.SERVER_URL;
-const appId = serverAppId;
-
-async function sendOwnerSummaryEmail({
-  ownerEmail,
-  ownerName,
-  total,
-  created,
-  failed,
-  failedList,
-}) {
-  try {
-    const subject = `Bulk send finished: ${failed} of ${total} failed to create`;
-
-    const failureHtml = failedList?.length
-      ? `<ul>${failedList
-          .slice(0, 50)
-          .map(f => `<li>#${f.index + 1}: ${String(f.error).slice(0, 200)}</li>`)
-          .join('')}</ul>
-         ${failedList.length > 50 ? `<p>…and ${failedList.length - 50} more.</p>` : ''}`
-      : `<p>No failures.</p>`;
-
-    const html = `
-      <p>Hi ${ownerName || ''},</p>
-      <p>Your bulk send processing is complete.</p>
-      <p><b>Total requested:</b> ${total}<br/>
-         <b>Created:</b> ${created}<br/>
-         <b>Failed to create:</b> ${failed}</p>
-      <h4>Failure details</h4>
-      ${failureHtml}
-    `;
-
-    const params = {
-      // keep provider selection consistent with your system; if you can’t decide, omit it.
-      isbulksend: true,
-      recipient: ownerEmail,
-      subject,
-      from: ownerEmail, // or use a tenant/from address if required by your provider
-      replyto: ownerEmail,
-      html,
-    };
-
-    await sendSystemMail({ params });
-  } catch (e) {
-    console.log('batchdoc Failed to send owner summary email:', e?.message || e);
-  }
-}
-
-async function deductcount(docsCount, extUserId) {
-  try {
-    if (extUserId) {
-      setDocumentCount(extUserId, docsCount);
-    }
-  } catch (err) {
-    console.log('batchdoc deductcount error: ', err);
-  }
-}
-const keepOnlyFirstSignerAndViewers = (document, placeholders) => {
-  const firstSignerIndex = placeholders.findIndex(
-    placeholder => getPlaceholderRole(placeholder) === 'signer'
-  );
-  const selected = placeholders.filter(
-    (placeholder, idx) => getPlaceholderRole(placeholder) === 'viewer' || idx === firstSignerIndex
-  );
-  if (selected.length === 0 && document?.Placeholders?.length > 0) {
-    return document.Placeholders.filter(x => x?.Role !== 'prefill').slice(0, 1);
-  }
-  return selected;
+const positiveIntegerOr = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-const withTenantRequestTemplate = document => {
-  const tenant = document?.ExtUserPtr?.TenantId;
-  return {
-    ...document,
-    RequestBody: tenant?.RequestBody || '',
-    RequestSubject: tenant?.RequestSubject || '',
+const assertWithinUserLimit = (userId, env = process.env) => {
+  const limit = Math.min(
+    positiveIntegerOr(env.BATCHDOCS_USER_LIMIT, DEFAULT_USER_LIMIT),
+    MAX_USER_LIMIT
+  );
+  const windowMs = positiveIntegerOr(env.BATCHDOCS_USER_WINDOW_MS, DEFAULT_USER_WINDOW_MS);
+  if (!userLimiter.tryConsume(userId, { limit, windowMs })) {
+    throw new Parse.Error(Parse.Error.REQUEST_LIMIT_EXCEEDED, 'Too many bulk send requests');
+  }
+};
+
+const memoize = (load, keyOf) => {
+  const cache = new Map();
+  return (...args) => {
+    const key = keyOf(...args);
+    if (!cache.has(key)) cache.set(key, load(...args));
+    return cache.get(key);
   };
 };
 
-export async function sendMail(document, publicUrl) {
-  const participants = (document.Placeholders || []).filter(x => x?.Role !== 'prefill');
-  const recipients = document.SendinOrder
-    ? keepOnlyFirstSignerAndViewers(document, participants)
-    : participants;
-  const mailDocument = withTenantRequestTemplate(document);
+const loadTenant = profile => {
+  const tenantId = profile.get('TenantId')?.id;
+  if (!tenantId) return undefined;
+  return new Parse.Query(TENANT_CLASS).equalTo('objectId', tenantId).first(MASTER);
+};
 
-  for (const placeholder of recipients) {
-    try {
-      const params = buildSignerInvitationMail({ document: mailDocument, placeholder, publicUrl });
-      await deliverMailv3({ params });
-    } catch (error) {
-      console.log('batchdoc sendmail error: ', error);
-    }
-  }
-}
+const requestLookups = () => ({
+  resolveProfile: memoize(resolveCallerProfile, (userId, extUserId) => `${userId}:${extUserId}`),
+  findTemplate: memoize(findAccessibleTemplate, (userId, templateId) => `${userId}:${templateId}`),
+  loadTenant: memoize(loadTenant, profile => profile.get('TenantId')?.id ?? ''),
+});
 
-async function startBulkSendInBackground(userId, Documents, Ip, parseConfig, type, publicUrl) {
-  const BATCH_LIMIT = 50; // Parse batch limit (safe)
-  const DOC_MAIL_CONCURRENCY = 5;
+const pickStrings = (source, fields) =>
+  Object.fromEntries(
+    fields
+      .map(field => [field, source?.get(field)])
+      .filter(([, value]) => typeof value === 'string' && value.length > 0)
+  );
 
-  // Find ext user
-  const extCls = new Parse.Query('contracts_Users');
-  extCls.equalTo('UserId', { __type: 'Pointer', className: '_User', objectId: userId });
-  const resExt = await extCls.first({ useMasterKey: true });
-  if (!resExt) throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'User not found.');
+const hasRequestTemplate = template =>
+  Boolean(template?.get('RequestBody') || template?.get('RequestSubject'));
 
-  const _resExt = JSON.parse(JSON.stringify(resExt));
-
-  // Build Parse /batch requests from your existing mapping (same as your current code)
-  const requests = Documents.map(x => {
-    const Signers = x.Signers;
-    const placeholders = x?.Placeholders?.filter(p => p?.Role !== 'prefill');
-    const allSigner = placeholders
-      ?.map(
-        item => Signers?.find(e => item?.signerPtr?.objectId === e?.objectId) || item?.signerPtr
-      )
-      .filter(signer => signer && Object.keys(signer).length > 0);
-    const date = new Date();
-    const isoDate = date.toISOString();
-    let Acl = { [x.CreatedBy.objectId]: { read: true, write: true } };
-    if (allSigner && allSigner.length > 0) {
-      allSigner.forEach(x => {
-        if (x?.CreatedBy?.objectId) {
-          Acl = { ...Acl, [x.CreatedBy.objectId]: { read: true, write: true } };
-        }
-      });
-    }
-    let mailBody = x?.ExtUserPtr?.TenantId?.RequestBody || '';
-    let mailSubject = x?.ExtUserPtr?.TenantId?.RequestSubject || '';
-    let EmailEditorType = x?.ExtUserPtr?.TenantId?.EmailEditorType || '';
-    return {
-      method: 'POST',
-      path: '/app/classes/contracts_Document',
-      body: {
-        Name: x.Name,
-        URL: x.URL,
-        Note: x.Note,
-        Description: x.Description,
-        CreatedBy: x.CreatedBy,
-        SendinOrder: x.SendinOrder || true,
-        SendInOrderStrict: x.SendInOrderStrict || false,
-        ExtUserPtr: {
-          __type: 'Pointer',
-          className: x.ExtUserPtr.className,
-          objectId: x.ExtUserPtr?.objectId,
-        },
-        Placeholders: placeholders.map(y =>
-          y?.signerPtr?.objectId
-            ? {
-                ...y,
-                signerPtr: {
-                  __type: 'Pointer',
-                  className: 'contracts_Contactbook',
-                  objectId: y.signerPtr.objectId,
-                },
-                signerObjId: y.signerObjId,
-                email: y?.signerPtr?.Email || y?.email || '',
-              }
-            : { ...y, signerPtr: {}, signerObjId: '', email: y.email || '' }
-        ),
-        SignedUrl: x.URL || x.SignedUrl,
-        SentToOthers: true,
-        Signers: allSigner?.map(y => ({
-          __type: 'Pointer',
-          className: 'contracts_Contactbook',
-          objectId: y.objectId,
-        })),
-        ACL: Acl,
-        SentToOthers: true,
-        RemindOnceInEvery: x.RemindOnceInEvery ? parseInt(x.RemindOnceInEvery) : 5,
-        AutomaticReminders: x.AutomaticReminders || false,
-        TimeToCompleteDays: x.TimeToCompleteDays ? parseInt(x.TimeToCompleteDays) : 15,
-        OriginIp: Ip,
-        DocSentAt: { __type: 'Date', iso: isoDate },
-        IsEnableOTP: x?.IsEnableOTP || false,
-        IsTourEnabled: x?.IsTourEnabled || false,
-        AllowModifications: x?.AllowModifications || false,
-        ...(x?.SenderName ? { SenderName: x?.SenderName } : {}),
-        ...(x?.SenderMail ? { SenderMail: x?.SenderMail } : {}),
-        ...(type === 'bulksend' ? { BulkSendToken: generateId(10) } : {}),
-        ...(x?.SignatureType ? { SignatureType: x?.SignatureType } : {}),
-        ...(x?.NotifyOnSignatures ? { NotifyOnSignatures: x?.NotifyOnSignatures } : {}),
-        ...(x?.Bcc?.length > 0 ? { Bcc: x?.Bcc } : {}),
-        ...(x?.Cc?.length > 0 ? { Cc: x?.Cc } : {}),
-        ...(x?.RedirectUrl ? { RedirectUrl: x?.RedirectUrl } : {}),
-        ...(mailBody ? { RequestBody: mailBody } : {}),
-        ...(mailSubject ? { RequestSubject: mailSubject } : {}),
-        ...(EmailEditorType ? { EmailEditorType: EmailEditorType } : {}),
-        ...(x?.objectId
-          ? {
-              TemplateId: {
-                __type: 'Pointer',
-                className: 'contracts_Template',
-                objectId: x?.objectId,
-              },
-            }
-          : {}),
-        ...(x?.PenColors?.length > 0 ? { PenColors: x?.PenColors } : {}),
-      },
-    };
+const serverFields =
+  ({ isBulkSend, lookups }) =>
+  async ({ profile, template }) => ({
+    DocSentAt: new Date(),
+    ...(isBulkSend ? { BulkSendToken: generateId(BULK_SEND_TOKEN_LENGTH) } : {}),
+    ...pickStrings(template, SENDER_FIELDS),
+    ...pickStrings(
+      hasRequestTemplate(template) ? template : await lookups.loadTenant(profile),
+      REQUEST_FIELDS
+    ),
   });
 
-  if (requests?.length > 0) {
-    const newrequests = [requests?.[0]];
-    const response = await axios.post('batch', { requests: newrequests }, parseConfig);
-    // Handle the batch query response
-    // console.log('Batch query response:', response.data);
-    if (response.data && response.data.length > 0) {
-      const document = Documents?.[0];
-      const updateDocuments = {
-        ...document,
-        objectId: response.data[0]?.success?.objectId,
-        createdAt: response.data[0]?.success?.createdAt,
-      };
-      deductcount(response.data.length, resExt.id);
-      sendMail(updateDocuments, publicUrl); //sessionToken
-      return { total: 1, created: 1, failed: 0 };
-    }
+const buildDraft = async (context, item) => {
+  await assertContactClaimsMatch(contactReferencesOf(item));
+  return buildAuthorizedDocument({
+    userId: context.userId,
+    ip: context.ip,
+    doc: toDraftInput(item),
+    fields: serverFields(context),
+    lookups: context.lookups,
+  });
+};
+
+const saveDrafts = async drafts => {
+  try {
+    await Parse.Object.saveAll(
+      drafts.map(draft => draft.document),
+      MASTER
+    );
+    return drafts;
+  } catch (error) {
+    const saved = drafts.filter(draft => Boolean(draft.document.id));
+    if (saved.length === 0) throw error;
+    console.log('batchdoc partial save failure: ', error);
+    return saved;
   }
-}
+};
+
+const countsByProfile = drafts =>
+  drafts.reduce(
+    (counts, { profile }) => ({ ...counts, [profile.id]: (counts[profile.id] ?? 0) + 1 }),
+    {}
+  );
+
+const chargeProfiles = drafts =>
+  Promise.all(
+    Object.entries(countsByProfile(drafts)).map(([profileId, count]) =>
+      setDocumentCount(profileId, count)
+    )
+  );
+
+const createBatch = async (request, items) => {
+  const context = {
+    userId: request.user.id,
+    ip: request.headers?.['x-real-ip'],
+    isBulkSend: request.headers?.type === BULK_SEND_TYPE,
+    lookups: requestLookups(),
+  };
+  const drafts = await Promise.all(items.map(item => buildDraft(context, item)));
+  const saved = await saveDrafts(drafts);
+  await chargeProfiles(saved);
+  dispatchBatchSigningMails({
+    documentIds: saved.map(draft => draft.document.id),
+    publicUrl: resolveInvitationBaseUrl(request.headers),
+  });
+  return { total: items.length, created: saved.length, failed: items.length - saved.length };
+};
+
+const toClientError = error =>
+  error instanceof Parse.Error
+    ? error
+    : new Parse.Error(Parse.Error.INTERNAL_SERVER_ERROR, 'Something went wrong.');
 
 export default async function createBatchDocs(request) {
-  const strDocuments = request.params.Documents;
-  const sessionToken = request.headers?.sessiontoken;
-  const type = request.headers?.type || 'quicksend';
-  const Documents = JSON.parse(strDocuments);
-
-  const Ip = request?.headers?.['x-real-ip'] || '';
-  // Use the browser origin so signing links keep the custom domain.
-  let publicUrl = request.headers.origin || request.headers.public_url;
-  const parseConfig = {
-    baseURL: serverUrl,
-    headers: {
-      'X-Parse-Application-Id': appId,
-      'X-Parse-Session-Token': sessionToken,
-      'Content-Type': 'application/json',
-    },
-  };
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'User is not authenticated.');
+  }
+  assertWithinUserLimit(request.user.id);
+  const items = parseBatchDocuments(request.params?.Documents);
   try {
-    let userId = '';
-
-    if (request?.user) {
-      userId = request.user.id;
-      // return await batchQuery(request.user.id, Documents, Ip, parseConfig, type, publicUrl);
-    }
-    if (!userId) {
-      throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'User is not authenticated.');
-    }
-
-    // quicksend
-    return await startBulkSendInBackground(userId, Documents, Ip, parseConfig, type, publicUrl);
-  } catch (err) {
-    console.log('createbatchdoc error: ', err);
-    const code = err?.code || 400;
-    const msg = err?.message || 'Something went wrong.';
-    throw new Parse.Error(code, msg);
+    return await createBatch(request, items);
+  } catch (error) {
+    console.log('createbatchdoc error: ', error);
+    throw toClientError(error);
   }
 }

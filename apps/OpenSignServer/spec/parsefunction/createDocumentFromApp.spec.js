@@ -14,7 +14,7 @@ import {
   canReadRow,
   countRows,
   documentCountOf,
-  fileUrl,
+  trustedFileUrl,
   ownerFields,
   readWriteFor,
   reload,
@@ -112,6 +112,20 @@ describe('createdocumentfromapp', () => {
     );
   });
 
+  it('rejects a document url outside the trusted storage and stores nothing', async () => {
+    const name = uniqueName('untrusted');
+
+    const failure = await captureRejection(
+      create(
+        { Name: name, URL: 'https://attacker.example/files/test/a.pdf', ...ownerFields(owner) },
+        owner.account
+      )
+    );
+
+    expect(failure.code).toBe(INVALID_JSON);
+    expect(await countRows(CLASS_NAME, 'Name', name)).toBe(0);
+  });
+
   it('stores every supplied field and the server derived ip instead of a spoofed header', async () => {
     const signer = await createPlainUser();
     const contact = await seedContact(owner, signer);
@@ -119,11 +133,11 @@ describe('createdocumentfromapp', () => {
     const template = await seedTemplate(owner);
     const document = {
       Name: uniqueName('full'),
-      URL: fileUrl('full.pdf'),
+      URL: trustedFileUrl('full.pdf'),
       ...ownerFields(owner),
       Description: 'description',
       Note: 'note',
-      SignedUrl: fileUrl('signed.pdf'),
+      SignedUrl: trustedFileUrl('signed.pdf'),
       ...Object.fromEntries(DEFAULT_FLAGS.map(flag => [flag, true])),
       SendInOrderStrict: 'yes',
       TimeToCompleteDays: '7',

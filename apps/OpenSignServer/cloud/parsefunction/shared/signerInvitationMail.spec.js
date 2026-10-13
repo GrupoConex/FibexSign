@@ -1,4 +1,8 @@
-import { buildSignerInvitationMail, getPlaceholderRole } from './signerInvitationMail.js';
+import {
+  buildSignerInvitationMail,
+  getPlaceholderRole,
+  isParticipantPlaceholder,
+} from './signerInvitationMail.js';
 
 const decodeLink = html => {
   const link = html.match(/https:\/\/app\.test\/login\/[A-Za-z0-9+/=]+/)[0];
@@ -24,6 +28,97 @@ describe('signerInvitationMail', () => {
       expect(getPlaceholderRole({ SignerRole: 'viewer' })).toBe('viewer');
       expect(getPlaceholderRole({ signer_role: 'viewer' })).toBe('viewer');
       expect(getPlaceholderRole({ role: 'viewer' })).toBe('viewer');
+    });
+  });
+
+  describe('isParticipantPlaceholder', () => {
+    it('excludes only the prefill role', () => {
+      expect(isParticipantPlaceholder({ Role: 'prefill' })).toBeFalse();
+      expect(isParticipantPlaceholder({ Role: 'Signer 1' })).toBeTrue();
+      expect(isParticipantPlaceholder(undefined)).toBeTrue();
+    });
+  });
+
+  describe('buildSignerInvitationMail recipients', () => {
+    it('never falls back to the placeholder email for a contact outside the signers', () => {
+      const mail = buildSignerInvitationMail({
+        document: buildDocument(),
+        placeholder: { signerObjId: 'cX', email: 'attacker@x.com' },
+        publicUrl: 'https://app.test',
+      });
+
+      expect(mail).toBeNull();
+    });
+
+    it('addresses the contact named by the signer pointer over the signer id', () => {
+      const document = buildDocument({
+        Signers: [
+          { objectId: 'c1', Email: 'signer@x.com' },
+          { objectId: 'c2', Email: 'other@x.com' },
+        ],
+      });
+
+      const mail = buildSignerInvitationMail({
+        document,
+        placeholder: { signerObjId: 'c2', signerPtr: { objectId: 'c1' }, email: 'other@x.com' },
+        publicUrl: 'https://app.test',
+      });
+
+      expect(mail.recipient).toBe('signer@x.com');
+      expect(decodeLink(mail.html)).toBe('doc1/signer@x.com/c1');
+    });
+
+    it('sends nothing to a placeholder without a contact or a valid email', () => {
+      const build = placeholder =>
+        buildSignerInvitationMail({
+          document: buildDocument(),
+          placeholder,
+          publicUrl: 'https://app.test',
+        });
+
+      expect(build({ email: 'not an email' })).toBeNull();
+      expect(build({ email: '' })).toBeNull();
+      expect(build({ signerPtr: {}, signerObjId: '' })).toBeNull();
+    });
+  });
+
+  describe('buildSignerInvitationMail escaping', () => {
+    const hostile = '<a href=evil>x</a><script>alert(1)</script> $& $1';
+
+    it('escapes document and sender values in the default template', () => {
+      const document = buildDocument({ Name: hostile, Note: hostile });
+      document.ExtUserPtr = { ...document.ExtUserPtr, Name: hostile, Company: hostile };
+
+      const mail = buildSignerInvitationMail({
+        document,
+        placeholder: contactPlaceholder,
+        publicUrl: 'https://app.test',
+      });
+
+      expect(mail.html).not.toContain('<script>');
+      expect(mail.html).not.toContain('<a href=evil>');
+      expect(mail.html).toContain('&lt;script&gt;alert(1)&lt;/script&gt; $&amp; $1');
+      expect(mail.subject).toBe(`${hostile} has requested you to sign "${hostile}"`);
+    });
+
+    it('escapes variables in the tenant template', () => {
+      const document = buildDocument({ Name: hostile, Note: hostile });
+      document.ExtUserPtr.TenantId = {
+        RequestSubject: '{{document_title}}',
+        RequestBody: '<p>{{document_title}}|{{note}}|{{receiver_name}}</p>',
+      };
+      document.Signers = [{ objectId: 'c1', Email: 'signer@x.com', Name: hostile }];
+
+      const mail = buildSignerInvitationMail({
+        document,
+        placeholder: contactPlaceholder,
+        publicUrl: 'https://app.test',
+      });
+
+      expect(mail.html).not.toContain('<script>');
+      expect(mail.html).toContain('&lt;a href=evil&gt;x&lt;/a&gt;');
+      expect(mail.html).toContain('$&amp; $1');
+      expect(mail.subject).toBe(hostile);
     });
   });
 

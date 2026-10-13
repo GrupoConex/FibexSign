@@ -275,6 +275,16 @@ describe('nextSignerNotification', () => {
       ]);
     });
 
+    it('does not mail a stored placeholder email when its contact is not a signer', async () => {
+      const document = buildDocument();
+      document.Placeholders[3] = buildPlaceholder('c2', 'attacker@x.com');
+      document.Signers = document.Signers.filter(signer => signer.objectId !== 'c2');
+
+      await notifyNextSigner(baseInput({ document }));
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
     it('resolves and logs a fixed message when the mail sender throws', async () => {
       const deliver = jasmine.createSpy('deliver').and.rejectWith(new Error('boom second@x.com'));
 
