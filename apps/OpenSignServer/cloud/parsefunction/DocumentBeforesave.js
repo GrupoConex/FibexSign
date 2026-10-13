@@ -1,7 +1,9 @@
 import { MAX_DESCRIPTION_LENGTH, MAX_NAME_LENGTH, MAX_NOTE_LENGTH } from '../../Utils.js';
 import { setDocumentCount } from '../../utils/CountUtils.js';
+import { guardDocumentSave } from './documentWriteGuard.js';
 
 async function DocumentBeforesave(request) {
+  await guardDocumentSave(request);
   if (!request.original) {
     const validations = [
       { field: 'Name', max: MAX_NAME_LENGTH },

@@ -1,7 +1,6 @@
 export default async function TemplateAfterSave(request) {
   try {
     if (!request.original) {
-      console.log('new entry is insert in contracts_Template', request?.object?.id);
       const obj = request.object;
       const objId = obj?.id;
       const ip = request?.headers?.['x-real-ip'] || '';
@@ -11,7 +10,9 @@ export default async function TemplateAfterSave(request) {
       // update acl of New template If There are signers present in array
       const signers = obj?.get('Signers');
       const hasSigners = Array.isArray(signers) && signers.length > 0;
-      updateTemplateMeta({ objId, createdAt, ip, originIp });
+      if (createdAt) {
+        await updateTemplateMeta({ objId, createdAt, ip, originIp });
+      }
       if (hasSigners) {
         await updateAclDoc(objId);
       } else if (objId && request?.user) {
@@ -35,76 +36,94 @@ export default async function TemplateAfterSave(request) {
   }
 
   async function updateTemplateMeta({ objId, createdAt, ip, originIp }) {
-    const templateQuery = new Parse.Query('contracts_Template');
-    templateQuery.include('ExtUserPtr.TenantId');
+    try {
+      const templateQuery = new Parse.Query('contracts_Template');
+      templateQuery.include('ExtUserPtr.TenantId');
 
-    const obj = await templateQuery.get(objId, { useMasterKey: true });
+      const obj = await templateQuery.get(objId, { useMasterKey: true });
+      if (!obj) return;
 
-    // Automatic reminders
-    const AutoReminder = obj?.get('AutomaticReminders') || false;
-    if (AutoReminder) {
-      const RemindOnceInEvery = obj?.get('RemindOnceInEvery') || 5;
-      const ReminderDate = new Date(createdAt);
-      ReminderDate.setDate(ReminderDate.getDate() + RemindOnceInEvery);
-      obj.set('NextReminderDate', ReminderDate);
+      // Automatic reminders
+      const AutoReminder = obj?.get('AutomaticReminders') || false;
+      if (AutoReminder) {
+        const RemindOnceInEvery = obj?.get('RemindOnceInEvery') || 5;
+        const ReminderDate = new Date(createdAt);
+        ReminderDate.setDate(ReminderDate.getDate() + RemindOnceInEvery);
+        obj.set('NextReminderDate', ReminderDate);
+      }
+      if (!originIp) {
+        obj.set('OriginIp', ip);
+      }
+
+      await obj.save(null, { useMasterKey: true });
+    } catch (err) {
+      console.log('err in updateTemplateMeta', err?.message || err);
     }
-    if (!originIp) {
-      obj.set('OriginIp', ip);
-    }
-
-    await obj.save(null, { useMasterKey: true });
   }
+
   async function updateAclDoc(objId) {
-    const Query = new Parse.Query('contracts_Template');
-    Query.include('Signers');
-    Query.include('CreatedBy');
-    Query.include('ExtUserPtr.TenantId');
-    const updateACL = await Query.get(objId, { useMasterKey: true });
-    const res = JSON.parse(JSON.stringify(updateACL));
-    const UsersPtr = res.Signers.map(item => item.UserId);
+    try {
+      const Query = new Parse.Query('contracts_Template');
+      Query.include('Signers');
+      Query.include('CreatedBy');
+      Query.include('ExtUserPtr.TenantId');
+      const updateACL = await Query.get(objId, { useMasterKey: true });
+      if (!updateACL) return;
+      const res = JSON.parse(JSON.stringify(updateACL));
+      const UsersPtr = res.Signers?.map(item => item.UserId) || [];
 
-    if (res.Signers[0].ExtUserPtr) {
-      const ExtUserSigners = res.Signers.map(item => {
-        return {
-          __type: 'Pointer',
-          className: 'contracts_Users',
-          objectId: item.ExtUserPtr.objectId,
-        };
+      if (res.Signers?.[0]?.ExtUserPtr) {
+        const ExtUserSigners = res.Signers.map(item => {
+          return {
+            __type: 'Pointer',
+            className: 'contracts_Users',
+            objectId: item.ExtUserPtr.objectId,
+          };
+        });
+        updateACL.set('Signers', ExtUserSigners);
+      }
+
+      const newACL = new Parse.ACL();
+      newACL.setPublicReadAccess(false);
+      newACL.setPublicWriteAccess(false);
+      if (res?.CreatedBy) {
+        newACL.setReadAccess(res?.CreatedBy?.objectId, true);
+        newACL.setWriteAccess(res?.CreatedBy?.objectId, true);
+      }
+
+      UsersPtr.forEach(x => {
+        if (x?.objectId) {
+          newACL.setReadAccess(x.objectId, true);
+          newACL.setWriteAccess(x.objectId, true);
+        }
       });
-      updateACL.set('Signers', ExtUserSigners);
+
+      updateACL.setACL(newACL);
+      await updateACL.save(null, { useMasterKey: true });
+    } catch (err) {
+      console.log('err in updateAclDoc', err?.message || err);
     }
-
-    const newACL = new Parse.ACL();
-    newACL.setPublicReadAccess(false);
-    newACL.setPublicWriteAccess(false);
-    if (res?.CreatedBy) {
-      newACL.setReadAccess(res?.CreatedBy?.objectId, true);
-      newACL.setWriteAccess(res?.CreatedBy?.objectId, true);
-    }
-
-    UsersPtr.forEach(x => {
-      newACL.setReadAccess(x.objectId, true);
-      newACL.setWriteAccess(x.objectId, true);
-    });
-
-    updateACL.setACL(newACL);
-    updateACL.save(null, { useMasterKey: true });
   }
 
   async function updateSelfDoc(objId) {
-    const Query = new Parse.Query('contracts_Template');
-    Query.include('CreatedBy');
-    Query.include('ExtUserPtr.TenantId');
-    const updateACL = await Query.get(objId, { useMasterKey: true });
-    const res = JSON.parse(JSON.stringify(updateACL));
-    const newACL = new Parse.ACL();
-    newACL.setPublicReadAccess(false);
-    newACL.setPublicWriteAccess(false);
-    if (res?.CreatedBy) {
-      newACL.setReadAccess(res?.CreatedBy?.objectId, true);
-      newACL.setWriteAccess(res?.CreatedBy?.objectId, true);
+    try {
+      const Query = new Parse.Query('contracts_Template');
+      Query.include('CreatedBy');
+      Query.include('ExtUserPtr.TenantId');
+      const updateACL = await Query.get(objId, { useMasterKey: true });
+      if (!updateACL) return;
+      const res = JSON.parse(JSON.stringify(updateACL));
+      const newACL = new Parse.ACL();
+      newACL.setPublicReadAccess(false);
+      newACL.setPublicWriteAccess(false);
+      if (res?.CreatedBy) {
+        newACL.setReadAccess(res?.CreatedBy?.objectId, true);
+        newACL.setWriteAccess(res?.CreatedBy?.objectId, true);
+      }
+      updateACL.setACL(newACL);
+      await updateACL.save(null, { useMasterKey: true });
+    } catch (err) {
+      console.log('err in updateSelfDoc', err?.message || err);
     }
-    updateACL.setACL(newACL);
-    updateACL.save(null, { useMasterKey: true });
   }
 }
