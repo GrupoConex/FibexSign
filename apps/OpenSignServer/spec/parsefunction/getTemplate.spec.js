@@ -11,6 +11,7 @@ import {
   answerSessionLookupWith,
   routeSessionLookupWithJavascriptKey,
   runFunctionOverRest,
+  seedRow,
   seedTemplate,
 } from '../utils/document-fixtures.js';
 import { knownDefect } from '../utils/known-defect.js';
@@ -163,35 +164,67 @@ describe('getTemplate', () => {
     );
   });
 
-  it(
-    'KNOWN DEFECT DEF-L3-09 hides foreign templates from callers without a team or profile',
-    knownDefect(
-      'DEF-L3-09',
-      'getTemplate drops the ownership and sharing filter when the caller has no contracts_Users profile or no TeamIds',
-      async check => {
-        routeSessionLookupWithJavascriptKey();
-        const template = await seedTemplate(owner);
-        const teamless = await createCaller('contracts_Admin', { team: undefined });
-        const profileless = await createPlainUser();
+  describe('for a caller without a team or without a profile', () => {
+    beforeEach(() => {
+      routeSessionLookupWithJavascriptKey();
+    });
 
-        const teamlessResult = await getTemplate(
-          { templateId: template.id },
-          teamless.account.sessionToken
-        );
-        const profilelessResult = await getTemplate(
-          { templateId: template.id },
-          profileless.sessionToken
-        );
+    it('hides a foreign template from a caller without a team', async () => {
+      const template = await seedTemplate(owner);
+      const teamless = await createCaller('contracts_Admin', { team: undefined });
 
-        check(
-          teamlessResult.objectId === undefined,
-          'caller without team cannot read the template'
-        );
-        check(
-          profilelessResult.objectId === undefined,
-          'caller without profile cannot read the template'
-        );
-      }
-    )
-  );
+      expect(await getTemplate({ templateId: template.id }, teamless.account.sessionToken)).toEqual(
+        GONE
+      );
+    });
+
+    it('hides a foreign template from a caller without a profile', async () => {
+      const template = await seedTemplate(owner);
+      const profileless = await createPlainUser();
+
+      expect(await getTemplate({ templateId: template.id }, profileless.sessionToken)).toEqual(
+        GONE
+      );
+    });
+
+    it('returns the own template to a caller without a team', async () => {
+      const teamless = await createCaller('contracts_Admin', { team: undefined });
+      const template = await seedTemplate(teamless);
+
+      const result = await getTemplate({ templateId: template.id }, teamless.account.sessionToken);
+
+      expect(result.objectId).toBe(template.id);
+    });
+
+    it('returns the own template to a caller without a profile', async () => {
+      const profileless = await createPlainUser();
+      const template = await seedRow('contracts_Template', {
+        Name: 'Template',
+        CreatedBy: pointer('_User', profileless.id),
+      });
+
+      const result = await getTemplate({ templateId: template.id }, profileless.sessionToken);
+
+      expect(result.objectId).toBe(template.id);
+    });
+
+    it('returns a template shared directly with a caller without a team', async () => {
+      const teamless = await createCaller('contracts_Admin', { team: undefined });
+      const template = await seedTemplate(owner, {
+        SharedWithUsers: [pointer('contracts_Users', teamless.extUser.id)],
+      });
+
+      const result = await getTemplate({ templateId: template.id }, teamless.account.sessionToken);
+
+      expect(result.objectId).toBe(template.id);
+    });
+
+    it('ignores a template id that is not a string', async () => {
+      await seedTemplate(owner);
+
+      expect(await getTemplate({ templateId: { $ne: null } }, owner.account.sessionToken)).toEqual(
+        GONE
+      );
+    });
+  });
 });

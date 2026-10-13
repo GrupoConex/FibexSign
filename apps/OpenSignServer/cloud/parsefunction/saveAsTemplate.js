@@ -1,4 +1,5 @@
 import { randomId } from '../../Utils.js';
+import { buildPrivateAcl } from './shared/recordAcl.js';
 
 export default async function saveAsTemplate(request) {
   const docId = request.params.docId;
@@ -133,6 +134,7 @@ export default async function saveAsTemplate(request) {
       if (_docRes?.PenColors?.length > 0) {
         templateCls.set('PenColors', _docRes?.PenColors);
       }
+      templateCls.setACL(buildPrivateAcl([request.user.id]));
       const res = await templateCls.save(null, { useMasterKey: true });
       return res;
     } else {

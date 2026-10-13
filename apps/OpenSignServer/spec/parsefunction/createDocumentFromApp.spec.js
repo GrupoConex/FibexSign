@@ -2,6 +2,7 @@ import {
   captureRejection,
   cloudRunAs,
   createCaller,
+  createExtUser,
   createPlainUser,
   pointer,
   purgeCreatedAccounts,
@@ -12,21 +13,23 @@ import {
   aclOf,
   canReadRow,
   countRows,
+  documentCountOf,
   fileUrl,
   ownerFields,
   readWriteFor,
   reload,
   runFunctionOverRest,
   seedContact,
+  seedTemplate,
   waitForAcl,
   waitForDocumentCount,
 } from '../utils/document-fixtures.js';
-import { knownDefect } from '../utils/known-defect.js';
 
 const CLASS_NAME = 'contracts_Document';
 const INVALID_JSON = 107;
 const INVALID_SESSION_TOKEN = 209;
 const VALIDATION_ERROR = 142;
+const OPERATION_FORBIDDEN = 119;
 const DEFAULT_FLAGS = [
   'SentToOthers',
   'SendinOrder',
@@ -60,8 +63,7 @@ const uniqueName = prefix => uniqueEmail(prefix).replace('@example.com', '');
 const create = (document, account) =>
   cloudRunAs('createdocumentfromapp', { document }, account?.sessionToken);
 
-const findByName = name =>
-  new Parse.Query(CLASS_NAME).equalTo('Name', name).first({ useMasterKey: true });
+const contactPointer = objectId => pointer('contracts_Contactbook', objectId);
 
 describe('createdocumentfromapp', () => {
   let owner;
@@ -114,6 +116,7 @@ describe('createdocumentfromapp', () => {
     const signer = await createPlainUser();
     const contact = await seedContact(owner, signer);
     const contactPointer = pointer('contracts_Contactbook', contact.id);
+    const template = await seedTemplate(owner);
     const document = {
       Name: uniqueName('full'),
       URL: fileUrl('full.pdf'),
@@ -127,7 +130,7 @@ describe('createdocumentfromapp', () => {
       RemindOnceInEvery: '2',
       DocSentAt: { iso: SENT_AT },
       RedirectUrl: 'https://redirect.test',
-      TemplateId: 'template1',
+      TemplateId: pointer('contracts_Template', template.id),
       Signers: [contactPointer],
       Placeholders: [{ Role: 'Role 1', placeHolder: [] }],
       SignatureType: [{ name: 'draw', enabled: true }],
@@ -184,63 +187,91 @@ describe('createdocumentfromapp', () => {
     expect(await aclOf(CLASS_NAME, created.id)).toEqual(readWriteFor(owner.account.id, signer.id));
   });
 
-  it(
-    'KNOWN DEFECT DEF-L3-01 keeps a document without signers private to its creator',
-    knownDefect(
-      'DEF-L3-01',
-      'createdocumentfromapp stores documents without signers with no ACL, so any session can read and write them',
-      async check => {
-        const stranger = await createPlainUser();
-        const created = await create({ ...ownerFields(owner) }, owner.account);
+  it('keeps a document without signers private to its creator', async () => {
+    const stranger = await createPlainUser();
 
-        await waitForAcl(CLASS_NAME, created.id);
+    const created = await create({ ...ownerFields(owner) }, owner.account);
 
-        check((await aclOf(CLASS_NAME, created.id)) !== null, 'document carries an ACL');
-        check(
-          !(await canReadRow(stranger.sessionToken, CLASS_NAME, created.id)),
-          'unrelated session cannot read the document'
-        );
-      }
-    )
-  );
+    expect(await aclOf(CLASS_NAME, created.id)).toEqual(readWriteFor(owner.account.id));
+    expect(await canReadRow(stranger.sessionToken, CLASS_NAME, created.id)).toBeFalse();
+  });
 
-  it(
-    'KNOWN DEFECT DEF-L3-02 binds the new document to the session user and the own contacts',
-    knownDefect(
-      'DEF-L3-02',
-      'createdocumentfromapp trusts client supplied CreatedBy, ExtUserPtr and Signers of another user',
-      async check => {
-        const victim = await createCaller('contracts_Admin');
-        const victimSigner = await createPlainUser();
-        const victimContact = await seedContact(victim, victimSigner);
-        const name = uniqueName('spoofed');
+  describe('binding to the session user', () => {
+    let victim;
 
-        await captureRejection(
-          create(
-            {
-              Name: name,
-              ...ownerFields(victim),
-              Signers: [pointer('contracts_Contactbook', victimContact.id)],
-            },
-            owner.account
-          )
-        );
+    beforeEach(async () => {
+      victim = await createCaller('contracts_Admin');
+    });
 
-        const stored = await findByName(name);
-        if (stored) await waitForAcl(CLASS_NAME, stored.id);
-        check(
-          !stored || stored.get('CreatedBy').id === owner.account.id,
-          'CreatedBy is the caller'
-        );
-        check(
-          !stored || stored.get('ExtUserPtr').id === owner.extUser.id,
-          'ExtUserPtr is the caller'
-        );
-        check(
-          !stored || !stored.get('Signers').some(signer => signer.id === victimContact.id),
-          'signers come from the caller contact book'
-        );
-      }
-    )
-  );
+    it('rejects signers from the contact book of another user and stores nothing', async () => {
+      const victimContact = await seedContact(victim, await createPlainUser());
+      const name = uniqueName('spoofed');
+
+      const failure = await captureRejection(
+        create(
+          { Name: name, ...ownerFields(owner), Signers: [contactPointer(victimContact.id)] },
+          owner.account
+        )
+      );
+
+      expect(failure.code).toBe(OPERATION_FORBIDDEN);
+      expect(await countRows(CLASS_NAME, 'Name', name)).toBe(0);
+    });
+
+    it('rejects bcc and cc contacts of another user', async () => {
+      const victimContact = await seedContact(victim, await createPlainUser());
+
+      const bccFailure = await captureRejection(
+        create({ ...ownerFields(owner), Bcc: [contactPointer(victimContact.id)] }, owner.account)
+      );
+      const ccFailure = await captureRejection(
+        create({ ...ownerFields(owner), Cc: [contactPointer(victimContact.id)] }, owner.account)
+      );
+
+      expect(bccFailure.code).toBe(OPERATION_FORBIDDEN);
+      expect(ccFailure.code).toBe(OPERATION_FORBIDDEN);
+    });
+
+    it('rejects a signer pointer that is not a contact', async () => {
+      const failure = await captureRejection(
+        create(
+          { ...ownerFields(owner), Signers: [pointer('_User', victim.account.id)] },
+          owner.account
+        )
+      );
+
+      expect(failure.code).toBe(OPERATION_FORBIDDEN);
+    });
+
+    it('attributes the document to the caller when another owner is sent', async () => {
+      const created = await create({ ...ownerFields(victim) }, owner.account);
+
+      const stored = await reload(CLASS_NAME, created.id);
+      expect(stored.get('CreatedBy').id).toBe(owner.account.id);
+      expect(stored.get('ExtUserPtr').id).toBe(owner.extUser.id);
+      expect(await aclOf(CLASS_NAME, created.id)).toEqual(readWriteFor(owner.account.id));
+      expect(await waitForDocumentCount(owner.extUser, 1)).toBeTrue();
+      expect(await documentCountOf(victim.extUser)).toBe(0);
+    });
+
+    it('accepts a linked profile of the caller', async () => {
+      const linked = await createExtUser({
+        account: owner.account,
+        role: 'contracts_User',
+        tenant: owner.tenant,
+        extras: { IsLinkedAccount: true },
+      });
+
+      const created = await create(
+        {
+          CreatedBy: pointer('_User', owner.account.id),
+          ExtUserPtr: pointer('contracts_Users', linked.id),
+        },
+        owner.account
+      );
+
+      expect((await reload(CLASS_NAME, created.id)).get('ExtUserPtr').id).toBe(linked.id);
+      expect(await waitForDocumentCount(linked, 1)).toBeTrue();
+    });
+  });
 });

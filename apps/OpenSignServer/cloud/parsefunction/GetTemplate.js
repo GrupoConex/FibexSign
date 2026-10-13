@@ -1,94 +1,57 @@
 import axios from 'axios';
 import { cloudServerUrl, serverAppId } from '../../Utils.js';
+import { loadCallerAccess } from './shared/sendMailv3Authorization.js';
+import { buildAccessibleTemplateQuery } from './shared/templateAccess.js';
 
-export default async function GetTemplate(request) {
-  const serverUrl = cloudServerUrl; //process.env.SERVER_URL;
-  const templateId = request.params.templateId;
-  const sessiontoken = request.headers?.sessiontoken;
+const INVALID_SESSION_TOKEN = 209;
+const MASTER = { useMasterKey: true };
+
+const noAccess = () => ({ error: "template deleted or you don't have access." });
+
+const isUsableId = id => typeof id === 'string' && id.length > 0;
+
+const fetchSessionUserId = async sessionToken => {
+  if (!sessionToken) return undefined;
+  const userRes = await axios.get(cloudServerUrl + '/users/me', {
+    headers: {
+      'X-Parse-Application-Id': serverAppId,
+      'X-Parse-Session-Token': sessionToken,
+    },
+  });
+  return userRes?.data?.objectId;
+};
+
+const withoutTenantSecrets = template => {
+  const tenant = template?.ExtUserPtr?.TenantId;
+  if (!tenant) return template;
+  const { FileAdapters, PfxFile, ...safeTenant } = tenant;
+  return { ...template, ExtUserPtr: { ...template.ExtUserPtr, TenantId: safeTenant } };
+};
+
+const readAccessibleTemplate = async (userId, templateId) => {
   try {
-    let userEmail;
-    if (sessiontoken) {
-      const userRes = await axios.get(serverUrl + '/users/me', {
-        headers: {
-          'X-Parse-Application-Id': serverAppId,
-          'X-Parse-Session-Token': sessiontoken,
-        },
-      });
-      userEmail = userRes.data && userRes.data.email;
-    }
-    if (templateId && userEmail) {
-      try {
-        let template = new Parse.Query('contracts_Template');
-        template.equalTo('objectId', templateId);
-        template.notEqualTo('IsArchive', true);
-        template.include('ExtUserPtr');
-        template.include('Signers');
-        template.include('CreatedBy');
-        template.include('ExtUserPtr.TenantId');
-        template.include('Bcc');
-        template.include('Cc');
-
-        const extUserQuery = new Parse.Query('contracts_Users');
-        extUserQuery.equalTo('Email', userEmail);
-        extUserQuery.include('TeamIds');
-        const extUser = await extUserQuery.first({ useMasterKey: true });
-        if (extUser) {
-          const _extUser = JSON.parse(JSON.stringify(extUser));
-          if (_extUser?.TeamIds && _extUser.TeamIds?.length > 0) {
-            let teamsArr = [];
-            _extUser?.TeamIds?.forEach(x => (teamsArr = [...teamsArr, ...x.Ancestors]));
-            // Create the first query
-            const sharedWithTeamQuery = new Parse.Query('contracts_Template');
-            sharedWithTeamQuery.containedIn('SharedWith', teamsArr);
-
-            // Create the second query
-            const sharedWithJsersQuery = new Parse.Query('contracts_Template');
-            sharedWithJsersQuery.equalTo('SharedWithUsers', {
-              __type: 'Pointer',
-              className: 'contracts_Users',
-              objectId: extUser.id,
-            });
-            // Create the third query
-            const createdByQuery = new Parse.Query('contracts_Template');
-            createdByQuery.equalTo('ExtUserPtr', {
-              __type: 'Pointer',
-              className: 'contracts_Users',
-              objectId: extUser.id,
-            });
-            template = Parse.Query.or(sharedWithTeamQuery, sharedWithJsersQuery, createdByQuery);
-            template.equalTo('objectId', templateId);
-            template.notEqualTo('IsArchive', true);
-            template.include('ExtUserPtr');
-            template.include('Signers');
-            template.include('CreatedBy');
-            template.include('ExtUserPtr.TenantId');
-            template.include('Placeholders.signerPtr');
-            template.include('Bcc');
-            template.include('Cc');
-          }
-        }
-        const res = await template.first({ useMasterKey: true });
-        if (res) {
-          const templateRes = JSON.parse(JSON.stringify(res));
-          delete templateRes?.ExtUserPtr?.TenantId?.FileAdapters;
-          delete templateRes?.ExtUserPtr?.TenantId?.PfxFile;
-          return templateRes;
-        } else {
-          return { error: "template deleted or you don't have access." };
-        }
-      } catch (err) {
-        console.log('err', err);
-        return err;
-      }
-    } else {
-      return { error: "template deleted or you don't have access." };
-    }
+    const access = await loadCallerAccess(userId);
+    const template = await buildAccessibleTemplateQuery({ userId, access, templateId }).first(
+      MASTER
+    );
+    return template ? withoutTenantSecrets(JSON.parse(JSON.stringify(template))) : noAccess();
   } catch (err) {
     console.log('err', err);
-    if (err?.response?.data?.code === 209 || err.code == 209) {
-      return { error: 'Invalid session token' };
-    } else {
-      return { error: "template deleted or you don't have access." };
-    }
+    return err;
+  }
+};
+
+const isInvalidSessionError = err =>
+  err?.response?.data?.code === INVALID_SESSION_TOKEN || err?.code === INVALID_SESSION_TOKEN;
+
+export default async function GetTemplate(request) {
+  const templateId = request.params.templateId;
+  try {
+    const userId = await fetchSessionUserId(request.headers?.sessiontoken);
+    if (!isUsableId(templateId) || !isUsableId(userId)) return noAccess();
+    return await readAccessibleTemplate(userId, templateId);
+  } catch (err) {
+    console.log('err', err);
+    return isInvalidSessionError(err) ? { error: 'Invalid session token' } : noAccess();
   }
 }
