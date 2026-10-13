@@ -9,14 +9,15 @@ import {
   silenceConsole,
 } from '../utils/auth-fixtures.js';
 import {
+  aclOf,
   canReadRow,
   fileUrl,
+  readWriteFor,
   reload,
   runFunctionOverRest,
   seedContact,
   seedDocument,
 } from '../utils/document-fixtures.js';
-import { knownDefect } from '../utils/known-defect.js';
 
 const CLASS_NAME = 'contracts_Template';
 const INVALID_SESSION_TOKEN = 209;
@@ -257,22 +258,20 @@ describe('saveastemplate', () => {
     expect(failure.message).toBe('save failed');
   });
 
-  it(
-    'KNOWN DEFECT DEF-L3-10 keeps a template saved from a document private to its owner',
-    knownDefect(
-      'DEF-L3-10',
-      'saveastemplate stores the template with no ACL, so any session can read and write it',
-      async check => {
-        const stranger = await createPlainUser();
-        const doc = await seedDocument(owner, { URL: fileUrl('private.pdf') });
+  it('keeps a template saved from a document private to its owner', async () => {
+    const stranger = await createPlainUser();
+    const doc = await seedDocument(owner, { URL: fileUrl('private.pdf') });
 
-        const template = await saveAsTemplate({ docId: doc.id }, owner.account);
+    const template = await saveAsTemplate({ docId: doc.id }, owner.account);
 
-        check(
-          !(await canReadRow(stranger.sessionToken, CLASS_NAME, template.id)),
-          'unrelated session cannot read the template'
-        );
-      }
-    )
-  );
+    expect(await canReadRow(stranger.sessionToken, CLASS_NAME, template.id)).toBeFalse();
+  });
+
+  it('grants read and write on the new template to the owner only', async () => {
+    const doc = await seedDocument(owner);
+
+    const template = await saveAsTemplate({ docId: doc.id }, owner.account);
+
+    expect(await aclOf(CLASS_NAME, template.id)).toEqual(readWriteFor(owner.account.id));
+  });
 });

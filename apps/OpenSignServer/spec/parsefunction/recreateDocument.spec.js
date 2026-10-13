@@ -20,7 +20,6 @@ import {
   waitForAcl,
   waitForDocumentCount,
 } from '../utils/document-fixtures.js';
-import { knownDefect } from '../utils/known-defect.js';
 
 const CLASS_NAME = 'contracts_Document';
 const INVALID_QUERY = 102;
@@ -89,6 +88,14 @@ describe('recreatedoc', () => {
 
   it('rejects a call without a document id as an invalid query', async () => {
     const failure = await captureRejection(recreate({}, owner.account));
+
+    expect(failure.code).toBe(INVALID_QUERY);
+  });
+
+  it('rejects a document id that is not a string as an invalid query', async () => {
+    await seedDocument(owner);
+
+    const failure = await captureRejection(recreate({ docId: { $ne: null } }, owner.account));
 
     expect(failure.code).toBe(INVALID_QUERY);
   });
@@ -179,21 +186,33 @@ describe('recreatedoc', () => {
     expect(failure.message).toBe('save failed');
   });
 
-  it(
-    'KNOWN DEFECT DEF-L3-08 refuses to recreate a document of another user',
-    knownDefect(
-      'DEF-L3-08',
-      'recreatedoc has no ownership check: any session clones any document by objectId into the victim account',
-      async check => {
-        const intruder = await createCaller('contracts_Admin');
-        const name = uniqueName('victim');
-        const doc = await seedDocument(owner, { Name: name });
+  it('refuses to recreate a document of another user and creates nothing', async () => {
+    const intruder = await createCaller('contracts_Admin');
+    const name = uniqueName('victim');
+    const doc = await seedDocument(owner, { Name: name });
 
-        const failure = await captureRejection(recreate({ docId: doc.id }, intruder.account));
+    const failure = await captureRejection(recreate({ docId: doc.id }, intruder.account));
 
-        check(failure !== null, 'intruder call is rejected');
-        check((await countRows(CLASS_NAME, 'Name', name)) === 1, 'no copy of the victim document');
-      }
-    )
-  );
+    expect(failure.code).toBe(OBJECT_NOT_FOUND);
+    expect(await countRows(CLASS_NAME, 'Name', name)).toBe(1);
+  });
+
+  it('answers a foreign document exactly like a missing one', async () => {
+    const intruder = await createCaller('contracts_Admin');
+    const doc = await seedDocument(owner);
+
+    const foreign = await captureRejection(recreate({ docId: doc.id }, intruder.account));
+    const missing = await captureRejection(recreate({ docId: 'missingDoc1' }, intruder.account));
+
+    expect([foreign.code, foreign.message]).toEqual([missing.code, missing.message]);
+    expect(foreign.message).toBe('Document not found');
+  });
+
+  it('keeps the copy of a document without signers private to its owner', async () => {
+    const doc = await seedDocument(owner);
+
+    const result = await recreate({ docId: doc.id }, owner.account);
+
+    expect(await aclOf(CLASS_NAME, result.objectId)).toEqual(readWriteFor(owner.account.id));
+  });
 });
