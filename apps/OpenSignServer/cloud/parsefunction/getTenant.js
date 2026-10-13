@@ -21,6 +21,7 @@ async function getTenantByUserId(userId, contactId) {
     } else {
       const query = new Parse.Query('contracts_Users');
       query.equalTo('UserId', { __type: 'Pointer', className: '_User', objectId: userId });
+      query.doesNotExist('RemovedFromOrgAt');
       const extuser = await query.first({ useMasterKey: true });
       if (extuser) {
         const tenantId = extuser?.get('TenantId')?.id || '';

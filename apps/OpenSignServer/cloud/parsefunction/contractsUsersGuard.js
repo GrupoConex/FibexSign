@@ -23,6 +23,7 @@ export const PROTECTED_CONTRACTS_USERS_FIELDS = Object.freeze([
   'DeleteOTPExpiry',
   'DeleteOTPSentAt',
   'DeleteOTPTries',
+  'RemovedFromOrgAt',
 ]);
 
 const buildForbiddenError = message => new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, message);
@@ -70,7 +71,12 @@ const mayManageAsOrgAdmin = (request, callerRow) =>
   changesOnlyDisabledFlag(request) &&
   isOrgAdminOfOrdinaryMember(callerRow, request.original);
 
+const isRemovedFromOrg = row => Boolean(row.get('RemovedFromOrgAt'));
+
 async function assertCallerMayUpdate(request) {
+  if (isRemovedFromOrg(request.original) && hasDisabledFlagChanged(request)) {
+    throw buildForbiddenError('A member removed from the organization cannot be reactivated.');
+  }
   const callerId = request.user?.id;
   if (!callerId) {
     throw buildForbiddenError('Authentication is required to update this record.');

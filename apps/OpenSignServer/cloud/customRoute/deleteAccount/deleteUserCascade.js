@@ -1,5 +1,10 @@
 import { generateId } from '../../../Utils.js';
-import { buildOwnExtUserQuery, findById, toUserPointer } from './accountLookup.js';
+import {
+  buildLinkedExtUserQuery,
+  buildOwnExtUserQuery,
+  findById,
+  toUserPointer,
+} from './accountLookup.js';
 import { deleteContactsInBatch, deleteDataFiles, deleteInBatches } from './deleteFileUrl.js';
 
 const MASTER = { useMasterKey: true };
@@ -9,6 +14,12 @@ const GENERATED_PASSWORD_LENGTH = 16;
 export const DELETION_SUCCESS = Object.freeze({
   code: 200,
   message: 'User and all associated data deleted successfully.',
+});
+
+export const LINKED_REMOVAL_SUCCESS = Object.freeze({
+  code: 200,
+  message: 'User removed from your organization.',
+  resultCode: 'LINKED_MEMBER_REMOVED',
 });
 
 const rejection = message => ({ code: 400, message });
@@ -55,8 +66,7 @@ const settleLoginAccount = async (userPointer, userId) => {
   await retireAccountWithContacts(userPointer, userId);
 };
 
-const buildTargetQuery = (userId, actor) => {
-  const query = buildOwnExtUserQuery(userId);
+const scopeToActor = (query, actor) => {
   if (actor.tenantPtr) {
     query.equalTo('TenantId', actor.tenantPtr);
     if (actor.isOrgAdmin) query.equalTo('OrganizationId', actor.orgPtr);
@@ -65,6 +75,11 @@ const buildTargetQuery = (userId, actor) => {
   }
   return query;
 };
+
+const buildTargetQuery = (userId, actor) => scopeToActor(buildOwnExtUserQuery(userId), actor);
+
+const findLinkedTargets = async (userId, actor) =>
+  actor.adminId ? scopeToActor(buildLinkedExtUserQuery(userId), actor).findAll(MASTER) : [];
 
 const judgeTarget = (target, actor) => {
   if (!target) return rejection(actor.isOrgAdmin ? 'Unauthorized.' : 'User not found.');
@@ -158,9 +173,49 @@ const runStages = async stages => {
   return DELETION_SUCCESS;
 };
 
+const judgeLinkedTargets = (targets, actor) =>
+  targets.length === 0
+    ? judgeTarget(undefined, actor)
+    : (targets.map(target => judgeTarget(target, actor)).find(Boolean) ?? null);
+
+const isObjectNotFound = err => err?.code === Parse.Error.OBJECT_NOT_FOUND;
+
+const isAlreadyRemoved = err =>
+  isObjectNotFound(err) ||
+  (err?.code === Parse.Error.AGGREGATE_ERROR &&
+    Array.isArray(err.errors) &&
+    err.errors.every(isObjectNotFound));
+
+const markRemovedFromOrg = (target, removedAt) => {
+  target.set('IsDisabled', true);
+  target.set('RemovedFromOrgAt', target.get('RemovedFromOrgAt') ?? removedAt);
+  return target;
+};
+
+const softRemoveLinkedTargets = async targets => {
+  const removedAt = new Date();
+  try {
+    await Parse.Object.saveAll(
+      targets.map(target => markRemovedFromOrg(target, removedAt)),
+      MASTER
+    );
+  } catch (err) {
+    if (!isAlreadyRemoved(err)) throw err;
+  }
+};
+
+const removeLinkedMember = async (userId, actor) => {
+  const targets = await findLinkedTargets(userId, actor);
+  const refusal = judgeLinkedTargets(targets, actor);
+  if (refusal) return refusal;
+  await softRemoveLinkedTargets(targets);
+  return LINKED_REMOVAL_SUCCESS;
+};
+
 export async function deleteUser(userId, actor = {}) {
   try {
     const target = await buildTargetQuery(userId, actor).first(MASTER);
+    if (!target) return await removeLinkedMember(userId, actor);
     const refusal = judgeTarget(target, actor);
     if (refusal) return refusal;
     return await runStages(buildStages(target, toUserPointer(userId), userId));

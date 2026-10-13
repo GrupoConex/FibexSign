@@ -25,6 +25,7 @@ const buildDuplicateAccountError = () =>
 const hasTenantMembership = account => {
   const membershipQuery = new Parse.Query('contracts_Users');
   membershipQuery.equalTo('UserId', toUserPointer(account.id));
+  membershipQuery.doesNotExist('RemovedFromOrgAt');
   return membershipQuery.first(MASTER);
 };
 
@@ -36,6 +37,29 @@ async function findOrphanAccount(email) {
     throw buildDuplicateAccountError();
   }
   return account;
+}
+
+async function findRemovedMembership(email, tenantId) {
+  const account = await new Parse.Query(Parse.User).equalTo('email', email).first(MASTER);
+  if (!account) return undefined;
+  return new Parse.Query('contracts_Users')
+    .equalTo('UserId', toUserPointer(account.id))
+    .equalTo('TenantId', { __type: 'Pointer', className: 'partners_Tenant', objectId: tenantId })
+    .equalTo('IsLinkedAccount', true)
+    .exists('RemovedFromOrgAt')
+    .first(MASTER);
+}
+
+async function restoreMembership(removedRow, draft, request, tenantId) {
+  const accountId = removedRow.get('UserId').id;
+  await secureUnverifiedAccount(accountId, { linkingTenantId: tenantId });
+  Object.entries(draft.attributes).forEach(([field, value]) => removedRow.set(field, value));
+  removedRow.set('IsDisabled', false);
+  removedRow.unset('RemovedFromOrgAt');
+  removedRow.set('CreatedBy', toUserPointer(request.user.id));
+  removedRow.setACL(buildMemberAcl(request.user.id, accountId));
+  const restored = await removedRow.save(null, MASTER);
+  return serializeExtUser(restored, accountId, true);
 }
 
 async function obtainAccount({ name, email, password, phone, tenantId }) {
@@ -144,6 +168,10 @@ export default async function addUser(request) {
       });
       if (timezone) {
         extUser.set('Timezone', timezone);
+      }
+      const removedRow = await findRemovedMembership(email, callerTenantId);
+      if (removedRow) {
+        return await restoreMembership(removedRow, extUser, request, callerTenantId);
       }
       const obtainedAccount = await obtainAccount({
         name,

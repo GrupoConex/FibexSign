@@ -1255,6 +1255,7 @@
   "delete-account-que": "Sei sicuro di voler eliminare il tuo account?",
   "delete-account-que-user": "Stai per eliminare in modo permanente questo utente e tutti i dati associati. Questa azione non può essere annullata.",
   "user-deleted-successfully": "Utente e tutti i dati associati eliminati con successo.",
+  "user-removed-from-organization": "Utente rimosso dalla tua organizzazione.",
   "account-deletion-request-sent-via-mail": "Le abbiamo inviato via e-mail un link di conferma. Approvi la richiesta per completare l'eliminazione del suo account.",
   "type-exact-email-delete": "Digita l'e-mail esatta per abilitare l'eliminazione",
   "email-does-not-match": "L'e-mail non corrisponde.",

@@ -1,5 +1,6 @@
 import { flattenPdf, getSecureUrl } from '../../Utils.js';
 import { parseUploadFile } from '../../utils/fileUtils.js';
+import { buildActiveProfileQuery } from './shared/activeProfileQuery.js';
 
 export default async function saveFile(request) {
   if (!request.params.fileBase64) {
@@ -9,8 +10,7 @@ export default async function saveFile(request) {
   const id = request.params.id;
   try {
     if (request.user) {
-      const extCls = new Parse.Query('contracts_Users');
-      extCls.equalTo('UserId', request.user);
+      const extCls = buildActiveProfileQuery(request.user.id);
       extCls.include('TenantId');
       extCls.include('UserId');
       const resExt = await extCls.first({ useMasterKey: true });

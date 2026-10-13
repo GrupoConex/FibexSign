@@ -1,3 +1,28 @@
+import { buildActiveProfileQuery } from './shared/activeProfileQuery.js';
+
+const MASTER = { useMasterKey: true };
+const MAIL_KEYS = Object.freeze([
+  'CompletionBody',
+  'CompletionSubject',
+  'RequestBody',
+  'RequestSubject',
+]);
+const RESPONSE_KEYS = Object.freeze([...MAIL_KEYS, 'EmailEditorType']);
+
+const applyMailDetails = (profile, details) => {
+  Object.keys(details)
+    .filter(key => MAIL_KEYS.includes(key))
+    .forEach(key => (details[key] ? profile.set(key, details[key]) : profile.unset(key)));
+  if (details.EmailEditorType) profile.set('EmailEditorType', details.EmailEditorType);
+  return profile;
+};
+
+const toTemplateResponse = profile => ({
+  objectId: profile.id,
+  updatedAt: profile.updatedAt?.toISOString(),
+  ...Object.fromEntries(RESPONSE_KEYS.map(key => [key, profile.get(key)])),
+});
+
 export default async function updateEmailTemplates(request) {
   const { tenantId, details } = request.params;
 
@@ -10,27 +35,12 @@ export default async function updateEmailTemplates(request) {
   }
 
   try {
-    const extUser = new Parse.Query('contracts_Users');
-    extUser.equalTo('UserId', { __type: 'Pointer', className: '_User', objectId: request.user.id });
-    extUser.include('TenantId');
-    const extUserRes = await extUser.first({ useMasterKey: true });
-    const mailKeys = ['CompletionBody', 'CompletionSubject', 'RequestBody', 'RequestSubject'];
-    Object.keys(details).forEach(key => {
-      if (mailKeys.includes(key)) {
-        if (details?.[key]) {
-          extUserRes.set(key, details?.[key]);
-        } else {
-          extUserRes.unset(key);
-        }
-      }
-    });
-    if (details?.EmailEditorType) extUserRes.set('EmailEditorType', details.EmailEditorType);
-
-    const updateExtRes = await extUserRes.save(null, { useMasterKey: true });
-    if (updateExtRes) {
-      const res = JSON.parse(JSON.stringify(updateExtRes));
-      return res;
+    const profile = await buildActiveProfileQuery(request.user.id).first(MASTER);
+    if (!profile) {
+      throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'User not found.');
     }
+    const saved = await applyMailDetails(profile, details).save(null, MASTER);
+    return toTemplateResponse(saved);
   } catch (error) {
     console.log('error while updating email templates:', error);
     throw error;

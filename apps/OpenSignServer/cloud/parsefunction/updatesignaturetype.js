@@ -1,3 +1,5 @@
+import { buildActiveProfileQuery } from './shared/activeProfileQuery.js';
+
 export default async function updateSignatureType(request) {
   if (!request?.user) {
     throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'User is not authenticated.');
@@ -20,13 +22,9 @@ export default async function updateSignatureType(request) {
       );
     } else {
       try {
-        const orgQuery = new Parse.Query('contracts_Users');
-        orgQuery.equalTo('UserId', {
-          __type: 'Pointer',
-          className: '_User',
-          objectId: request.user.id,
+        const resUser = await buildActiveProfileQuery(request.user.id).first({
+          useMasterKey: true,
         });
-        const resUser = await orgQuery.first({ useMasterKey: true });
         if (resUser) {
           const newOrg = new Parse.Object('contracts_Users');
           newOrg.id = resUser.id;
