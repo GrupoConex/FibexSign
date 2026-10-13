@@ -13,6 +13,13 @@ export const buildOwnExtUserQuery = userId => {
   return query;
 };
 
+export const buildLinkedExtUserQuery = userId => {
+  const query = new Parse.Query('contracts_Users');
+  query.equalTo('UserId', toUserPointer(userId));
+  query.equalTo('IsLinkedAccount', true);
+  return query;
+};
+
 export const findOwnExtUser = userId => buildOwnExtUserQuery(userId).first(MASTER);
 
 export const findById = (className, objectId) =>

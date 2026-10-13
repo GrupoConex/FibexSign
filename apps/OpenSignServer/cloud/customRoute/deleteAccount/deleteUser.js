@@ -70,6 +70,9 @@ const buildActor = (adminId, adminExtUser) => {
   };
 };
 
+const toResponseBody = ({ message, resultCode }) =>
+  resultCode ? { message, code: resultCode } : { message };
+
 const refuseUnauthorized = res => res.status(400).json({ message: 'Unauthorized.' });
 
 export const deleteUserByAdmin = async (req, res) => {
@@ -88,7 +91,7 @@ export const deleteUserByAdmin = async (req, res) => {
     const actor = buildActor(adminId, adminExtUser);
     if (!actor.isAllowed) return refuseUnauthorized(res);
     const outcome = await deleteUser(userId, actor);
-    return res.status(outcome.code).json({ message: outcome.message });
+    return res.status(outcome.code).json(toResponseBody(outcome));
   } catch (error) {
     const message = describeRequestFailure(error);
     console.error('Account deletion error:', message);

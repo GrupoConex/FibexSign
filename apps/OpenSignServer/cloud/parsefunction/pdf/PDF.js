@@ -194,10 +194,10 @@ async function sendNotifyMail(doc, signUser, mailProvider, publicUrl) {
 }
 
 // `sendCompletedMail` is used to send copy of completed document mail
-async function sendCompletedMail(obj) {
+export async function sendCompletedMail(obj) {
   const url = obj.doc?.SignedUrl;
   const doc = obj.doc;
-  const sender = obj.doc.ExtUserPtr;
+  const sender = obj.doc.ExtUserPtr ?? {};
   const pdfName = doc.Name;
   const TenantAppName = appName;
   const logo = `<p style='padding:20px;font-family:system-ui;font-size:22px;font-weight:700;color:#1a1a1a'>${TenantAppName}</p>`;
@@ -207,7 +207,7 @@ async function sendCompletedMail(obj) {
     const isOwnerExistsinSigners = doc?.Signers?.find(x => x.Email === sender.Email);
     signersMail = isOwnerExistsinSigners
       ? doc?.Signers?.map(x => x?.Email)?.join(',')
-      : [...doc?.Signers?.map(x => x?.Email), sender.Email]?.join(',');
+      : [...doc?.Signers?.map(x => x?.Email), sender.Email].filter(Boolean).join(',');
   } else {
     signersMail = sender.Email;
   }

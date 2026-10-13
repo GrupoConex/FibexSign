@@ -1253,6 +1253,7 @@
   "delete-account-que": "Êtes-vous sûr de vouloir supprimer votre compte ?",
   "delete-account-que-user": "Vous êtes sur le point de supprimer définitivement cet utilisateur et toutes les données associées. Cette action est irréversible.",
   "user-deleted-successfully": "L'utilisateur et toutes les données associées ont été supprimés avec succès.",
+  "user-removed-from-organization": "L'utilisateur a été retiré de votre organisation.",
   "account-deletion-request-sent-via-mail": "Nous vous avons envoyé par e-mail un lien de confirmation. Approuvez la demande pour finaliser la suppression de votre compte.",
   "type-exact-email-delete": "Saisissez l'adresse e-mail exacte pour activer la suppression",
   "email-does-not-match": "L'adresse e-mail ne correspond pas.",

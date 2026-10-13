@@ -1255,6 +1255,7 @@
   "delete-account-que": "Sind Sie sicher, dass Sie Ihr Konto löschen möchten?",
   "delete-account-que-user": "Sie sind dabei, diesen Benutzer und alle zugehörigen Daten dauerhaft zu löschen. Diese Aktion kann nicht rückgängig gemacht werden.",
   "user-deleted-successfully": "Benutzer und alle zugehörigen Daten wurden erfolgreich gelöscht.",
+  "user-removed-from-organization": "Benutzer wurde aus Ihrer Organisation entfernt.",
   "account-deletion-request-sent-via-mail": "Wir haben Ihnen einen Bestätigungslink per E-Mail gesendet. Genehmigen Sie die Anfrage, um die Löschung Ihres Kontos abzuschließen.",
   "type-exact-email-delete": "Geben Sie die genaue E-Mail ein, um das Löschen zu aktivieren",
   "email-does-not-match": "E-Mail stimmt nicht überein.",

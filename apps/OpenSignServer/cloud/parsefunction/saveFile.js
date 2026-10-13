@@ -1,5 +1,6 @@
 import { flattenPdf, getSecureUrl } from '../../Utils.js';
 import { parseUploadFile } from '../../utils/fileUtils.js';
+import { buildActiveProfileQuery } from './shared/activeProfileQuery.js';
 
 const FILE_NAME_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9@._ ~-]*$/;
 const DEFAULT_MAX_BYTES = 80 * 1024 * 1024;
@@ -70,7 +71,44 @@ export default async function saveFile(request) {
     throw new Parse.Error(Parse.Error.INVALID_QUERY, 'Please provide file.');
   }
   try {
-    if (!request.user) {
+    if (request.user) {
+      const extCls = buildActiveProfileQuery(request.user.id);
+      extCls.include('TenantId');
+      extCls.include('UserId');
+      const resExt = await extCls.first({ useMasterKey: true });
+      if (resExt) {
+        const _resExt = JSON.parse(JSON.stringify(resExt));
+        const fileName = request.params.fileName;
+        const ext = request.params.fileName?.split('.')?.pop();
+        let mimeType;
+        let file;
+        if (ext === 'pdf') {
+          mimeType = 'application/pdf';
+          const flatPdf = await flattenPdf(fileBase64);
+          // file = [...flatPdf];
+          file = flatPdf;
+        } else if (ext === 'png' || ext === 'jpeg' || ext === 'jpg') {
+          mimeType = `image/${ext}`;
+          // file = { base64: fileBase64 };
+          file = Buffer.from(fileBase64, 'base64');
+        }
+        // const pdfFile = new Parse.File(fileName, file, mimeType);
+        // // Save the Parse File if needed
+        // const pdfData = await pdfFile.save({ useMasterKey: true });
+        // const presignedUrl = pdfData.url();
+        // const fileRes = getSecureUrl(presignedUrl);
+        // return { url: fileRes.url };
+        try {
+          const fileRes = await parseUploadFile(fileName, file, mimeType);
+          fileUrl = getSecureUrl(fileRes?.url)?.url;
+          return { url: fileUrl };
+        } catch (err) {
+          throw new Parse.Error(400, err?.message);
+        }
+      } else {
+        throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'User not found.');
+      }
+    } else {
       throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'User is not authenticated.');
     }
     if (!(await findCallerProfile(request.user))) {

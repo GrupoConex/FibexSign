@@ -1284,6 +1284,7 @@
   "delete-account-que": "Are you sure you want to delete your account?",
   "delete-account-que-user": "You are about to permanently delete this user and all associated data. This action cannot be undone.",
   "user-deleted-successfully": "User and all associated data deleted successfully.",
+  "user-removed-from-organization": "User removed from your organization.",
   "account-deletion-request-sent-via-mail": "We've emailed you a confirmation link. Approve the request to complete your account deletion.",
   "type-exact-email-delete": "Type the exact email to enable delete",
   "email-does-not-match": "Email does not match.",

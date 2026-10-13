@@ -61,9 +61,9 @@ const resolveRequestTemplate = document => {
 
 const resolveSender = document => {
   const owner = document.ExtUserPtr;
-  const email = document?.SenderMail || owner.Email;
-  const from = document?.SenderName || owner?.UseNameAsSender === true ? owner.Name : email;
-  return { name: document?.SenderName || owner.Name, email, from };
+  const email = document?.SenderMail || owner?.Email;
+  const from = document?.SenderName || owner?.UseNameAsSender === true ? owner?.Name : email;
+  return { name: document?.SenderName || owner?.Name, email, from };
 };
 
 const buildCustomMail = ({ document, recipient, signingUrl, expiryDate, sender }) => {
@@ -92,7 +92,7 @@ const buildDefaultMail = ({ document, signingUrl, expiryDate, sender }) => {
     senderName: sender.name,
     senderMail: sender.email,
     title: document.Name,
-    organization: document.ExtUserPtr.Company || '',
+    organization: document.ExtUserPtr?.Company || '',
     localExpireDate: expiryDate,
     signingUrl,
   };
@@ -117,7 +117,7 @@ export function buildSignerInvitationMail({ document, placeholder, publicUrl }) 
   };
   const mail = buildCustomMail(context) ?? buildDefaultMail(context);
   return {
-    extUserId: document.ExtUserPtr.objectId,
+    extUserId: document.ExtUserPtr?.objectId,
     recipient: recipient.email,
     subject: mail.subject,
     from: sender.from,

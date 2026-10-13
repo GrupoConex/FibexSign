@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
+import axios from "axios";
 import UserList from "../UserList";
 
 const notifySuccess = vi.fn();
@@ -281,6 +282,65 @@ describe("UserList page", () => {
 
     await waitFor(() =>
       expect(screen.getByText("delete-account")).toBeInTheDocument()
+    );
+  });
+
+  const confirmDeletionOf = async (user, name, email) => {
+    const row = screen.getByText(name).closest("tr");
+    await user.click(within(row).getByRole("button", { name: "btnLabel.Delete" }));
+    await waitFor(() =>
+      expect(screen.getByText("delete-account-que-user")).toBeInTheDocument()
+    );
+    const form = screen.getByText("delete-account-que-user").closest("form");
+    await user.type(within(form).getByRole("textbox", { hidden: true }), email);
+    await user.click(within(form).getByText("delete"));
+  };
+
+  it("announces a removal from the organization and drops the linked member from the list", async () => {
+    setAdminSession();
+    const user = userEvent.setup();
+    axios.post.mockResolvedValueOnce({
+      data: {
+        message: "Usuario quitado de la organizacion.",
+        code: "LINKED_MEMBER_REMOVED"
+      }
+    });
+    renderUserList();
+    await waitFor(() => expect(screen.getByText("Uma User")).toBeInTheDocument());
+
+    await confirmDeletionOf(user, "Uma User", "uma@example.com");
+
+    await waitFor(() =>
+      expect(notifySuccess).toHaveBeenCalledWith("user-removed-from-organization")
+    );
+    expect(axios.post).toHaveBeenCalledWith(
+      "http://localhost/api/deleteuser/parseuser-user",
+      null,
+      { headers: { sessiontoken: "token123" } }
+    );
+    await waitFor(() =>
+      expect(screen.queryByText("Uma User")).not.toBeInTheDocument()
+    );
+    expect(notifySuccess).not.toHaveBeenCalledWith("user-deleted-successfully");
+    expect(notifyError).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the generic success notice when the response carries no code", async () => {
+    setAdminSession();
+    const user = userEvent.setup();
+    axios.post.mockResolvedValueOnce({
+      data: { message: "User removed from your organization." }
+    });
+    renderUserList();
+    await waitFor(() => expect(screen.getByText("Uma User")).toBeInTheDocument());
+
+    await confirmDeletionOf(user, "Uma User", "uma@example.com");
+
+    await waitFor(() =>
+      expect(notifySuccess).toHaveBeenCalledWith("user-deleted-successfully")
+    );
+    await waitFor(() =>
+      expect(screen.queryByText("Uma User")).not.toBeInTheDocument()
     );
   });
 
