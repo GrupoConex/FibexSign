@@ -62,7 +62,38 @@ describe('authorizePlaceholders', () => {
 
     const [authorized] = await authorize([placeholder]);
 
-    expect(authorized).toEqual({ ...placeholder, signerPtr: contactPointer(contact.id) });
+    expect(authorized).toEqual({
+      ...placeholder,
+      signerPtr: contactPointer(contact.id),
+      email: contact.get('Email'),
+    });
+  });
+
+  it('takes the signer id and email of a contact placeholder from the stored contact', async () => {
+    const contact = await seedContact(owner, await createPlainUser());
+    const other = await seedContact(owner, await createPlainUser());
+
+    const [authorized] = await authorize([
+      { signerObjId: other.id, signerPtr: contactPointer(contact.id), email: 'attacker@x.com' },
+    ]);
+
+    expect(authorized).toEqual({
+      signerObjId: contact.id,
+      signerPtr: contactPointer(contact.id),
+      email: contact.get('Email'),
+    });
+  });
+
+  it('links a placeholder named only by its signer id to the stored contact', async () => {
+    const contact = await seedContact(owner, await createPlainUser());
+
+    const [authorized] = await authorize([{ signerObjId: contact.id, email: 'attacker@x.com' }]);
+
+    expect(authorized).toEqual({
+      signerObjId: contact.id,
+      signerPtr: contactPointer(contact.id),
+      email: contact.get('Email'),
+    });
   });
 
   it('keeps placeholders without a signer untouched', async () => {

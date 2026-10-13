@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { sendMail } from '../../cloud/parsefunction/createBatchDocs.js';
+import { sendMail } from '../../cloud/parsefunction/shared/batchSigningMail.js';
 import { resetCommsMailBreaker } from '../../cloud/parsefunction/shared/commsMailClient.js';
 
 const COMMS_KEYS = ['COMMS_BASE_URL', 'COMMS_API_KEY'];

@@ -30,7 +30,7 @@ export const loadContacts = async ids => {
   if (contactIds.length === 0) return [];
   return new Parse.Query(CONTACT_CLASS)
     .containedIn('objectId', contactIds)
-    .select('CreatedBy', 'UserId')
+    .select('CreatedBy', 'UserId', 'Email')
     .limit(contactIds.length)
     .find(MASTER);
 };
