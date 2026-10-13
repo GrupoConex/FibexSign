@@ -74,56 +74,68 @@ async function DocumentAftersave(request) {
   }
 
   async function updateAclDoc(objId) {
-    const Query = new Parse.Query('contracts_Document');
-    Query.include('Signers');
-    Query.include('ExtUserPtr.TenantId');
-    Query.include('CreatedBy');
-    const updateACL = await Query.get(objId, { useMasterKey: true });
-    const res = JSON.parse(JSON.stringify(updateACL));
-    const UsersPtr = res.Signers.map(item => item.UserId);
+    try {
+      const Query = new Parse.Query('contracts_Document');
+      Query.include('Signers');
+      Query.include('ExtUserPtr.TenantId');
+      Query.include('CreatedBy');
+      const updateACL = await Query.get(objId, { useMasterKey: true });
+      if (!updateACL) return;
+      const res = JSON.parse(JSON.stringify(updateACL));
+      const UsersPtr = res.Signers?.map(item => item.UserId) || [];
 
-    if (res.Signers[0].ExtUserPtr) {
-      const ExtUserSigners = res.Signers.map(item => {
-        return {
-          __type: 'Pointer',
-          className: 'contracts_Users',
-          objectId: item.ExtUserPtr.objectId,
-        };
+      if (res.Signers?.[0]?.ExtUserPtr) {
+        const ExtUserSigners = res.Signers.map(item => {
+          return {
+            __type: 'Pointer',
+            className: 'contracts_Users',
+            objectId: item.ExtUserPtr.objectId,
+          };
+        });
+        updateACL.set('Signers', ExtUserSigners);
+      }
+
+      const newACL = new Parse.ACL();
+      newACL.setPublicReadAccess(false);
+      newACL.setPublicWriteAccess(false);
+      if (res?.CreatedBy) {
+        newACL.setReadAccess(res?.CreatedBy?.objectId, true);
+        newACL.setWriteAccess(res?.CreatedBy?.objectId, true);
+      }
+      UsersPtr.forEach(x => {
+        if (x?.objectId) {
+          newACL.setReadAccess(x.objectId, true);
+          newACL.setWriteAccess(x.objectId, true);
+        }
       });
-      updateACL.set('Signers', ExtUserSigners);
-    }
 
-    const newACL = new Parse.ACL();
-    newACL.setPublicReadAccess(false);
-    newACL.setPublicWriteAccess(false);
-    if (res?.CreatedBy) {
-      newACL.setReadAccess(res?.CreatedBy?.objectId, true);
-      newACL.setWriteAccess(res?.CreatedBy?.objectId, true);
+      updateACL.setACL(newACL);
+      await updateACL.save(null, { useMasterKey: true });
+    } catch (err) {
+      console.log('err in updateAclDoc DocumentAftersave', err?.message || err);
     }
-    UsersPtr.forEach(x => {
-      newACL.setReadAccess(x.objectId, true);
-      newACL.setWriteAccess(x.objectId, true);
-    });
-
-    updateACL.setACL(newACL);
-    updateACL.save(null, { useMasterKey: true });
   }
 
   async function updateSelfDoc(objId) {
-    const Query = new Parse.Query('contracts_Document');
-    Query.include('CreatedBy');
-    Query.include('ExtUserPtr.TenantId');
-    const updateACL = await Query.get(objId, { useMasterKey: true });
-    const res = JSON.parse(JSON.stringify(updateACL));
-    const newACL = new Parse.ACL();
-    newACL.setPublicReadAccess(false);
-    newACL.setPublicWriteAccess(false);
-    if (res?.CreatedBy) {
-      newACL.setReadAccess(res?.CreatedBy?.objectId, true);
-      newACL.setWriteAccess(res?.CreatedBy?.objectId, true);
+    try {
+      const Query = new Parse.Query('contracts_Document');
+      Query.include('CreatedBy');
+      Query.include('ExtUserPtr.TenantId');
+      const updateACL = await Query.get(objId, { useMasterKey: true });
+      if (!updateACL) return;
+      const res = JSON.parse(JSON.stringify(updateACL));
+      const newACL = new Parse.ACL();
+      newACL.setPublicReadAccess(false);
+      newACL.setPublicWriteAccess(false);
+      if (res?.CreatedBy) {
+        newACL.setReadAccess(res?.CreatedBy?.objectId, true);
+        newACL.setWriteAccess(res?.CreatedBy?.objectId, true);
+      }
+      updateACL.setACL(newACL);
+      await updateACL.save(null, { useMasterKey: true });
+    } catch (err) {
+      console.log('err in updateSelfDoc DocumentAftersave', err?.message || err);
     }
-    updateACL.setACL(newACL);
-    updateACL.save(null, { useMasterKey: true });
   }
 }
 

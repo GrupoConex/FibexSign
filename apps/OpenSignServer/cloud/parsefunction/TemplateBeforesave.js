@@ -1,7 +1,9 @@
 import { MAX_DESCRIPTION_LENGTH, MAX_NAME_LENGTH, MAX_NOTE_LENGTH } from '../../Utils.js';
 import { setTemplateCount } from '../../utils/CountUtils.js';
+import { guardTemplateSave } from './templateWriteGuard.js';
 
 async function TemplateBeforeSave(request) {
+  await guardTemplateSave(request);
   if (!request.original) {
     const validations = [
       { field: 'Name', max: MAX_NAME_LENGTH },
