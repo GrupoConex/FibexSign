@@ -10,6 +10,7 @@ async function getUserDetails(request) {
         const email = request.user.get('email');
         userQuery.equalTo('Email', email);
       }
+      userQuery.doesNotExist('RemovedFromOrgAt');
       userQuery.include('TenantId');
       userQuery.include('UserId');
       userQuery.include('CreatedBy');

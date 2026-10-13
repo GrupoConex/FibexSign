@@ -36,6 +36,15 @@ const heading = ["Sr.No", "Name", "Email", "Phone", "Role", "Team", "Active"];
 
 const ROLE_OPTIONS = ["Admin", "OrgAdmin", "Editor", "User"];
 
+const DELETION_NOTICE_KEYS = Object.freeze({
+  LINKED_MEMBER_REMOVED: "user-removed-from-organization"
+});
+
+const deletionNoticeKey = (resultCode) =>
+  Object.hasOwn(DELETION_NOTICE_KEYS, resultCode ?? "")
+    ? DELETION_NOTICE_KEYS[resultCode]
+    : "user-deleted-successfully";
+
 const ACTION_ICONS = {
   trash: Trash2,
   key: KeyRound
@@ -199,13 +208,13 @@ const UserList = () => {
       const url = localStorage.getItem("baseUrl")?.replace(/\/app\/?$/, "/");
       const deleteUrl = `${url}deleteuser/${item.UserId.objectId}`;
       try {
-        await axios.post(deleteUrl, null, {
+        const response = await axios.post(deleteUrl, null, {
           headers: { sessiontoken: localStorage.getItem("accesstoken") }
         });
         setUserList((prev) =>
           prev.filter((user) => user.objectId !== item.objectId)
         );
-        notify.success(t("user-deleted-successfully"));
+        notify.success(t(deletionNoticeKey(response?.data?.code)));
       } catch (err) {
         const message = err?.response?.data?.message || err?.message;
         setDeleteUserRes(message);

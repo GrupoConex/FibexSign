@@ -1,3 +1,5 @@
+import { buildActiveProfileQuery } from './shared/activeProfileQuery.js';
+
 export default async function setWidgetPreferences(request) {
   if (!request?.user) {
     throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'User is not authenticated.');
@@ -7,9 +9,7 @@ export default async function setWidgetPreferences(request) {
     throw new Parse.Error(Parse.Error.INVALID_QUERY, 'Please provide parameters.');
   }
   try {
-    const orgQuery = new Parse.Query('contracts_Users');
-    orgQuery.equalTo('UserId', request.user);
-    const userObj = await orgQuery.first({ useMasterKey: true });
+    const userObj = await buildActiveProfileQuery(request.user.id).first({ useMasterKey: true });
     if (!userObj) {
       throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Permission denied.');
     }

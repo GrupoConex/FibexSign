@@ -75,6 +75,7 @@ describe('contractsUsersGuard', () => {
           'IsLinkedAccount',
           'NotifyOnSignatures',
           'OrganizationId',
+          'RemovedFromOrgAt',
           'SignatureType',
           'TeamIds',
           'TemplateCount',

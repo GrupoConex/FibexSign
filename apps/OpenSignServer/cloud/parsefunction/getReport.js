@@ -39,14 +39,15 @@ export default async function getReport(request) {
       if (reportId == '6TeaPr321t') {
         const extUserQuery = new Parse.Query('contracts_Users');
         extUserQuery.equalTo('Email', userRes.data.email);
+        extUserQuery.notEqualTo('IsDisabled', true);
         extUserQuery.include('TeamIds');
         const extUser = await extUserQuery.first({ useMasterKey: true });
         const userPtr = { __type: 'Pointer', className: '_User', objectId: userId };
         if (!extUser) {
           paramsObj = { ...paramsObj, CreatedBy: userPtr };
         }
-        const _extUser = JSON.parse(JSON.stringify(extUser));
-        const extPtr = { __type: 'Pointer', className: 'contracts_Users', objectId: extUser.id };
+        const _extUser = extUser ? JSON.parse(JSON.stringify(extUser)) : null;
+        const extPtr = { __type: 'Pointer', className: 'contracts_Users', objectId: extUser?.id };
         if (_extUser?.TeamIds && _extUser.TeamIds?.length > 0) {
           // Collect ancestors efficiently + de-dupe
           const teamSet = new Set();

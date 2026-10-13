@@ -186,22 +186,15 @@ describe('getDocument', () => {
     )
   );
 
-  it(
-    'KNOWN DEFECT DEF-L3-04 returns a document whose sender profile has no tenant',
-    knownDefect(
-      'DEF-L3-04',
-      'getDocument dereferences ExtUserPtr.TenantId without optional chaining and answers {} for documents without a tenant',
-      async check => {
-        const doc = await seedDocument(owner, { ExtUserPtr: undefined });
-        const orphan = await seedDocument(owner);
-        await owner.extUser.save({ TenantId: null }, MASTER);
+  it('returns a document whose sender profile is missing or has no tenant', async () => {
+    const doc = await seedDocument(owner, { ExtUserPtr: undefined });
+    const orphan = await seedDocument(owner);
+    await owner.extUser.save({ TenantId: null }, MASTER);
 
-        const withoutProfile = await getDocument({ docId: doc.id });
-        const withoutTenant = await getDocument({ docId: orphan.id });
+    const withoutProfile = await getDocument({ docId: doc.id });
+    const withoutTenant = await getDocument({ docId: orphan.id });
 
-        check(withoutProfile.objectId === doc.id, 'document without sender profile returned');
-        check(withoutTenant.objectId === orphan.id, 'document without tenant returned');
-      }
-    )
-  );
+    expect(withoutProfile.objectId).toBe(doc.id);
+    expect(withoutTenant.objectId).toBe(orphan.id);
+  });
 });

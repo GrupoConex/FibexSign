@@ -2,7 +2,13 @@ import { access, mkdir, rm, writeFile } from 'node:fs/promises';
 import axios from 'axios';
 import * as deleteUtils from '../../cloud/customRoute/deleteAccount/deleteUtils.js';
 import { resetCommsMailBreaker } from '../../cloud/parsefunction/shared/commsMailClient.js';
-import { createCaller, pointer } from './auth-fixtures.js';
+import {
+  cloudRunAs,
+  createCaller,
+  createMasterKeySession,
+  markEmailVerified,
+  pointer,
+} from './auth-fixtures.js';
 
 const MASTER = { useMasterKey: true };
 const ROUTE_ROOT = 'http://localhost:30001';
@@ -177,4 +183,34 @@ export const stubSessionLookup = () => {
     if (!session) throw buildInvalidSessionError();
     return { data: { objectId: session.get('user').id } };
   });
+};
+
+export const REMOVED_FROM_ORGANIZATION = 'User removed from your organization.';
+export const LINKED_MEMBER_REMOVED = 'LINKED_MEMBER_REMOVED';
+
+export const linkGuestInto = (admin, guest) =>
+  cloudRunAs(
+    'adduser',
+    {
+      name: 'Linked Guest',
+      email: guest.email,
+      password: 'Attacker-Passw0rd!',
+      organization: { objectId: admin.organization.id },
+      team: admin.team.id,
+      role: 'User',
+      tenantId: admin.tenant.id,
+    },
+    admin.account.sessionToken
+  );
+
+export const openGuestSession = async guest => {
+  await markEmailVerified(guest.id);
+  return createMasterKeySession(guest.id);
+};
+
+export const sessionIdsOf = async userId => {
+  const sessions = await new Parse.Query('_Session')
+    .equalTo('user', pointer('_User', userId))
+    .findAll(MASTER);
+  return sessions.map(session => session.id).sort();
 };
