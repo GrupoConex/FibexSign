@@ -1,10 +1,75 @@
 import axios from 'axios';
 import { cloudServerUrl, serverAppId } from '../../Utils.js';
+import {
+  OBJECT_METADATA,
+  isRecord,
+  pick,
+  projectCopyRecipient,
+  projectOwnerSigner,
+  projectSigner,
+  toPointer,
+} from './shared/contactProjection.js';
 
 const MASTER = { useMasterKey: true };
 const SESSION_LOOKUP_TIMEOUT_MS = 5000;
+const SESSION_LOOKUP_RETRIES = 1;
 const OWNER_INCLUDES = ['Bcc', 'Cc'];
-const OBJECT_METADATA = ['__type', 'className', 'objectId'];
+const SESSION_TOKEN_PREFIX = 'r:';
+export const RETURNED_FIELDS = [
+  'Name',
+  'URL',
+  'ExtUserPtr',
+  'CreatedBy',
+  'ExpiryDate',
+  'Note',
+  'EnableEmailOTP',
+  'Signers',
+  'Type',
+  'Description',
+  'SignedUrl',
+  'AuditTrail',
+  'Placeholders',
+  'Folder',
+  'SendinOrder',
+  'AutomaticReminders',
+  'IsCompleted',
+  'IsDeclined',
+  'RemindOnceInEvery',
+  'TimeToCompleteDays',
+  'SentToOthers',
+  'EnablePhoneOTP',
+  'AgreementValidUntil',
+  'Recipients',
+  'Clauses',
+  'AgreementDelta',
+  'IsArchive',
+  'SendMail',
+  'SendCompletionMail',
+  'DeclineReason',
+  'IsSignyourself',
+  'DeclineBy',
+  'IsEnableOTP',
+  'IsTourEnabled',
+  'SignatureType',
+  'NotifyOnSignatures',
+  'RedirectUrl',
+  'AllowModifications',
+  'PenColors',
+  'SenderName',
+  'SenderMail',
+  'SendInOrderStrict',
+  'SharedWithUsers',
+  'DocSentAt',
+];
+export const INTERNAL_FIELDS = ['ACL', 'OriginIp', 'DebugginLog', 'FileAdapterId'];
+export const NON_OWNER_FIELDS = [
+  ...OWNER_INCLUDES,
+  'RequestBody',
+  'RequestSubject',
+  'EmailEditorType',
+  'NextReminderDate',
+  'TemplateId',
+];
 const SENDER_PROFILE_FIELDS = [
   'Name',
   'Email',
@@ -22,14 +87,6 @@ const SENDER_PROFILE_POINTERS = ['UserId', 'TenantId'];
 
 const noAccess = () => ({ error: "You don't have access of this document!" });
 
-const pick = (source, keys) =>
-  Object.fromEntries(
-    keys.filter(key => source?.[key] !== undefined).map(key => [key, source[key]])
-  );
-
-const toPointer = (reference, className = reference?.className) =>
-  reference?.objectId ? { __type: 'Pointer', className, objectId: reference.objectId } : reference;
-
 const projectSenderProfile = profile => ({
   ...pick(profile, [...OBJECT_METADATA, ...SENDER_PROFILE_FIELDS]),
   ...Object.fromEntries(
@@ -40,29 +97,51 @@ const projectSenderProfile = profile => ({
   ),
 });
 
-const projectAuditTrail = trail =>
-  Array.isArray(trail)
-    ? trail.map(entry =>
-        entry?.UserPtr
-          ? { ...entry, UserPtr: pick(entry.UserPtr, [...OBJECT_METADATA, 'Email', 'Name']) }
-          : entry
-      )
-    : trail;
+const projectAuditEntry = entry =>
+  isRecord(entry)
+    ? {
+        ...pick(entry, ['Activity']),
+        ...(entry.UserPtr
+          ? { UserPtr: pick(entry.UserPtr, [...OBJECT_METADATA, 'Email', 'Name']) }
+          : {}),
+      }
+    : entry;
 
-const FIELD_PROJECTIONS = [
+const isEmbeddedRecord = reference =>
+  isRecord(reference) && Object.keys(reference).some(key => !OBJECT_METADATA.includes(key));
+
+const projectEmbeddedSigner = signerPtr => (signerPtr.objectId ? toPointer(signerPtr) : {});
+
+const projectPlaceholder = placeholder =>
+  isEmbeddedRecord(placeholder?.signerPtr)
+    ? { ...placeholder, signerPtr: projectEmbeddedSigner(placeholder.signerPtr) }
+    : placeholder;
+
+const mapEntries = project => entries => (Array.isArray(entries) ? entries.map(project) : []);
+
+const fieldProjections = isOwner => [
   ['CreatedBy', creator => toPointer(creator, '_User')],
   ['ExtUserPtr', projectSenderProfile],
   ['DeclineBy', decliner => pick(decliner, [...OBJECT_METADATA, 'email'])],
-  ['AuditTrail', projectAuditTrail],
+  ['AuditTrail', mapEntries(projectAuditEntry)],
+  ['Placeholders', mapEntries(projectPlaceholder)],
+  ['Signers', mapEntries(isOwner ? projectOwnerSigner : projectSigner)],
+  ...(isOwner ? OWNER_INCLUDES.map(field => [field, mapEntries(projectCopyRecipient)]) : []),
 ];
 
-const projectDocument = document =>
-  FIELD_PROJECTIONS.reduce(
-    (projected, [field, project]) =>
-      projected[field] === undefined || projected[field] === null
-        ? projected
-        : { ...projected, [field]: project(projected[field]) },
-    document
+const withoutFields = (document, hiddenFields) =>
+  Object.fromEntries(Object.entries(document).filter(([field]) => !hiddenFields.includes(field)));
+
+export const projectDocument = (document, isOwner) =>
+  withoutFields(
+    fieldProjections(isOwner).reduce(
+      (projected, [field, project]) =>
+        projected[field] === undefined || projected[field] === null
+          ? projected
+          : { ...projected, [field]: project(projected[field]) },
+      document
+    ),
+    isOwner ? INTERNAL_FIELDS : [...INTERNAL_FIELDS, ...NON_OWNER_FIELDS]
   );
 
 const allowedIncludesOf = include =>
@@ -89,19 +168,26 @@ const buildDocumentQuery = (docId, extraIncludes = []) => {
   return query;
 };
 
-const resolveSessionUserId = async sessiontoken => {
+const isTransientFailure = err => err?.response?.status === undefined || err.response.status >= 500;
+
+const lookupSessionUser = sessiontoken =>
+  axios.get(cloudServerUrl + '/users/me', {
+    headers: {
+      'X-Parse-Application-Id': serverAppId,
+      'X-Parse-Session-Token': sessiontoken,
+    },
+    timeout: SESSION_LOOKUP_TIMEOUT_MS,
+  });
+
+const resolveSessionUserId = async (sessiontoken, retriesLeft = SESSION_LOOKUP_RETRIES) => {
   if (!sessiontoken) return undefined;
   try {
-    const userRes = await axios.get(cloudServerUrl + '/users/me', {
-      headers: {
-        'X-Parse-Application-Id': serverAppId,
-        'X-Parse-Session-Token': sessiontoken,
-      },
-      timeout: SESSION_LOOKUP_TIMEOUT_MS,
-    });
-    return userRes.data?.objectId;
+    return (await lookupSessionUser(sessiontoken)).data?.objectId;
   } catch (err) {
-    console.log('err user in not authenticated', err);
+    if (retriesLeft > 0 && isTransientFailure(err)) {
+      return resolveSessionUserId(sessiontoken, retriesLeft - 1);
+    }
+    console.log('session lookup failed', err?.response?.status ?? err?.code);
     return undefined;
   }
 };
@@ -113,27 +199,30 @@ const canReadWith = (document, userId) => {
   return Boolean(userId && acl && acl.getReadAccess(userId));
 };
 
-const readDocument = async (docId, includes, sessiontoken) => {
+const resolveCallerId = async request => {
+  if (request.user?.id) return request.user.id;
+  const sessiontoken = request.headers?.sessiontoken;
+  return typeof sessiontoken === 'string' && sessiontoken.startsWith(SESSION_TOKEN_PREFIX)
+    ? resolveSessionUserId(sessiontoken)
+    : undefined;
+};
+
+const readDocument = async (docId, includes, userId) => {
   const res = await buildDocumentQuery(docId).first(MASTER);
   if (!res) return { error: "document deleted or you don't have access." };
-  const isOtpEnabled = res.get('IsEnableOTP') || false;
-  const userId =
-    includes.length > 0 || isOtpEnabled ? await resolveSessionUserId(sessiontoken) : undefined;
-  if (isOtpEnabled && !canReadWith(res, userId)) return noAccess();
+  if ((res.get('IsEnableOTP') || false) && !canReadWith(res, userId)) return noAccess();
+  const isOwner = isOwnedBy(res, userId);
   const source =
-    includes.length > 0 && isOwnedBy(res, userId)
-      ? await buildDocumentQuery(docId, includes).first(MASTER)
-      : res;
-  return projectDocument(JSON.parse(JSON.stringify(source)));
+    includes.length > 0 && isOwner ? await buildDocumentQuery(docId, includes).first(MASTER) : res;
+  return projectDocument(JSON.parse(JSON.stringify(source)), isOwner);
 };
 
 export default async function getDocument(request) {
   const docId = request.params.docId;
   if (!docId) return { error: 'Please pass required parameters!' };
   const includes = allowedIncludesOf(request?.params?.include);
-  const sessiontoken = request?.headers?.sessiontoken || '';
   try {
-    return await readDocument(docId, includes, sessiontoken);
+    return await readDocument(docId, includes, await resolveCallerId(request));
   } catch (err) {
     console.log('err', err);
     return noAccess();

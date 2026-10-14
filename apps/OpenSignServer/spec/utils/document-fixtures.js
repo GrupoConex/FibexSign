@@ -36,6 +36,17 @@ export const routeSessionLookupWithJavascriptKey = () => {
   );
 };
 
+export const failSessionLookupThenRoute = failures => {
+  const originalGet = axios.get.bind(axios);
+  const pending = [...failures];
+  return spyOn(axios, 'get').and.callFake((url, config = {}) => {
+    if (!String(url).endsWith('/users/me')) return originalGet(url, config);
+    return pending.length > 0
+      ? Promise.reject(pending.shift())
+      : originalGet(url, { ...config, headers: { ...config.headers, ...restHeaders() } });
+  });
+};
+
 export const answerSessionLookupWith = respond => {
   const originalGet = axios.get.bind(axios);
   return spyOn(axios, 'get').and.callFake((url, config) =>

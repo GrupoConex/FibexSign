@@ -1,3 +1,5 @@
+import { projectContact } from './shared/contactProjection.js';
+
 export default async function updateContactTour(request) {
   const contactId = request.params.contactId;
   try {
@@ -22,7 +24,7 @@ export default async function updateContactTour(request) {
       }
       contactRes.set('TourStatus', updatedTourStatus);
       const updateRes = await contactRes.save(null, { useMasterKey: true });
-      return updateRes;
+      return projectContact(JSON.parse(JSON.stringify(updateRes)));
     } else {
       throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'contact not found.');
     }
