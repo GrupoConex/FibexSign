@@ -149,6 +149,12 @@ describe('server hardening: rate-limited path coverage', () => {
     expect(isAuthRateLimitedPath('/parse/functions/declinedoc')).toBe(true);
   });
 
+  it('rate-limits the forwarddoc cloud function suffix with the operational limiter', () => {
+    expect(isAuthRateLimitedPath('/parse/functions/forwarddoc')).toBe(true);
+    expect(isAuthRateLimitedPath('/parse/functions/ForwardDoc/')).toBe(true);
+    expect(isStrictAuthPath('/parse/functions/forwarddoc')).toBe(false);
+  });
+
   it('rate-limits the verifyemail cloud function with the strict auth limiter', () => {
     expect(isAuthRateLimitedPath('/parse/functions/verifyemail')).toBe(true);
     expect(isStrictAuthPath('/parse/functions/verifyemail')).toBe(true);

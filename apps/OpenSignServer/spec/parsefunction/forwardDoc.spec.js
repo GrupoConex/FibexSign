@@ -8,12 +8,15 @@ import {
 } from '../utils/auth-fixtures.js';
 import { useCommsMailCapture } from '../utils/delete-account-fixtures.js';
 import { fileUrl, seedDocument } from '../utils/document-fixtures.js';
-import { knownDefect } from '../utils/known-defect.js';
+import { escapeHtml } from '../../cloud/parsefunction/shared/mailRendering.js';
 
+const MASTER = { useMasterKey: true };
 const INVALID_SESSION_TOKEN = 209;
 const INVALID_QUERY = 102;
 const OBJECT_NOT_FOUND = 101;
 const MAIL_FAILURE = 400;
+const GENERIC_MAIL_FAILURE = 'Could not send the document copy.';
+const MAX_ACCEPTED_ENTRIES = 20;
 const RECIPIENT = 'copy@example.com';
 const SECOND_RECIPIENT = 'second@example.com';
 const recipientsOf = count => Array.from({ length: count }, (_, index) => `r${index}@example.com`);
@@ -37,6 +40,18 @@ const failCertificateCleanupWith = failure => {
   const originalExists = fs.existsSync;
   spyOn(fs, 'existsSync').and.callFake(path => {
     if (String(path).includes('certificate')) throw failure;
+    return originalExists(path);
+  });
+};
+
+const failCertificateCleanupOnce = failure => {
+  const originalExists = fs.existsSync;
+  let isArmed = true;
+  spyOn(fs, 'existsSync').and.callFake(path => {
+    if (isArmed && String(path).includes('certificate')) {
+      isArmed = false;
+      throw failure;
+    }
     return originalExists(path);
   });
 };
@@ -125,21 +140,56 @@ describe('forwarddoc', () => {
     expect(mail.last().html).toContain(`contact the sender ${owner.account.email} directly`);
   });
 
-  it(
-    'KNOWN DEFECT DEF-L3-07 omits missing sender details instead of printing undefined',
-    knownDefect(
-      'DEF-L3-07',
-      'forwarddoc writes "undefined" as sender name and reply address when the document has no sender profile',
-      async check => {
-        const doc = await seedDocument(owner, { ExtUserPtr: undefined });
+  describe('sender details', () => {
+    const withoutLoginEmail = async () => {
+      const user = await new Parse.Query(Parse.User).get(owner.account.id, MASTER);
+      user.unset('email');
+      await user.save(null, MASTER);
+    };
+
+    it('omits missing sender details instead of printing undefined', async () => {
+      const doc = await seedDocument(owner, { ExtUserPtr: undefined });
+
+      await forward({ docId: doc.id, recipients: [RECIPIENT] }, owner.account);
+
+      expect(mail.last().subject).not.toContain('undefined');
+      expect(mail.last().html).not.toContain('undefined');
+    });
+
+    it('falls back to the login email as reply address when there is no profile', async () => {
+      const doc = await seedDocument(owner, { ExtUserPtr: undefined });
+
+      await forward({ docId: doc.id, recipients: [RECIPIENT] }, owner.account);
+
+      expect(mail.last().html).toContain(`contact the sender ${owner.account.email} directly`);
+    });
+
+    const invalidReplyAddresses = {
+      'a line break': 'sender@example.com\r\nBcc: victim@example.com',
+      'a malformed value': 'not-an-address',
+      'an angle bracket wrapper': 'Boss <boss@example.com>',
+    };
+    Object.entries(invalidReplyAddresses).forEach(([label, senderMail]) => {
+      it(`drops the contact sentence when the stored sender mail has ${label}`, async () => {
+        const doc = await seedDocument(owner, { SenderMail: senderMail });
 
         await forward({ docId: doc.id, recipients: [RECIPIENT] }, owner.account);
 
-        check(!mail.last().subject.includes('undefined'), 'subject has no undefined sender');
-        check(!mail.last().html.includes('undefined'), 'body has no undefined reply address');
-      }
-    )
-  );
+        expect(mail.last().html).not.toContain('please contact the sender');
+      });
+    });
+
+    it('drops the contact sentence when no reply address is known', async () => {
+      await withoutLoginEmail();
+      const doc = await seedDocument(owner, { ExtUserPtr: undefined });
+
+      await forward({ docId: doc.id, recipients: [RECIPIENT] }, owner.account);
+
+      expect(mail.last().html).not.toContain('please contact the sender');
+      expect(mail.last().html).not.toContain('undefined');
+      expect(mail.last().subject).not.toContain('undefined');
+    });
+  });
 
   it('reports a rejected provider delivery as an error status', async () => {
     mail.providerStatus = 500;
@@ -151,16 +201,17 @@ describe('forwarddoc', () => {
   });
 
   const mailFailures = {
-    'the provider error field': [
-      { response: { data: { error: 'provider said no' } } },
-      'provider said no',
-    ],
-    'the raw provider body': [{ response: { data: 'raw failure' } }, 'raw failure'],
-    'the error message': [new Error('disk failure'), 'disk failure'],
-    'a generic message': [{}, 'Something went wrong.'],
+    'the provider error field': { response: { data: { error: 'provider said no' } } },
+    'the raw provider body': { response: { data: 'raw failure' } },
+    'a provider body naming internal resources': {
+      response: { data: { error: 'bucket internal-name' } },
+    },
+    'a provider body that is an object': { response: { data: { bucket: 'internal-name' } } },
+    'the error message': new Error('disk failure'),
+    'an empty failure': {},
   };
-  Object.entries(mailFailures).forEach(([label, [failure, message]]) => {
-    it(`turns a failing mail step into a bad request with ${label}`, async () => {
+  Object.entries(mailFailures).forEach(([label, failure]) => {
+    it(`turns a failing mail step into a generic bad request despite ${label}`, async () => {
       failCertificateCleanupWith(failure);
       const doc = await seedDocument(owner, { SignedUrl: fileUrl('signed.pdf') });
 
@@ -169,76 +220,223 @@ describe('forwarddoc', () => {
       );
 
       expect(error.code).toBe(MAIL_FAILURE);
-      expect(error.message).toBe(message);
+      expect(error.message).toBe(GENERIC_MAIL_FAILURE);
     });
   });
 
-  it(
-    'KNOWN DEFECT DEF-L3-05 escapes the document name inside the forwarded mail',
-    knownDefect(
-      'DEF-L3-05',
-      'forwarddoc interpolates the document Name unescaped into the mail HTML sent to arbitrary recipients',
-      async check => {
-        const injected = '<a href="https://evil.test/login">Verify account</a>';
-        const doc = await seedDocument(owner, { Name: injected });
+  it('logs the full mail failure server side', async () => {
+    const failure = { response: { data: { error: 'bucket internal-name' } } };
+    failCertificateCleanupWith(failure);
+    const doc = await seedDocument(owner, { SignedUrl: fileUrl('signed.pdf') });
 
-        await forward({ docId: doc.id, recipients: [RECIPIENT] }, owner.account);
+    await captureRejection(forward({ docId: doc.id, recipients: [RECIPIENT] }, owner.account));
 
-        check(!mail.last().html.includes(injected), 'markup from the name is not rendered');
-      }
-    )
-  );
+    expect(console.log).toHaveBeenCalledWith(jasmine.any(String), failure);
+  });
 
-  it(
-    'KNOWN DEFECT DEF-L3-06 keeps the ten recipient cap for comma separated addresses',
-    knownDefect(
-      'DEF-L3-06',
-      'forwarddoc caps the recipients array at ten but each entry may hold several comma separated addresses',
-      async check => {
+  describe('mail content', () => {
+    it('escapes the document name inside the forwarded mail', async () => {
+      const injected = '<a href="https://evil.test/login">Verify account</a>';
+      const doc = await seedDocument(owner, { Name: injected });
+
+      await forward({ docId: doc.id, recipients: [RECIPIENT] }, owner.account);
+
+      expect(mail.last().html).not.toContain(injected);
+      expect(mail.last().html).toContain(escapeHtml(injected));
+    });
+
+    it('escapes the sender name and reply address inside the forwarded mail', async () => {
+      const doc = await seedDocument(owner, {
+        SenderName: '<b>Boss</b>',
+        SenderMail: '"><script>x</script>@evil.test',
+      });
+
+      await forward({ docId: doc.id, recipients: [RECIPIENT] }, owner.account);
+
+      expect(mail.last().html).not.toContain('<script>');
+      expect(mail.last().html).not.toContain('<b>Boss</b>');
+    });
+
+    it('keeps line breaks out of the subject', async () => {
+      const doc = await seedDocument(owner, { Name: 'Lease\r\nBcc: victim@example.com' });
+
+      await forward({ docId: doc.id, recipients: [RECIPIENT] }, owner.account);
+
+      expect(mail.last().subject).not.toMatch(/[\r\n]/);
+    });
+  });
+
+  describe('recipients validation', () => {
+    const rejectedRecipients = {
+      'a string instead of a list': 'me@x.io',
+      'an object instead of a list': { 0: RECIPIENT, length: 1 },
+      'a non string entry': [RECIPIENT, 42],
+      'a null entry': [null],
+      'a blank entry': ['   '],
+      'a malformed address': ['not-an-email'],
+      'several comma separated addresses in one entry': [`${RECIPIENT},${SECOND_RECIPIENT}`],
+      'a semicolon separated pair in one entry': [`${RECIPIENT};${SECOND_RECIPIENT}`],
+      'a space separated pair in one entry': [`${RECIPIENT} ${SECOND_RECIPIENT}`],
+      'a comma inside the local part': ['a,b@example.com'],
+      'an angle bracket display name': ['Foo<a@b.com>'],
+      'a quoted local part': ['"a"@b.com'],
+      'parentheses in the local part': ['a(b)@c.com'],
+      'a backslash in the local part': ['a\\b@c.com'],
+      'a null character in the local part': ['a\u0000b@c.com'],
+      'an inner carriage return': ['a\r@b.com'],
+      'a line separator': ['a\u2028b@c.com'],
+      'a paragraph separator': ['a\u2029b@c.com'],
+      'a delete character': ['a\u007fb@c.com'],
+      'an apostrophe': ["a'b@c.com"],
+      'a comma separated list of eleven addresses': [recipientsOf(11).join(',')],
+      'eleven distinct addresses': recipientsOf(11),
+    };
+    Object.entries(rejectedRecipients).forEach(([label, recipients]) => {
+      it(`rejects ${label} without sending mail`, async () => {
         const doc = await seedDocument(owner);
 
-        await forward({ docId: doc.id, recipients: [recipientsOf(11).join(',')] }, owner.account);
-
-        check(mail.sent.length <= 10, 'at most ten addresses are mailed');
-      }
-    )
-  );
-
-  it(
-    'KNOWN DEFECT DEF-L3-12 reports a failed delivery to an earlier recipient',
-    knownDefect(
-      'DEF-L3-12',
-      'forwarddoc overwrites mailRes per recipient and returns only the last result, so earlier delivery failures are lost',
-      async check => {
-        failFirstCommsDelivery(mail);
-        const doc = await seedDocument(owner);
-
-        const outcome = await forward(
-          { docId: doc.id, recipients: [RECIPIENT, SECOND_RECIPIENT] },
-          owner.account
-        ).catch(error => ({ rejected: error }));
-
-        check(mail.sent.length === 2, 'both recipients were attempted');
-        check(outcome?.status !== 'success', 'a partial failure is not reported as success');
-      }
-    )
-  );
-
-  it(
-    'KNOWN DEFECT DEF-L3-13 treats a recipients string as one address instead of characters',
-    knownDefect(
-      'DEF-L3-13',
-      'forwarddoc accepts a non array recipients string and mails each of its characters as a separate recipient',
-      async check => {
-        const doc = await seedDocument(owner);
-
-        await captureRejection(forward({ docId: doc.id, recipients: 'me@x.io' }, owner.account));
-
-        check(
-          mail.sent.every(message => message.to.includes('@')),
-          'no single character recipient is mailed'
+        const failure = await captureRejection(
+          forward({ docId: doc.id, recipients }, owner.account)
         );
-      }
-    )
-  );
+
+        expect(failure.code).toBe(INVALID_QUERY);
+        expect(mail.sent).toEqual([]);
+      });
+    });
+
+    it('rejects an oversized recipient list before querying the document', async () => {
+      const doc = await seedDocument(owner);
+      const lookup = spyOn(Parse.Query.prototype, 'first').and.callThrough();
+
+      const failure = await captureRejection(
+        forward({ docId: doc.id, recipients: recipientsOf(10000) }, owner.account)
+      );
+
+      expect(failure.code).toBe(INVALID_QUERY);
+      expect(lookup).not.toHaveBeenCalled();
+      expect(mail.sent).toEqual([]);
+    });
+
+    it('rejects more entries than the accepted cap even when they collapse to one address', async () => {
+      const doc = await seedDocument(owner);
+
+      const failure = await captureRejection(
+        forward(
+          { docId: doc.id, recipients: Array(MAX_ACCEPTED_ENTRIES + 1).fill(RECIPIENT) },
+          owner.account
+        )
+      );
+
+      expect(failure.code).toBe(INVALID_QUERY);
+      expect(mail.sent).toEqual([]);
+    });
+
+    it('validates the recipients before looking the document up', async () => {
+      const failure = await captureRejection(
+        forward({ docId: 'missingDoc1', recipients: 'me@x.io' }, owner.account)
+      );
+
+      expect(failure.code).toBe(INVALID_QUERY);
+    });
+
+    it('trims and deduplicates addresses ignoring case', async () => {
+      const doc = await seedDocument(owner);
+
+      const result = await forward(
+        {
+          docId: doc.id,
+          recipients: [`  ${RECIPIENT.toUpperCase()} `, RECIPIENT, SECOND_RECIPIENT],
+        },
+        owner.account
+      );
+
+      expect(result).toEqual({ status: 'success' });
+      expect(mail.sent.map(message => message.to.toLowerCase())).toEqual([
+        RECIPIENT,
+        SECOND_RECIPIENT,
+      ]);
+    });
+
+    it('accepts eleven entries that collapse to ten addresses', async () => {
+      const doc = await seedDocument(owner);
+
+      const result = await forward(
+        { docId: doc.id, recipients: [...recipientsOf(10), 'R0@example.com'] },
+        owner.account
+      );
+
+      expect(result).toEqual({ status: 'success' });
+      expect(mail.sent.length).toBe(10);
+    });
+  });
+
+  describe('delivery report', () => {
+    it('reports success only when every recipient was delivered', async () => {
+      const doc = await seedDocument(owner);
+
+      const result = await forward(
+        { docId: doc.id, recipients: [RECIPIENT, SECOND_RECIPIENT] },
+        owner.account
+      );
+
+      expect(result).toEqual({ status: 'success' });
+    });
+
+    it('reports an error status when every delivery is rejected', async () => {
+      mail.providerStatus = PROVIDER_ERROR;
+      const doc = await seedDocument(owner);
+
+      const result = await forward(
+        { docId: doc.id, recipients: [RECIPIENT, SECOND_RECIPIENT] },
+        owner.account
+      );
+
+      expect(result).toEqual({ status: 'error' });
+      expect(mail.sent.length).toBe(2);
+    });
+
+    it('reports a failed delivery to an earlier recipient as a partial result', async () => {
+      failFirstCommsDelivery(mail);
+      const doc = await seedDocument(owner);
+
+      const result = await forward(
+        { docId: doc.id, recipients: [RECIPIENT, SECOND_RECIPIENT] },
+        owner.account
+      );
+
+      expect(mail.sent.length).toBe(2);
+      expect(result).toEqual({
+        status: 'partial',
+        sentCount: 1,
+        failedCount: 1,
+        failedRecipients: [RECIPIENT],
+      });
+    });
+
+    it('reports a partial result when one recipient throws and another is delivered', async () => {
+      failCertificateCleanupOnce(new Error('disk failure'));
+      const doc = await seedDocument(owner, { SignedUrl: fileUrl('signed.pdf') });
+
+      const result = await forward(
+        { docId: doc.id, recipients: [RECIPIENT, SECOND_RECIPIENT] },
+        owner.account
+      );
+
+      expect(result).toEqual({
+        status: 'partial',
+        sentCount: 1,
+        failedCount: 1,
+        failedRecipients: [RECIPIENT],
+      });
+    });
+
+    it('keeps attempting later recipients after an earlier one throws', async () => {
+      failCertificateCleanupOnce(new Error('disk failure'));
+      const doc = await seedDocument(owner, { SignedUrl: fileUrl('signed.pdf') });
+
+      await forward({ docId: doc.id, recipients: [RECIPIENT, SECOND_RECIPIENT] }, owner.account);
+
+      expect(mail.sent.map(message => message.to)).toEqual([RECIPIENT, SECOND_RECIPIENT]);
+    });
+  });
 });

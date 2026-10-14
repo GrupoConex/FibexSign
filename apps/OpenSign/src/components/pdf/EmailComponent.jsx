@@ -30,7 +30,12 @@ function EmailComponent({
   const sendEmail = async () => {
     setIsLoading(true);
     const params = { docId: pdfDetails?.[0]?.objectId, recipients: emailList };
-    const sendmail = await Parse.Cloud.run("forwarddoc", params);
+    const sendmail = await Parse.Cloud.run("forwarddoc", params).catch(
+      (err) => {
+        console.log("Err in forwarddoc", err);
+        return null;
+      }
+    );
     if (sendmail?.status === "success") {
       setSuccessEmail(true);
       setIsEmail(false);
@@ -49,7 +54,12 @@ function EmailComponent({
         alertMessage: t("something-went-wrong-mssg")
       });
       setEmailValue("");
-      setEmailList([]);
+      setEmailList(
+        sendmail?.status === "partial" &&
+          Array.isArray(sendmail.failedRecipients)
+          ? sendmail.failedRecipients
+          : []
+      );
     }
   };
 

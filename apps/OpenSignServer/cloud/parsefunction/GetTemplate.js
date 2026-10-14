@@ -37,7 +37,7 @@ const readAccessibleTemplate = async (userId, templateId) => {
     return template ? withoutTenantSecrets(JSON.parse(JSON.stringify(template))) : noAccess();
   } catch (err) {
     console.log('err', err);
-    return err;
+    return noAccess();
   }
 };
 
