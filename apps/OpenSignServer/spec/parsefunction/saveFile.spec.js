@@ -3,9 +3,12 @@ import {
   captureRejection,
   cloudRunAs,
   createCaller,
+  createExtUser,
   createPlainUser,
+  createTenantScope,
   purgeCreatedAccounts,
   silenceConsole,
+  uniqueEmail,
 } from '../utils/auth-fixtures.js';
 
 const INVALID_SESSION_TOKEN = 209;
@@ -65,6 +68,29 @@ describe('savefile cloud function', () => {
     );
 
     expect(failure.code).toBe(OBJECT_NOT_FOUND);
+  });
+
+  [
+    ['disabled', { IsDisabled: true }],
+    ['removed from the organization', { RemovedFromOrgAt: new Date() }],
+  ].forEach(([state, extras]) => {
+    it(`refuses a caller whose only profile is ${state} without uploading anything`, async () => {
+      const account = await createPlainUser(uniqueEmail('savefile-inactive'));
+      await createExtUser({
+        account,
+        role: 'contracts_User',
+        ...(await createTenantScope()),
+        extras,
+      });
+      const upload = spyOn(axios, 'post').and.callThrough();
+
+      const failure = await captureRejection(
+        saveFile({ fileBase64: TINY_PNG_BASE64, fileName: 'a.png' }, account)
+      );
+
+      expect(failure.code).toBe(OBJECT_NOT_FOUND);
+      expect(upload.calls.allArgs().some(([url]) => String(url).includes('/files/'))).toBeFalse();
+    });
   });
 
   it('refuses an unsupported extension without uploading anything', async () => {
