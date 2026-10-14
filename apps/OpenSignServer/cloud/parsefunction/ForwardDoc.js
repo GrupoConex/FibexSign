@@ -1,73 +1,70 @@
 import { appName } from '../../Utils.js';
 import sendMailWithAttachment from './sendMailWithAttachment.js';
+import {
+  buildForwardMail,
+  normalizeRecipients,
+  resolveSender,
+  summarizeDeliveries,
+} from './shared/forwardDocMail.js';
+
+const deliver = async mail => {
+  try {
+    const result = await sendMailWithAttachment(mail);
+    return { recipient: mail.recipient, isSent: result?.status === 'success' };
+  } catch (error) {
+    return { recipient: mail.recipient, isSent: false, error };
+  }
+};
+
+const deliverInOrder = async mails => {
+  const outcomes = [];
+  for (const mail of mails) {
+    outcomes.push(await deliver(mail));
+  }
+  return outcomes;
+};
+
+const findOwnDocument = async (docId, userId) => {
+  const userPtr = { __type: 'Pointer', className: '_User', objectId: userId };
+  const docQuery = new Parse.Query('contracts_Document');
+  docQuery
+    .equalTo('objectId', docId)
+    .equalTo('CreatedBy', userPtr)
+    .notEqualTo('IsArchive', true)
+    .notEqualTo('IsDeclined', true)
+    .include('Signers')
+    .include('ExtUserPtr')
+    .include('Placeholders.signerPtr')
+    .include('ExtUserPtr.TenantId');
+  const docRes = await docQuery.first({ useMasterKey: true });
+  if (!docRes) {
+    throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'Document not found.');
+  }
+  return docRes.toJSON();
+};
 
 export default async function forwardDoc(request) {
   try {
     if (!request.user) {
       throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'unauthorized.');
     }
-    const { docId, recipients } = request.params;
-    const isReceipents = recipients?.length > 0 && recipients?.length <= 10;
-    if (docId && isReceipents) {
-      const userPtr = { __type: 'Pointer', className: '_User', objectId: request.user.id };
-      const docQuery = new Parse.Query('contracts_Document');
-      docQuery
-        .equalTo('objectId', docId)
-        .equalTo('CreatedBy', userPtr)
-        .notEqualTo('IsArchive', true)
-        .notEqualTo('IsDeclined', true)
-        .include('Signers')
-        .include('ExtUserPtr')
-        .include('Placeholders.signerPtr')
-        .include('ExtUserPtr.TenantId');
-      const docRes = await docQuery.first({ useMasterKey: true });
-      if (!docRes) {
-        throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'Document not found.');
-      }
-      const _docRes = docRes?.toJSON();
-      const docName = _docRes.Name;
-      const extUserId = _docRes?.ExtUserPtr?.objectId;
-      const TenantAppName = appName;
-      const from = _docRes?.SenderName || _docRes?.ExtUserPtr?.Email;
-      const replyTo = _docRes?.SenderMail || _docRes?.ExtUserPtr?.Email;
-      const senderName = _docRes?.SenderName || _docRes?.ExtUserPtr?.Name;
-
-      try {
-        let mailRes;
-        for (let i = 0; i < recipients.length; i++) {
-          const logo = `<p style='padding:20px;font-family:system-ui;font-size:22px;font-weight:700;color:#1a1a1a'>${TenantAppName}</p>`;
-
-          const themeColor = '#47a3ad';
-
-          let params = {
-            extUserId: extUserId,
-            pdfName: docName,
-            url: _docRes?.SignedUrl || '',
-            recipient: recipients[i],
-            subject: `${senderName} has signed the doc - ${docName}`,
-            replyto: replyTo || '',
-            from: from,
-            html:
-              `<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background-color:white'><div>` +
-              `${logo}</div><div style='padding:2px;font-family:system-ui;background-color:${themeColor}'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Document Copy</p></div><div>` +
-              `<p style='padding:20px;font-family:system-ui;font-size:14px'>A copy of the document <strong>${docName}</strong> is attached to this email. Kindly download the document from the attachment.</p>` +
-              `</div></div><div><p>This is an automated email from ${TenantAppName}. For any queries regarding this email, please contact the sender ${replyTo} directly.</p></div></div></body></html>`,
-          };
-          mailRes = await sendMailWithAttachment(params);
-          // console.log('mailRes', mailRes);
-        }
-        return mailRes;
-      } catch (error) {
-        const msg =
-          error?.response?.data?.error ||
-          error?.response?.data ||
-          error?.message ||
-          'Something went wrong.';
-        throw new Parse.Error(400, msg);
-      }
-    } else {
+    const { docId } = request.params;
+    if (!docId) {
       throw new Parse.Error(Parse.Error.INVALID_QUERY, 'please provide parameters.');
     }
+    const recipients = normalizeRecipients(request.params.recipients);
+    const document = await findOwnDocument(docId, request.user.id);
+    const sender = resolveSender(document, request.user, appName);
+    const mails = recipients.map(recipient =>
+      buildForwardMail({
+        ...sender,
+        recipient,
+        extUserId: document?.ExtUserPtr?.objectId,
+        docName: document.Name,
+        url: document?.SignedUrl || '',
+      })
+    );
+    return summarizeDeliveries(await deliverInOrder(mails));
   } catch (err) {
     console.log('Err in forwardDoc', err);
     throw err;

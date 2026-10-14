@@ -21,6 +21,7 @@ export const OPERATIONAL_PATH_SUFFIXES = [
   '/functions/getUserDetails',
   '/functions/declinedoc',
   '/functions/sendmailv3',
+  '/functions/forwarddoc',
 ];
 
 const RATE_LIMIT_MESSAGE = 'Too many requests, please try again later.';

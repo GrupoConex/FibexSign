@@ -14,7 +14,6 @@ import {
   seedRow,
   seedTemplate,
 } from '../utils/document-fixtures.js';
-import { knownDefect } from '../utils/known-defect.js';
 
 const MASTER = { useMasterKey: true };
 const INVALID_SESSION_TOKEN = 209;
@@ -143,25 +142,13 @@ describe('getTemplate', () => {
       );
     });
 
-    it(
-      'KNOWN DEFECT DEF-L3-11 reports a failing template lookup through the error envelope',
-      knownDefect(
-        'DEF-L3-11',
-        'getDocument and getTemplate inner catch returns the raw error object as a successful result instead of the {error} envelope or a rejection',
-        async check => {
-          rejectFirstFor('contracts_Template', new Parse.Error(OBJECT_NOT_FOUND, 'lookup failed'));
+    it('reports a failing template lookup through the error envelope', async () => {
+      rejectFirstFor('contracts_Template', new Parse.Error(OBJECT_NOT_FOUND, 'lookup failed'));
 
-          const result = await getTemplate(
-            { templateId: 'anyTemplate' },
-            owner.account.sessionToken
-          );
+      const result = await getTemplate({ templateId: 'anyTemplate' }, owner.account.sessionToken);
 
-          check(result?.objectId === undefined, 'no template is returned');
-          check(result?.code === undefined, 'no raw error code leaks as a result');
-          check(result === undefined || typeof result.error === 'string', 'error envelope used');
-        }
-      )
-    );
+      expect(result).toEqual(GONE);
+    });
   });
 
   describe('for a caller without a team or without a profile', () => {
