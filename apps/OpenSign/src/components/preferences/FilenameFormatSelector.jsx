@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import Select from "react-select";
 import Parse from "parse";
 import { buildDownloadFilename } from "../../utils";
 import { useTranslation } from "react-i18next";
@@ -17,6 +18,11 @@ const FILENAME_FORMATS = [
     label: "document Name - name@domain.com - date.pdf"
   }
 ];
+
+const FILENAME_FORMAT_OPTIONS = FILENAME_FORMATS.map((opt) => ({
+  value: opt.id,
+  label: opt.label
+}));
 
 const FilenameFormatSelector = ({ fileNameFormat, setFileNameFormat }) => {
   const { t } = useTranslation();
@@ -67,22 +73,30 @@ const FilenameFormatSelector = ({ fileNameFormat, setFileNameFormat }) => {
           </div>
         </HelpHint>
       </label>
-      <select
-        id="filename-format-select"
-        className="op-select op-select-bordered op-select-sm focus:outline-none hover:border-base-content w-full h-full text-[11px]"
-        value={value}
-        onChange={async (e) => {
-          const v = e.target.value;
+      <Select
+        inputId="filename-format-select"
+        value={FILENAME_FORMAT_OPTIONS.find((opt) => opt.value === value)}
+        onChange={async (option) => {
+          const v = option?.value;
           setValue(v);
           await savePreference(v);
         }}
-      >
-        {FILENAME_FORMATS.map((opt) => (
-          <option key={opt.id} value={opt.id}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        options={FILENAME_FORMAT_OPTIONS}
+        unstyled
+        isSearchable={false}
+        classNames={{
+          control: () =>
+            "op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full h-full text-[11px]",
+          valueContainer: () =>
+            "flex flex-row gap-x-[2px] gap-y-[2px] md:gap-y-0 w-full my-[2px]",
+          menu: () =>
+            "mt-1 shadow-md rounded-lg bg-base-200 text-base-content",
+          menuList: () => "shadow-md rounded-lg overflow-hidden",
+          option: () =>
+            "bg-base-200 text-base-content rounded-lg m-1 hover:bg-base-300 p-2 text-[11px]",
+          noOptionsMessage: () => "p-2 bg-base-200 rounded-lg m-1 p-2 text-[11px]"
+        }}
+      />
 
       <div className="mt-2 text-xs opacity-80">
         {t("preview")}

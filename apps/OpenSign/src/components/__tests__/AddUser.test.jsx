@@ -56,23 +56,22 @@ beforeEach(() => {
 
 describe("AddUser team selection", () => {
   it("renders a team select populated from teamList with All Users selected by default", async () => {
+    const user = userEvent.setup();
     render(<AddUser />);
 
-    const teamSelect = await screen.findByLabelText("team");
+    const teamContainer = screen.getByTestId("user-team-select");
+    await within(teamContainer).findByText("All Users");
 
-    await waitFor(() => {
-      expect(
-        screen.getAllByRole("option", { name: "Sales" })
-      ).toHaveLength(1);
-    });
-
+    await user.click(within(teamContainer).getByText("All Users"));
     expect(
-      screen.getByRole("option", { name: "All Users" })
+      within(teamContainer).getByRole("option", { name: "Sales" })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("option", { name: "Support" })
+      within(teamContainer).getByRole("option", { name: "Support" })
     ).toBeInTheDocument();
-    expect(teamSelect.value).toBe("team-all-users");
+    expect(
+      within(teamContainer).getByRole("option", { name: "All Users" })
+    ).toBeInTheDocument();
   });
 
   it("provides a placeholder option for the team select before the team list has loaded", async () => {
@@ -90,43 +89,43 @@ describe("AddUser team selection", () => {
 
     render(<AddUser />);
 
-    const teamSelect = await screen.findByLabelText("team");
-    expect(
-      within(teamSelect).getByRole("option", { name: "Select" })
-    ).toBeInTheDocument();
-    expect(teamSelect.value).toBe("");
+    const teamContainer = screen.getByTestId("user-team-select");
+    expect(within(teamContainer).getByText("Select")).toBeInTheDocument();
 
     resolveTeams();
 
-    await waitFor(() => expect(teamSelect.value).toBe("team-all-users"));
+    await within(teamContainer).findByText("All Users");
   });
 
   it("updates the selected team when the user picks a different option", async () => {
     const user = userEvent.setup();
     render(<AddUser />);
 
-    const teamSelect = await screen.findByLabelText("team");
-    await waitFor(() =>
-      expect(
-        screen.getByRole("option", { name: "Sales" })
-      ).toBeInTheDocument()
-    );
+    const teamContainer = screen.getByTestId("user-team-select");
+    await within(teamContainer).findByText("All Users");
 
-    await user.selectOptions(teamSelect, "team-sales");
+    await user.click(within(teamContainer).getByText("All Users"));
+    await user.click(within(teamContainer).getByText("Sales"));
 
-    expect(teamSelect.value).toBe("team-sales");
+    await within(teamContainer).findByText("Sales");
   });
 });
 
 describe("AddUser submission outcomes", () => {
   const fillAndSubmit = async (user) => {
-    await screen.findByRole("option", { name: "Sales" });
+    const teamContainer = screen.getByTestId("user-team-select");
+    await within(teamContainer).findByText("All Users");
+
     await user.type(screen.getByPlaceholderText("enter-name"), "New Member");
     await user.type(
       screen.getByPlaceholderText("enter-email"),
       "member@example.com"
     );
-    await user.selectOptions(document.getElementById("role"), "Editor");
+
+    const roleContainer = screen.getByTestId("user-role-select");
+    await user.click(within(roleContainer).getByText("Select"));
+    await user.click(within(roleContainer).getByText("Editor"));
+
     await user.click(screen.getByRole("button", { name: "submit" }));
   };
 
@@ -207,5 +206,26 @@ describe("AddUser submission outcomes", () => {
       expect(notifyError).toHaveBeenCalledWith("something-went-wrong-mssg")
     );
     expect(notifyError).not.toHaveBeenCalledWith("email-already-registered");
+  });
+
+  it("blocks submission and warns when no role is selected", async () => {
+    const user = userEvent.setup();
+    render(<AddUser />);
+
+    const teamContainer = screen.getByTestId("user-team-select");
+    await within(teamContainer).findByText("All Users");
+
+    await user.type(screen.getByPlaceholderText("enter-name"), "New Member");
+    await user.type(
+      screen.getByPlaceholderText("enter-email"),
+      "member@example.com"
+    );
+
+    await user.click(screen.getByRole("button", { name: "submit" }));
+
+    await waitFor(() =>
+      expect(notifyWarning).toHaveBeenCalledWith("input-required")
+    );
+    expect(cloudRun).not.toHaveBeenCalledWith("adduser", expect.anything());
   });
 });

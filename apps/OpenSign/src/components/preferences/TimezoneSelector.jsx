@@ -32,8 +32,8 @@ const TimezoneSelector = (props) => {
               "mt-1 shadow-md rounded-lg bg-base-200 text-base-content",
             menuList: () => "shadow-md rounded-lg overflow-hidden",
             option: () =>
-              "bg-base-200 text-base-content rounded-lg m-1 hover:bg-base-300 p-2",
-            noOptionsMessage: () => "p-2 bg-base-200 rounded-lg m-1 p-2"
+              "bg-base-200 text-base-content rounded-lg m-1 hover:bg-base-300 p-2 text-[11px]",
+            noOptionsMessage: () => "p-2 bg-base-200 rounded-lg m-1 p-2 text-[11px]"
           }}
         />
       </div>

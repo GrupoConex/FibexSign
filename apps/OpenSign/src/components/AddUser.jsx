@@ -1,11 +1,24 @@
 import { useEffect, useState } from "react";
 import Parse from "parse";
+import Select from "react-select";
 import { Check, Copy } from "lucide-react";
 import Loader from "../primitives/Loader";
 import { copytoData, usertimezone } from "../constant/Utils";
 import { emailRegex } from "../constant/const";
 import { useTranslation } from "react-i18next";
 import { notify, withSessionValidation } from "../utils";
+
+const SELECT_CLASS_NAMES = {
+  control: () =>
+    "op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full h-full text-xs",
+  valueContainer: () =>
+    "flex flex-row gap-x-[2px] gap-y-[2px] md:gap-y-0 w-full my-[2px]",
+  menu: () => "mt-1 shadow-md rounded-lg bg-base-200 text-base-content",
+  menuList: () => "shadow-md rounded-lg overflow-hidden",
+  option: () =>
+    "bg-base-200 text-base-content rounded-lg m-1 hover:bg-base-300 p-2 text-xs",
+  noOptionsMessage: () => "p-2 bg-base-200 rounded-lg m-1 p-2 text-xs"
+};
 
 function generatePassword(length) {
   const characters =
@@ -35,6 +48,8 @@ const AddUser = (props) => {
   const [teamList, setTeamList] = useState([]);
   const [copied, setCopied] = useState(false);
   const role = ["OrgAdmin", "Editor", "User"];
+  const roleOptions = role.map((x) => ({ value: x, label: x }));
+  const teamOptions = teamList.map((x) => ({ value: x.objectId, label: x.Name }));
   useEffect(() => {
     getTeamList();
     // eslint-disable-next-line
@@ -71,6 +86,8 @@ const AddUser = (props) => {
     e.stopPropagation();
     if (!emailRegex.test(formdata.email)) {
       notify.warning(t("valid-email-alert"));
+    } else if (!formdata.role) {
+      notify.warning(t("input-required"));
     } else {
       const localUser = JSON.parse(localStorage.getItem("Extand_Class"))?.[0];
       setIsFormLoader(true);
@@ -156,6 +173,14 @@ const AddUser = (props) => {
       value = value?.toLowerCase()?.replace(/\s/g, "");
     }
     setFormdata((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleRoleChange = (option) => {
+    setFormdata((prev) => ({ ...prev, role: option?.value || "" }));
+  };
+
+  const handleTeamChange = (option) => {
+    setFormdata((prev) => ({ ...prev, team: option?.value || "" }));
   };
 
   const copytoclipboard = (text) => {
@@ -249,48 +274,42 @@ const AddUser = (props) => {
               {t("Role")}
               <span className="text-error text-[13px]"> *</span>
             </label>
-            <select
-              id="role"
-              value={formdata.role}
-              onChange={(e) => handleChange(e)}
-              name="role"
-              className="op-select op-select-bordered op-select-sm focus:outline-none hover:border-base-content w-full text-xs"
-              onInvalid={(e) => e.target.setCustomValidity(t("input-required"))}
-              onInput={(e) => e.target.setCustomValidity("")}
-              required
-            >
-              <option defaultValue={""} value={""}>
-                {t("Select")}
-              </option>
-              {role.length > 0 &&
-                role.map((x) => (
-                  <option key={x} value={x}>
-                    {x}
-                  </option>
-                ))}
-            </select>
+            <div data-testid="user-role-select">
+              <Select
+                inputId="role"
+                aria-required="true"
+                value={
+                  roleOptions.find((option) => option.value === formdata.role) ||
+                  null
+                }
+                onChange={handleRoleChange}
+                options={roleOptions}
+                placeholder={t("Select")}
+                unstyled
+                isSearchable={false}
+                classNames={SELECT_CLASS_NAMES}
+              />
+            </div>
           </div>
           <div className="mb-3">
             <label htmlFor="team" className="block text-xs font-semibold">
               {t("team")}
             </label>
-            <select
-              id="team"
-              value={formdata.team}
-              onChange={(e) => handleChange(e)}
-              name="team"
-              className="op-select op-select-bordered op-select-sm focus:outline-none hover:border-base-content w-full text-xs"
-            >
-              <option defaultValue={""} value={""}>
-                {t("Select")}
-              </option>
-              {teamList.length > 0 &&
-                teamList.map((x) => (
-                  <option key={x.objectId} value={x.objectId}>
-                    {x.Name}
-                  </option>
-                ))}
-            </select>
+            <div data-testid="user-team-select">
+              <Select
+                inputId="team"
+                value={
+                  teamOptions.find((option) => option.value === formdata.team) ||
+                  null
+                }
+                onChange={handleTeamChange}
+                options={teamOptions}
+                placeholder={t("Select")}
+                unstyled
+                isSearchable={false}
+                classNames={SELECT_CLASS_NAMES}
+              />
+            </div>
           </div>
           <div className="flex items-center mt-3 gap-2 text-white">
             <button type="submit" className="op-btn op-btn-primary">

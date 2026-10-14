@@ -358,7 +358,9 @@ describe("UserList page", () => {
       expect(screen.getByText("Many User 01")).toBeInTheDocument()
     );
 
-    await user.selectOptions(screen.getByTestId("user-status-filter"), "active");
+    const statusFilterContainer = screen.getByTestId("user-status-filter");
+    await user.click(within(statusFilterContainer).getByText("all-statuses"));
+    await user.click(screen.getByText("status-active"));
 
     await waitFor(() =>
       expect(screen.getByText("Many User 10")).toBeInTheDocument()
@@ -485,7 +487,8 @@ describe("UserList page", () => {
 
     // Team filter: Team Alpha
     const teamFilter = screen.getByTestId("user-team-filter");
-    await user.selectOptions(teamFilter, "team-a");
+    await user.click(within(teamFilter).getByText("all-teams"));
+    await user.click(within(teamFilter).getByText("Team Alpha"));
 
     await waitFor(() => {
       expect(screen.getByText("Zara Admin")).toBeInTheDocument();
@@ -504,7 +507,8 @@ describe("UserList page", () => {
 
     // Sort by name A-Z
     const sortFilter = screen.getByTestId("user-sort-filter");
-    await user.selectOptions(sortFilter, "name-asc");
+    await user.click(within(sortFilter).getByText("sort-default"));
+    await user.click(screen.getByText("sort-name-asc"));
 
     // Table rows should be ordered: Alan User, Bella Solo, Zara Admin
     const rows = screen.getAllByRole("row");
