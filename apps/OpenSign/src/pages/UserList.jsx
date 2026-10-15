@@ -14,6 +14,7 @@ import {
   Users,
   X
 } from "lucide-react";
+import Select from "react-select";
 import Loader from "../primitives/Loader";
 import { useLocation } from "react-router";
 import ModalUi from "../primitives/ModalUi";
@@ -49,6 +50,21 @@ const ACTION_ICONS = {
   trash: Trash2,
   key: KeyRound
 };
+
+const FILTER_SELECT_CONTROL_CLASS =
+  "op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content text-xs";
+
+const buildFilterSelectClassNames = (minWidthClass) => ({
+  container: () => minWidthClass,
+  control: () => FILTER_SELECT_CONTROL_CLASS,
+  valueContainer: () =>
+    "flex flex-row gap-x-[2px] gap-y-[2px] md:gap-y-0 w-full my-[2px]",
+  menu: () => "mt-1 shadow-md rounded-lg bg-base-200 text-base-content",
+  menuList: () => "shadow-md rounded-lg overflow-hidden",
+  option: () =>
+    "bg-base-200 text-base-content rounded-lg m-1 hover:bg-base-300 p-2 text-xs",
+  noOptionsMessage: () => "p-2 bg-base-200 rounded-lg m-1 p-2 text-xs"
+});
 
 const UserList = () => {
   const { t } = useTranslation();
@@ -100,6 +116,39 @@ const UserList = () => {
     paginateFront,
     paginateBack
   } = useUserListFilters(userList);
+
+  const roleFilterOptions = useMemo(
+    () => [
+      { value: "all", label: t("all-roles") },
+      ...ROLE_OPTIONS.map((role) => ({ value: role, label: role }))
+    ],
+    [t]
+  );
+  const statusFilterOptions = useMemo(
+    () => [
+      { value: "all", label: t("all-statuses") },
+      { value: "active", label: t("status-active") },
+      { value: "inactive", label: t("status-inactive") }
+    ],
+    [t]
+  );
+  const teamFilterOptions = useMemo(
+    () => [
+      { value: "all", label: t("all-teams") },
+      { value: "none", label: t("no-team") },
+      ...availableTeams.map((team) => ({ value: team.id, label: team.name }))
+    ],
+    [t, availableTeams]
+  );
+  const sortFilterOptions = useMemo(
+    () => [
+      { value: "default", label: t("sort-default") },
+      { value: "name-asc", label: t("sort-name-asc") },
+      { value: "name-desc", label: t("sort-name-desc") },
+      { value: "role", label: t("sort-role") }
+    ],
+    [t]
+  );
 
   const activeDeleteUser = useMemo(
     () => userList.find((u) => Boolean(isActModal["delete_" + u.objectId])),
@@ -349,60 +398,68 @@ const UserList = () => {
                           </button>
                         )}
                       </div>
-                      <select
-                        data-testid="user-role-filter"
-                        aria-label={t("report-heading.Role")}
-                        className="op-select op-select-bordered op-select-sm focus:outline-none focus:border-primary text-xs"
-                        value={roleFilter}
-                        onChange={(e) => setRoleFilter(e.target.value)}
-                      >
-                        <option value="all">{t("all-roles")}</option>
-                        {ROLE_OPTIONS.map((role) => (
-                          <option key={role} value={role}>
-                            {role}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        data-testid="user-status-filter"
-                        aria-label={t("report-heading.Status")}
-                        className="op-select op-select-bordered op-select-sm focus:outline-none focus:border-primary text-xs"
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                      >
-                        <option value="all">{t("all-statuses")}</option>
-                        <option value="active">{t("status-active")}</option>
-                        <option value="inactive">{t("status-inactive")}</option>
-                      </select>
+                      <div data-testid="user-role-filter">
+                        <Select
+                          aria-label={t("report-heading.Role")}
+                          value={roleFilterOptions.find(
+                            (option) => option.value === roleFilter
+                          )}
+                          onChange={(option) => setRoleFilter(option?.value)}
+                          options={roleFilterOptions}
+                          unstyled
+                          isSearchable={false}
+                          classNames={buildFilterSelectClassNames(
+                            "min-w-[130px]"
+                          )}
+                        />
+                      </div>
+                      <div data-testid="user-status-filter">
+                        <Select
+                          aria-label={t("report-heading.Status")}
+                          value={statusFilterOptions.find(
+                            (option) => option.value === statusFilter
+                          )}
+                          onChange={(option) => setStatusFilter(option?.value)}
+                          options={statusFilterOptions}
+                          unstyled
+                          isSearchable={false}
+                          classNames={buildFilterSelectClassNames(
+                            "min-w-[150px]"
+                          )}
+                        />
+                      </div>
                       {availableTeams.length > 0 && (
-                        <select
-                          data-testid="user-team-filter"
-                          aria-label={t("report-heading.Team")}
-                          className="op-select op-select-bordered op-select-sm focus:outline-none focus:border-primary text-xs"
-                          value={teamFilter}
-                          onChange={(e) => setTeamFilter(e.target.value)}
-                        >
-                          <option value="all">{t("all-teams")}</option>
-                          <option value="none">{t("no-team")}</option>
-                          {availableTeams.map((team) => (
-                            <option key={team.id} value={team.id}>
-                              {team.name}
-                            </option>
-                          ))}
-                        </select>
+                        <div data-testid="user-team-filter">
+                          <Select
+                            aria-label={t("report-heading.Team")}
+                            value={teamFilterOptions.find(
+                              (option) => option.value === teamFilter
+                            )}
+                            onChange={(option) => setTeamFilter(option?.value)}
+                            options={teamFilterOptions}
+                            unstyled
+                            isSearchable={false}
+                            classNames={buildFilterSelectClassNames(
+                              "min-w-[160px]"
+                            )}
+                          />
+                        </div>
                       )}
-                      <select
-                        data-testid="user-sort-filter"
-                        aria-label={t("sort-by")}
-                        className="op-select op-select-bordered op-select-sm focus:outline-none focus:border-primary text-xs"
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
-                      >
-                        <option value="default">{t("sort-default")}</option>
-                        <option value="name-asc">{t("sort-name-asc")}</option>
-                        <option value="name-desc">{t("sort-name-desc")}</option>
-                        <option value="role">{t("sort-role")}</option>
-                      </select>
+                      <div data-testid="user-sort-filter">
+                        <Select
+                          aria-label={t("sort-by")}
+                          value={sortFilterOptions.find(
+                            (option) => option.value === sortBy
+                          )}
+                          onChange={(option) => setSortBy(option?.value)}
+                          options={sortFilterOptions}
+                          unstyled
+                          isSearchable={false}
+                          classNames={buildFilterSelectClassNames(
+                            "min-w-[170px]"
+                          )}
+                        />
+                      </div>
                       {hasActiveFilters && (
                         <button
                           type="button"
