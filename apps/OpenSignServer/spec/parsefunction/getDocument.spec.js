@@ -1,3 +1,4 @@
+import { inspect } from 'node:util';
 import {
   createCaller,
   createPlainUser,
@@ -10,6 +11,8 @@ import {
   DOCUMENT_GONE,
   NO_DOCUMENT_ACCESS,
   answerSessionLookupWith,
+  failSessionLookupThenRoute,
+  fileUrl,
   readWriteFor,
   routeSessionLookupWithJavascriptKey,
   runFunctionOverRest,
@@ -22,6 +25,13 @@ const OBJECT_NOT_FOUND = 101;
 const SESSION_LOOKUP_TIMEOUT_MS = 5000;
 const timedOutLookup = () =>
   Promise.reject(Object.assign(new Error('timeout of 5000ms exceeded'), { code: 'ECONNABORTED' }));
+
+const axiosFailure = (token, { status, code } = {}) =>
+  Object.assign(new Error('lookup failed'), {
+    code,
+    config: { headers: { 'X-Parse-Session-Token': token } },
+    ...(status ? { response: { status } } : {}),
+  });
 
 const getDocument = async (params, sessionToken) => {
   const body = await runFunctionOverRest(
@@ -96,8 +106,26 @@ describe('getDocument', () => {
         owner.account.sessionToken
       );
 
-      expect(plain.Bcc[0].Email).toBeUndefined();
+      expect(plain.Bcc).toBeUndefined();
       expect(included.Bcc[0].Email).toBe(contact.get('Email'));
+    });
+
+    it('projects the included Bcc contacts to the public fields plus the phone', async () => {
+      routeSessionLookupWithJavascriptKey();
+      await contact.save(
+        { Phone: '+5800000000', TenantId: pointer('partners_Tenant', owner.tenant.id) },
+        MASTER
+      );
+
+      const included = await getDocument(
+        { docId: doc.id, include: 'Bcc' },
+        owner.account.sessionToken
+      );
+
+      expect(Object.keys(included.Bcc[0]).sort()).toEqual(
+        ['Email', 'Name', 'Phone', '__type', 'className', 'objectId'].sort()
+      );
+      expect(included.Bcc[0].Phone).toBe('+5800000000');
     });
 
     it('resolves Cc and Bcc from a comma separated include with spaces', async () => {
@@ -118,7 +146,7 @@ describe('getDocument', () => {
       const result = await getDocument({ docId: doc.id, include: 'Bcc' });
 
       expect(result.objectId).toBe(doc.id);
-      expect(result.Bcc[0].Email).toBeUndefined();
+      expect(result.Bcc).toBeUndefined();
     });
 
     it('ignores include for a session that does not own the document', async () => {
@@ -131,7 +159,7 @@ describe('getDocument', () => {
       );
 
       expect(result.objectId).toBe(doc.id);
-      expect(result.Bcc[0].Email).toBeUndefined();
+      expect(result.Bcc).toBeUndefined();
     });
 
     it('ignores include for an invalid session token', async () => {
@@ -140,7 +168,7 @@ describe('getDocument', () => {
       const result = await getDocument({ docId: doc.id, include: 'Bcc' }, 'r:invalid');
 
       expect(result.objectId).toBe(doc.id);
-      expect(result.Bcc[0].Email).toBeUndefined();
+      expect(result.Bcc).toBeUndefined();
     });
 
     it('ignores paths outside the whitelist even for the owner', async () => {
@@ -174,21 +202,118 @@ describe('getDocument', () => {
       );
 
       expect(result.objectId).toBe(doc.id);
-      expect(result.Bcc[0].Email).toBeUndefined();
+      expect(result.Bcc).toBeUndefined();
     });
 
-    it('does not resolve the session when no allowed include is requested', async () => {
-      const lookup = answerSessionLookupWith(async () => {
+    it('never logs the session token when the session lookup fails', async () => {
+      const token = owner.account.sessionToken;
+      const failure = axiosFailure(token, { status: 401 });
+      answerSessionLookupWith(() => Promise.reject(failure));
+
+      await getDocument({ docId: doc.id, include: 'Bcc' }, token);
+
+      const logged = inspect(console.log.calls.allArgs(), { depth: 8 });
+      expect(console.log.calls.count()).toBeGreaterThan(0);
+      expect(logged).not.toContain(token);
+      expect(logged).toContain('401');
+    });
+
+    it('logs the error code when the failed lookup has no response', async () => {
+      const token = owner.account.sessionToken;
+      answerSessionLookupWith(() => Promise.reject(axiosFailure(token, { code: 'ECONNRESET' })));
+
+      await getDocument({ docId: doc.id, include: 'Bcc' }, token);
+
+      const logged = inspect(console.log.calls.allArgs(), { depth: 8 });
+      expect(logged).not.toContain(token);
+      expect(logged).toContain('ECONNRESET');
+    });
+
+    it('retries the session lookup once after a transient failure and serves the owner view', async () => {
+      const token = owner.account.sessionToken;
+      const lookup = failSessionLookupThenRoute([axiosFailure(token, { status: 503 })]);
+
+      const result = await getDocument({ docId: doc.id, include: 'Bcc' }, token);
+
+      expect(lookup).toHaveBeenCalledTimes(2);
+      expect(result.Bcc[0].Email).toBe(contact.get('Email'));
+    });
+
+    it('retries after a network error without a response', async () => {
+      const token = owner.account.sessionToken;
+      const lookup = failSessionLookupThenRoute([axiosFailure(token, { code: 'ECONNRESET' })]);
+
+      const result = await getDocument({ docId: doc.id, include: 'Bcc' }, token);
+
+      expect(lookup).toHaveBeenCalledTimes(2);
+      expect(result.Bcc[0].Email).toBe(contact.get('Email'));
+    });
+
+    it('does not retry when the session is rejected with a client error', async () => {
+      const token = owner.account.sessionToken;
+      const lookup = failSessionLookupThenRoute([axiosFailure(token, { status: 401 })]);
+
+      const result = await getDocument({ docId: doc.id, include: 'Bcc' }, token);
+
+      expect(lookup).toHaveBeenCalledTimes(1);
+      expect(result.Bcc).toBeUndefined();
+    });
+
+    it('gives up after two transient failures and serves the non owner view', async () => {
+      const token = owner.account.sessionToken;
+      const lookup = failSessionLookupThenRoute([
+        axiosFailure(token, { status: 502 }),
+        axiosFailure(token, { code: 'ECONNABORTED' }),
+      ]);
+
+      const result = await getDocument({ docId: doc.id, include: 'Bcc' }, token);
+
+      expect(lookup).toHaveBeenCalledTimes(2);
+      expect(result.objectId).toBe(doc.id);
+      expect(result.Bcc).toBeUndefined();
+    });
+
+    const failingLookup = () =>
+      answerSessionLookupWith(async () => {
         throw new Error('session lookup must not run');
       });
 
-      const result = await getDocument(
-        { docId: doc.id, include: 'Signers.UserId' },
-        owner.account.sessionToken
-      );
+    it('does not resolve the session for a caller without a session token', async () => {
+      const lookup = failingLookup();
+
+      const result = await getDocument({ docId: doc.id, include: 'Bcc' });
 
       expect(lookup).not.toHaveBeenCalled();
       expect(result.objectId).toBe(doc.id);
+    });
+
+    it('does not resolve the session for a token that is not a session token', async () => {
+      const lookup = failingLookup();
+
+      await getDocument({ docId: doc.id }, 'null');
+      await getDocument({ docId: doc.id }, 'not-a-session');
+
+      expect(lookup).not.toHaveBeenCalled();
+    });
+
+    it('resolves the session of a session token even when no include is requested', async () => {
+      const lookup = routeSessionLookupWithJavascriptKey();
+
+      const result = await getDocument({ docId: doc.id }, owner.account.sessionToken);
+
+      expect(lookup).toHaveBeenCalledTimes(1);
+      expect(result.objectId).toBe(doc.id);
+    });
+
+    it('resolves the session only once when otp is enabled', async () => {
+      const lookup = routeSessionLookupWithJavascriptKey();
+      const otpDoc = await withAcl(await seedDocument(owner, { IsEnableOTP: true }), [
+        owner.account.id,
+      ]);
+
+      await getDocument({ docId: otpDoc.id, include: 'Bcc' }, owner.account.sessionToken);
+
+      expect(lookup).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -352,10 +477,21 @@ describe('getDocument', () => {
       const signer = await seedContact(owner, await createPlainUser());
 
       const result = await projectionOf({
-        AuditTrail: [{ UserPtr: pointer('contracts_Contactbook', signer.id), Activity: 'Signed' }],
+        AuditTrail: [
+          {
+            UserPtr: pointer('contracts_Contactbook', signer.id),
+            Activity: 'Signed',
+            ipAddress: '10.0.0.1',
+            Signature: 'data:image/png;base64,AAAA',
+            SignedUrl: fileUrl('signed.pdf'),
+            SignedOn: 'Jan 1, 2030',
+            ViewedOn: 'Jan 1, 2030',
+          },
+        ],
       });
 
       const [entry] = result.AuditTrail;
+      expect(Object.keys(entry).sort()).toEqual(['Activity', 'UserPtr']);
       expect(entry.Activity).toBe('Signed');
       expect(Object.keys(entry.UserPtr).sort()).toEqual(
         ['Email', 'Name', '__type', 'className', 'objectId'].sort()
@@ -363,13 +499,167 @@ describe('getDocument', () => {
       expect(entry.UserPtr.Email).toBe(signer.get('Email'));
     });
 
-    it('leaves the signers untouched', async () => {
-      const signer = await seedContact(owner, await createPlainUser());
+    it('reduces each signer to the public contact fields', async () => {
+      const signer = await seedContact(owner, await createPlainUser(), {
+        Phone: '+5800000000',
+        TenantId: pointer('partners_Tenant', owner.tenant.id),
+        UserRole: 'contracts_Guest',
+        IsDeleted: false,
+        JobTitle: 'CTO',
+        Company: 'Acme',
+        TourStatus: [{ requestSign: true }],
+      });
+      await withAcl(signer, [owner.account.id]);
 
       const result = await projectionOf({ Signers: [pointer('contracts_Contactbook', signer.id)] });
 
-      expect(result.Signers[0].Email).toBe(signer.get('Email'));
-      expect(result.Signers[0].CreatedBy.objectId).toBe(owner.account.id);
+      const [projected] = result.Signers;
+      expect(projected.Email).toBe(signer.get('Email'));
+      expect(projected.JobTitle).toBe('CTO');
+      expect(projected.Company).toBe('Acme');
+      ['ACL', 'CreatedBy', 'TenantId', 'UserRole', 'IsDeleted', 'Phone', 'TourStatus'].forEach(
+        key => expect(projected[key]).toBeUndefined()
+      );
+      expect(projected.UserId).toEqual(pointer('_User', signer.get('UserId').objectId));
+    });
+
+    it('keeps the signer phone for the owner only', async () => {
+      routeSessionLookupWithJavascriptKey();
+      const signer = await seedContact(owner, await createPlainUser(), { Phone: '+5800000000' });
+      const doc = await seedDocument(owner, {
+        Signers: [pointer('contracts_Contactbook', signer.id)],
+      });
+
+      const asAnonymous = await getDocument({ docId: doc.id });
+      const asOwner = await getDocument({ docId: doc.id }, owner.account.sessionToken);
+      const intruder = await createCaller('contracts_Admin');
+      const asIntruder = await getDocument({ docId: doc.id }, intruder.account.sessionToken);
+
+      expect(asAnonymous.Signers[0].Phone).toBeUndefined();
+      expect(asIntruder.Signers[0].Phone).toBeUndefined();
+      expect(asOwner.Signers[0].Phone).toBe('+5800000000');
+    });
+
+    it('keeps the signer login pointer that the anonymous signing page reads', async () => {
+      const signerAccount = await createPlainUser();
+      const signer = await seedContact(owner, signerAccount);
+
+      const result = await projectionOf({ Signers: [pointer('contracts_Contactbook', signer.id)] });
+
+      expect(result.Signers[0].UserId.objectId).toBe(signerAccount.id);
+    });
+
+    it('drops the internal top level fields for every caller', async () => {
+      routeSessionLookupWithJavascriptKey();
+      const doc = await withAcl(
+        await seedDocument(owner, {
+          OriginIp: '10.0.0.1',
+          DebugginLog: 'trace',
+          FileAdapterId: 'adapter1',
+        }),
+        [owner.account.id]
+      );
+
+      const asAnonymous = await getDocument({ docId: doc.id });
+      const asOwner = await getDocument({ docId: doc.id }, owner.account.sessionToken);
+
+      [asAnonymous, asOwner].forEach(result =>
+        ['ACL', 'OriginIp', 'DebugginLog', 'FileAdapterId'].forEach(key =>
+          expect(result[key]).toBeUndefined()
+        )
+      );
+    });
+
+    describe('owner only fields', () => {
+      const OWNER_ONLY = {
+        RequestBody: 'body',
+        RequestSubject: 'subject',
+        EmailEditorType: 'html',
+        NextReminderDate: { __type: 'Date', iso: '2030-01-01T00:00:00.000Z' },
+        TemplateId: pointer('contracts_Template', 'tpl1'),
+        Bcc: [],
+        Cc: [],
+      };
+
+      it('hides them from anonymous callers and sessions that do not own the document', async () => {
+        routeSessionLookupWithJavascriptKey();
+        const doc = await seedDocument(owner, OWNER_ONLY);
+        const intruder = await createCaller('contracts_Admin');
+
+        const asAnonymous = await getDocument({ docId: doc.id });
+        const asIntruder = await getDocument({ docId: doc.id }, intruder.account.sessionToken);
+
+        [asAnonymous, asIntruder].forEach(result =>
+          Object.keys(OWNER_ONLY).forEach(key => expect(result[key]).toBeUndefined())
+        );
+      });
+
+      it('keeps them for the owner', async () => {
+        routeSessionLookupWithJavascriptKey();
+        const doc = await seedDocument(owner, OWNER_ONLY);
+
+        const result = await getDocument({ docId: doc.id }, owner.account.sessionToken);
+
+        expect(result.RequestBody).toBe('body');
+        expect(result.RequestSubject).toBe('subject');
+        expect(result.EmailEditorType).toBe('html');
+        expect(result.TemplateId.objectId).toBe('tpl1');
+        expect(result.NextReminderDate.iso).toBe('2030-01-01T00:00:00.000Z');
+        expect(result.Bcc).toEqual([]);
+        expect(result.Cc).toEqual([]);
+      });
+    });
+
+    describe('placeholders', () => {
+      const placeholdersOf = signerPtr => [
+        {
+          Id: 1,
+          Role: 'signer',
+          signerObjId: 'c1',
+          signerPtr,
+          placeHolder: [{ pageNumber: 1, pos: [{ xPosition: 1, options: { name: 'sig' } }] }],
+        },
+      ];
+
+      it('passes them through unchanged when the signer pointer is not embedded', async () => {
+        const stored = placeholdersOf(pointer('contracts_Contactbook', 'c1'));
+
+        const result = await projectionOf({ Placeholders: stored });
+
+        expect(JSON.stringify(result.Placeholders)).toBe(JSON.stringify(stored));
+      });
+
+      it('reduces a legacy embedded signer record to a pointer', async () => {
+        const embedded = {
+          className: 'contracts_Contactbook',
+          objectId: 'c1',
+          Name: 'Ana',
+          Email: 'ana@example.com',
+          Phone: '+5800000000',
+          ACL: { '*': { read: true } },
+        };
+        const stored = placeholdersOf(embedded);
+
+        const result = await projectionOf({ Placeholders: stored });
+
+        expect(result.Placeholders).toEqual(placeholdersOf(pointer('contracts_Contactbook', 'c1')));
+      });
+
+      it('replaces a signer record without an id by an empty object', async () => {
+        const stored = placeholdersOf({ Name: 'Ana', Email: 'ana@example.com' });
+
+        const result = await projectionOf({ Placeholders: stored });
+
+        expect(result.Placeholders).toEqual(placeholdersOf({}));
+      });
+
+      it('keeps an empty signer pointer as stored', async () => {
+        const stored = placeholdersOf({});
+
+        const result = await projectionOf({ Placeholders: stored });
+
+        expect(result.Placeholders).toEqual(stored);
+      });
     });
   });
 
